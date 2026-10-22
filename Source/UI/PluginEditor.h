@@ -54,6 +54,7 @@ private:
 
     juce::Label startTimeLabel { {}, juce::String::fromUTF8("Inicio (MM:SS):") };
     juce::TextEditor startTimeEditor;
+    juce::Slider startTimeSlider;
 
     juce::Label durationBadgeLabel;
 

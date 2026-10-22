@@ -4,7 +4,7 @@
 ; ==============================================================================
 
 #define MyAppName "ClipSampler10"
-#define MyAppVersion "1.0.0"
+#define MyAppVersion "2.0.0"
 #define MyAppPublisher "AudioInnovations"
 #define MyAppURL "https://www.audioinnovations.com"
 

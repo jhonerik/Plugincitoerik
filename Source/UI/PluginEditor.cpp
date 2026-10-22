@@ -46,21 +46,55 @@ ClipSampler10AudioProcessorEditor::ClipSampler10AudioProcessorEditor(ClipSampler
     pasteButton.onClick = [this] { onPasteClicked(); };
     addAndMakeVisible(pasteButton);
 
-    // Start Time input (restores last saved session state if available)
+    // Start Time input + interactive time bar slider (restores last saved session state if available)
     startTimeLabel.setColour(juce::Label::textColourId, juce::Colour(0xffb0bac9));
     startTimeLabel.setFont(juce::Font(13.0f, juce::Font::bold));
     addAndMakeVisible(startTimeLabel);
 
     juce::String savedTime = audioProcessor.getLastStartTime();
-    startTimeEditor.setText(savedTime.isNotEmpty() ? savedTime : "00:00");
+    if (savedTime.isEmpty())
+        savedTime = "00:00";
+
+    const int initialSeconds = AudioExtractorWorker::parseTimeToSeconds(savedTime);
+
+    startTimeEditor.setText(savedTime, false);
     startTimeEditor.setJustification(juce::Justification::centred);
     startTimeEditor.setColour(juce::TextEditor::backgroundColourId, juce::Colour(0xff1e222d));
     startTimeEditor.setColour(juce::TextEditor::textColourId, juce::Colour(0xff00e5ff));
     startTimeEditor.setColour(juce::TextEditor::outlineColourId, juce::Colour(0xff2d3444));
+    startTimeEditor.onTextChange = [this] {
+        int secs = AudioExtractorWorker::parseTimeToSeconds(startTimeEditor.getText());
+        if (secs > startTimeSlider.getMaximum())
+            startTimeSlider.setRange(0.0, static_cast<double>(secs + 60), 1.0);
+        startTimeSlider.setValue(static_cast<double>(secs), juce::dontSendNotification);
+        audioProcessor.setLastStartTime(startTimeEditor.getText().trim());
+    };
     addAndMakeVisible(startTimeEditor);
 
+    // Interactive horizontal slider bar next to start time (00:00 to 10:00, 1s step, fine resolution around 1-2 min)
+    startTimeSlider.setSliderStyle(juce::Slider::LinearHorizontal);
+    startTimeSlider.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
+    startTimeSlider.setRange(0.0, juce::jmax(600.0, static_cast<double>(initialSeconds)), 1.0);
+    startTimeSlider.setSkewFactorFromMidPoint(120.0); // Makes 0:00 - 2:00 (e.g. 01:00) extra easy and precise to dial in
+    startTimeSlider.setValue(static_cast<double>(initialSeconds), juce::dontSendNotification);
+    startTimeSlider.setColour(juce::Slider::backgroundColourId, juce::Colour(0xff161922));
+    startTimeSlider.setColour(juce::Slider::trackColourId, juce::Colour(0xff00e5ff));
+    startTimeSlider.setColour(juce::Slider::thumbColourId, juce::Colour(0xffff0055));
+    startTimeSlider.setTooltip(juce::String::fromUTF8("Desliza para elegir rápidamente el minuto y segundo de inicio (ej. 01:00)"));
+    startTimeSlider.onValueChange = [this] {
+        int totalSecs = static_cast<int>(std::round(startTimeSlider.getValue()));
+        int mins = totalSecs / 60;
+        int secs = totalSecs % 60;
+        juce::String formatted = (mins >= 60)
+            ? AudioExtractorWorker::formatSecondsToTime(totalSecs)
+            : juce::String::formatted("%02d:%02d", mins, secs);
+        startTimeEditor.setText(formatted, false);
+        audioProcessor.setLastStartTime(formatted);
+    };
+    addAndMakeVisible(startTimeSlider);
+
     // Strict 10-Second Duration Badge (Locked in Code)
-    durationBadgeLabel.setText(juce::String::fromUTF8("DURACIÓN MÁXIMA: 10s EXACTOS [BLOQUEADO]"), juce::dontSendNotification);
+    durationBadgeLabel.setText(juce::String::fromUTF8("MÁX: 10s [BLOQUEADO]"), juce::dontSendNotification);
     durationBadgeLabel.setFont(juce::Font(11.0f, juce::Font::bold));
     durationBadgeLabel.setJustificationType(juce::Justification::centred);
     durationBadgeLabel.setColour(juce::Label::backgroundColourId, juce::Colour(0x33ff9800));
@@ -282,7 +316,7 @@ void ClipSampler10AudioProcessorEditor::paint(juce::Graphics& g)
 
     g.setColour(juce::Colour(0xff00e5ff));
     g.setFont(juce::Font(20.0f, juce::Font::bold));
-    g.drawText("CLIPSAMPLER 10", 20, 6, 220, 24, juce::Justification::left);
+    g.drawText("CLIPSAMPLER 10 v2.0", 20, 6, 260, 24, juce::Justification::left);
 
     g.setColour(juce::Colour(0xff738096));
     g.setFont(juce::Font(11.0f, juce::Font::plain));
@@ -325,12 +359,14 @@ void ClipSampler10AudioProcessorEditor::resized()
 
     topInner.removeFromTop(12);
 
-    // Row 2: Start time + Duration lock badge
+    // Row 2: Start time + Interactive time slider bar + Duration lock badge
     auto timeRow = topInner.removeFromTop(32);
     startTimeLabel.setBounds(timeRow.removeFromLeft(125));
-    startTimeEditor.setBounds(timeRow.removeFromLeft(80));
-    timeRow.removeFromLeft(14);
-    durationBadgeLabel.setBounds(timeRow);
+    startTimeEditor.setBounds(timeRow.removeFromLeft(75));
+    timeRow.removeFromLeft(10);
+    durationBadgeLabel.setBounds(timeRow.removeFromRight(165));
+    timeRow.removeFromRight(10);
+    startTimeSlider.setBounds(timeRow);
 
     topInner.removeFromTop(12);
 
