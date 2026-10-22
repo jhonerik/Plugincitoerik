@@ -5,7 +5,6 @@
 #if JUCE_WINDOWS
  #define NOMINMAX
  #include <windows.h>
- #include <tlhelp32.h>
 #endif
 
 namespace
@@ -26,6 +25,7 @@ AudioExtractorWorker::~AudioExtractorWorker()
 
 void AudioExtractorWorker::startExtraction(const juce::String& youtubeUrl,
                                            const juce::String& startTimeString,
+                                           int durationSeconds,
                                            int targetSampleRate,
                                            ProgressCallback progressCb,
                                            CompletionCallback completionCb)
@@ -35,6 +35,7 @@ void AudioExtractorWorker::startExtraction(const juce::String& youtubeUrl,
 
     currentUrl = youtubeUrl.trim();
     currentStartTimeStr = startTimeString.trim();
+    currentDurationSec = juce::jlimit(1, 60, durationSeconds);
     currentSampleRate = (targetSampleRate > 0) ? targetSampleRate : 44100;
     progressCallback = std::move(progressCb);
     completionCallback = std::move(completionCb);
@@ -67,9 +68,8 @@ int AudioExtractorWorker::parseTimeToSeconds(const juce::String& timeString)
 
     auto tokens = juce::StringArray::fromTokens(clean, ":", "");
     if (tokens.size() == 1)
-    {
         return juce::jmax(0, tokens[0].getIntValue());
-    }
+
     if (tokens.size() == 2)
     {
         int minutes = tokens[0].getIntValue();
@@ -97,6 +97,19 @@ juce::String AudioExtractorWorker::formatSecondsToTime(int totalSeconds)
     return juce::String::formatted("%02d:%02d:%02d", hours, minutes, seconds);
 }
 
+juce::String AudioExtractorWorker::formatSecondsToMMSS(int totalSeconds)
+{
+    totalSeconds = juce::jmax(0, totalSeconds);
+    int hours = totalSeconds / 3600;
+    int minutes = (totalSeconds % 3600) / 60;
+    int seconds = totalSeconds % 60;
+
+    if (hours > 0)
+        return juce::String::formatted("%02d:%02d:%02d", hours, minutes, seconds);
+
+    return juce::String::formatted("%02d:%02d", minutes, seconds);
+}
+
 juce::File AudioExtractorWorker::getCacheDirectory()
 {
     auto baseDir = juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory);
@@ -109,7 +122,7 @@ juce::File AudioExtractorWorker::getCacheDirectory()
     return cacheDir;
 }
 
-int AudioExtractorWorker::clearCacheDirectory(const juce::File& activeFileToKeep)
+int AudioExtractorWorker::clearCacheDirectory(const juce::File& activeFile1, const juce::File& activeFile2)
 {
     auto cacheDir = getCacheDirectory();
     auto files = cacheDir.findChildFiles(juce::File::findFiles, false, "*");
@@ -117,7 +130,9 @@ int AudioExtractorWorker::clearCacheDirectory(const juce::File& activeFileToKeep
 
     for (auto& f : files)
     {
-        if (activeFileToKeep != juce::File() && f == activeFileToKeep)
+        if (activeFile1 != juce::File() && f == activeFile1)
+            continue;
+        if (activeFile2 != juce::File() && f == activeFile2)
             continue;
 
         if (f.hasFileExtension(".wav") || f.hasFileExtension(".part") || f.hasFileExtension(".ytdl") || f.hasFileExtension(".webm") || f.hasFileExtension(".m4a"))
@@ -127,6 +142,133 @@ int AudioExtractorWorker::clearCacheDirectory(const juce::File& activeFileToKeep
         }
     }
     return count;
+}
+
+void AudioExtractorWorker::fetchVideoMetadata(const juce::String& youtubeUrl,
+                                              std::function<void(const VideoMetadata&)> onComplete)
+{
+    juce::String cleanUrl = youtubeUrl.trim();
+    juce::Thread::launch([cleanUrl, onComplete = std::move(onComplete)] {
+        VideoMetadata meta;
+        if (cleanUrl.isEmpty() || (!cleanUrl.startsWithIgnoreCase("http://") && !cleanUrl.startsWithIgnoreCase("https://")))
+        {
+            meta.errorMessage = juce::String::fromUTF8("URL no válida.");
+            if (onComplete)
+                juce::MessageManager::callAsync([onComplete, meta] { onComplete(meta); });
+            return;
+        }
+
+        auto ytDlpBin = findExecutable("yt-dlp");
+        if (!ytDlpBin.existsAsFile())
+        {
+            meta.errorMessage = juce::String::fromUTF8("No se encontró yt-dlp.");
+            if (onComplete)
+                juce::MessageManager::callAsync([onComplete, meta] { onComplete(meta); });
+            return;
+        }
+
+        juce::StringArray args;
+        args.add(ytDlpBin.getFullPathName());
+        args.add("--no-playlist");
+        args.add("--skip-download");
+        args.add("--print");
+        args.add("%(duration)s|||%(title)s|||%(license)s|||%(track)s|||%(artist)s|||%(channel)s");
+        args.add(cleanUrl);
+
+        juce::ChildProcess process;
+        if (!process.start(args, juce::ChildProcess::wantStdOut | juce::ChildProcess::wantStdErr))
+        {
+            meta.errorMessage = juce::String::fromUTF8("No se pudo consultar la duración del video.");
+            if (onComplete)
+                juce::MessageManager::callAsync([onComplete, meta] { onComplete(meta); });
+            return;
+        }
+
+        juce::String output;
+        char buffer[512];
+        const auto startMs = juce::Time::getMillisecondCounterHiRes();
+        while (process.isRunning())
+        {
+            int n = process.readProcessOutput(buffer, sizeof(buffer) - 1);
+            if (n > 0)
+            {
+                buffer[n] = '\0';
+                output += juce::String::fromUTF8(buffer, n);
+            }
+            if ((juce::Time::getMillisecondCounterHiRes() - startMs) > 15000.0)
+            {
+                process.kill();
+                break;
+            }
+            juce::Thread::sleep(30);
+        }
+
+        while (true)
+        {
+            int n = process.readProcessOutput(buffer, sizeof(buffer) - 1);
+            if (n <= 0)
+                break;
+            buffer[n] = '\0';
+            output += juce::String::fromUTF8(buffer, n);
+        }
+
+        auto lines = juce::StringArray::fromLines(output.trim());
+        for (const auto& line : lines)
+        {
+            if (line.contains("|||"))
+            {
+                auto parts = juce::StringArray::fromTokens(line, "|||", "");
+                // Tokenize carefully by splitting on "|||"
+                juce::String remaining = line;
+                juce::StringArray fields;
+                while (remaining.isNotEmpty())
+                {
+                    int idx = remaining.indexOf("|||");
+                    if (idx >= 0)
+                    {
+                        fields.add(remaining.substring(0, idx).trim());
+                        remaining = remaining.substring(idx + 3);
+                    }
+                    else
+                    {
+                        fields.add(remaining.trim());
+                        break;
+                    }
+                }
+
+                if (fields.size() >= 2)
+                {
+                    meta.durationSeconds = juce::jmax(0, fields[0].getIntValue());
+                    meta.title = fields[1];
+                    juce::String lic = (fields.size() >= 3) ? fields[2] : "";
+                    juce::String track = (fields.size() >= 4) ? fields[3] : "";
+                    juce::String artist = (fields.size() >= 5) ? fields[4] : "";
+                    juce::String channel = (fields.size() >= 6) ? fields[5] : "";
+
+                    bool isCreativeCommons = lic.containsIgnoreCase("Creative Commons") || lic.containsIgnoreCase("CC BY");
+                    bool hasMusicTrack = (track.isNotEmpty() && track != "NA") || (artist.isNotEmpty() && artist != "NA");
+                    meta.hasCopyrightMetadata = !isCreativeCommons;
+
+                    if (hasMusicTrack)
+                        meta.trackInfo = artist + " - " + track;
+                    else
+                        meta.trackInfo = channel.isNotEmpty() ? channel : meta.title;
+
+                    meta.licenseInfo = isCreativeCommons
+                        ? juce::String::fromUTF8("Licencia Creative Commons declarada")
+                        : juce::String::fromUTF8("Licencia Estándar de YouTube / Content ID Protegido");
+                    meta.success = (meta.durationSeconds > 0);
+                    break;
+                }
+            }
+        }
+
+        if (!meta.success && meta.errorMessage.isEmpty())
+            meta.errorMessage = juce::String::fromUTF8("No se pudo detectar la duración del video.");
+
+        if (onComplete)
+            juce::MessageManager::callAsync([onComplete, meta] { onComplete(meta); });
+    });
 }
 
 void AudioExtractorWorker::runYtDlpUpdate(std::function<void(bool success, const juce::String& outputMsg)> onComplete)
@@ -160,7 +302,6 @@ void AudioExtractorWorker::runYtDlpUpdate(std::function<void(bool success, const
             return;
         }
 
-        // Incremental non-hanging read loop with strict 45-second timeout
         juce::String output;
         char buffer[512];
         const auto startTimeMs = juce::Time::getMillisecondCounterHiRes();
@@ -186,7 +327,6 @@ void AudioExtractorWorker::runYtDlpUpdate(std::function<void(bool success, const
             juce::Thread::sleep(40);
         }
 
-        // Drain any remaining bytes in pipe
         while (!timedOut)
         {
             int bytesRead = process.readProcessOutput(buffer, sizeof(buffer) - 1);
@@ -246,19 +386,16 @@ juce::File AudioExtractorWorker::findExecutable(const juce::String& executableNa
 #if JUCE_WINDOWS
     juce::String binaryName = executableName.endsWithIgnoreCase(".exe") ? executableName : (executableName + ".exe");
 
-    // 1. Check Common Application Data (%PROGRAMDATA%\ClipSampler10\tools)
     auto commonAppData = juce::File::getSpecialLocation(juce::File::commonApplicationDataDirectory);
     auto commonToolsBin = commonAppData.getChildFile("ClipSampler10").getChildFile("tools").getChildFile(binaryName);
     if (commonToolsBin.existsAsFile())
         return cacheAndReturn(commonToolsBin);
 
-    // 2. Check Roaming AppData (%APPDATA%\ClipSampler10\tools)
     auto roamingAppData = juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory);
     auto roamingBin = roamingAppData.getChildFile("ClipSampler10").getChildFile("tools").getChildFile(binaryName);
     if (roamingBin.existsAsFile())
         return cacheAndReturn(roamingBin);
 
-    // 3. Check Local AppData (%LOCALAPPDATA%\ClipSampler10\tools & WinGet)
     juce::String localAppDataEnv = juce::SystemStats::getEnvironmentVariable("LOCALAPPDATA", {});
     if (localAppDataEnv.isNotEmpty())
     {
@@ -267,12 +404,10 @@ juce::File AudioExtractorWorker::findExecutable(const juce::String& executableNa
         if (localTools.existsAsFile())
             return cacheAndReturn(localTools);
 
-        // WinGet Links (%LOCALAPPDATA%\Microsoft\WinGet\Links)
         auto wingetLink = localAppData.getChildFile("Microsoft").getChildFile("WinGet").getChildFile("Links").getChildFile(binaryName);
         if (wingetLink.existsAsFile())
             return cacheAndReturn(wingetLink);
 
-        // WinGet Packages directory
         auto wingetPackages = localAppData.getChildFile("Microsoft").getChildFile("WinGet").getChildFile("Packages");
         if (wingetPackages.isDirectory())
         {
@@ -282,7 +417,6 @@ juce::File AudioExtractorWorker::findExecutable(const juce::String& executableNa
         }
     }
 
-    // 4. Check sibling directory to plugin DLL/VST3 and bundle root
     auto pluginFile = juce::File::getSpecialLocation(juce::File::currentExecutableFile);
     auto pluginDir = pluginFile.getParentDirectory();
     auto pluginTools = pluginDir.getChildFile("tools").getChildFile(binaryName);
@@ -294,13 +428,11 @@ juce::File AudioExtractorWorker::findExecutable(const juce::String& executableNa
     if (bundleTools.existsAsFile())
         return cacheAndReturn(bundleTools);
 
-    // 5. Check Global Applications Directory (Program Files without hardcoded C:\)
     auto globalAppsDir = juce::File::getSpecialLocation(juce::File::globalApplicationsDirectory);
     auto pfTools = globalAppsDir.getChildFile("ClipSampler10").getChildFile("tools").getChildFile(binaryName);
     if (pfTools.existsAsFile())
         return cacheAndReturn(pfTools);
 
-    // 6. Check Scoop shims & Chocolatey (using environment/special locations instead of hardcoded C:\)
     juce::String userProfile = juce::SystemStats::getEnvironmentVariable("USERPROFILE", {});
     if (userProfile.isNotEmpty())
     {
@@ -316,7 +448,6 @@ juce::File AudioExtractorWorker::findExecutable(const juce::String& executableNa
     if (chocoBin.existsAsFile())
         return cacheAndReturn(chocoBin);
 
-    // 7. Windows API SearchPathW lookup (searches PATH cleanly via OS API)
     WCHAR foundBuffer[MAX_PATH] = { 0 };
     if (SearchPathW(nullptr, binaryName.toWideCharPointer(), nullptr, MAX_PATH, foundBuffer, nullptr) > 0)
     {
@@ -326,7 +457,6 @@ juce::File AudioExtractorWorker::findExecutable(const juce::String& executableNa
             return cacheAndReturn(foundFile);
     }
 
-    // 8. Fallback manual PATH iteration
     juce::String pathVar = juce::SystemStats::getEnvironmentVariable("PATH", {});
     if (pathVar.isNotEmpty())
     {
@@ -371,10 +501,12 @@ juce::File AudioExtractorWorker::findExecutable(const juce::String& executableNa
 
 void AudioExtractorWorker::run()
 {
+    const int durationToExtract = juce::jlimit(1, 60, currentDurationSec);
+
     if (progressCallback)
     {
-        juce::MessageManager::callAsync([cb = progressCallback] {
-            cb(0.05f, juce::String::fromUTF8("Iniciando motor de extracción..."));
+        juce::MessageManager::callAsync([cb = progressCallback, durationToExtract] {
+            cb(0.05f, juce::String::fromUTF8("Iniciando motor de extracción (") + juce::String(durationToExtract) + "s)...");
         });
     }
 
@@ -386,7 +518,7 @@ void AudioExtractorWorker::run()
         if (completionCallback)
         {
             juce::MessageManager::callAsync([cb = completionCallback] {
-                cb(false, juce::File(), juce::String::fromUTF8("No se pudo iniciar el proceso 'yt-dlp'. Verifica que esté instalado en el sistema o en la carpeta tools de ClipSampler10."));
+                cb(false, juce::File(), juce::String::fromUTF8("No se pudo iniciar 'yt-dlp'. Verifica que esté instalado."));
             });
         }
         return;
@@ -403,20 +535,17 @@ void AudioExtractorWorker::run()
         return;
     }
 
-    // Calculate timestamps: strictly 10.0 seconds max
     int startSec = parseTimeToSeconds(currentStartTimeStr);
-    int endSec = startSec + MAX_DURATION_SECONDS;
+    int endSec = startSec + durationToExtract;
     juce::String startTimestamp = formatSecondsToTime(startSec);
     juce::String endTimestamp = formatSecondsToTime(endSec);
 
     auto cacheDir = getCacheDirectory();
     auto jobStartTime = juce::Time::getCurrentTime();
-
-    // Sincronización de Sample Rate: DAW sample rate dinámico
     int sampleRateToUse = (currentSampleRate > 0) ? currentSampleRate : 44100;
 
-    // Nombres de Archivo Limpios:
-    auto outputTemplate = cacheDir.getFullPathName() + juce::File::getSeparatorString() + "%(title).40s_" + juce::String(startSec) + "s.%(ext)s";
+    auto outputTemplate = cacheDir.getFullPathName() + juce::File::getSeparatorString()
+                        + "%(title).36s_" + juce::String(startSec) + "s_" + juce::String(durationToExtract) + "s.%(ext)s";
 
     juce::StringArray args;
     args.add(ytDlpBin.getFullPathName());
@@ -434,10 +563,8 @@ void AudioExtractorWorker::run()
         args.add(ffmpegBin.getFullPathName());
     }
 
-    // Postprocessor args: Dynamic SR, 24-bit PCM y Hard Cut -t 10
-    // (El fade anti-click de 10ms y la normalización a -1dB se aplican en una única pasada DSP en validateAndEnforceDuration)
     args.add("--postprocessor-args");
-    args.add("ffmpeg:-acodec pcm_s24le -ar " + juce::String(sampleRateToUse) + " -t 10");
+    args.add("ffmpeg:-acodec pcm_s24le -ar " + juce::String(sampleRateToUse) + " -t " + juce::String(durationToExtract));
 
     args.add("-o");
     args.add(outputTemplate);
@@ -445,8 +572,10 @@ void AudioExtractorWorker::run()
 
     if (progressCallback)
     {
-        juce::MessageManager::callAsync([cb = progressCallback, startTimestamp, endTimestamp, sampleRateToUse] {
-            cb(0.15f, juce::String::fromUTF8("Descargando sección [") + startTimestamp + " -> " + endTimestamp + juce::String::fromUTF8("] a ") + juce::String(sampleRateToUse) + " Hz...");
+        juce::MessageManager::callAsync([cb = progressCallback, startTimestamp, endTimestamp, durationToExtract, sampleRateToUse] {
+            cb(0.15f, juce::String::fromUTF8("Extrayendo ") + juce::String(durationToExtract)
+                      + juce::String::fromUTF8("s [") + startTimestamp + " -> " + endTimestamp
+                      + juce::String::fromUTF8("] a ") + juce::String(sampleRateToUse) + " Hz...");
         });
     }
 
@@ -455,7 +584,7 @@ void AudioExtractorWorker::run()
         if (completionCallback)
         {
             juce::MessageManager::callAsync([cb = completionCallback] {
-                cb(false, juce::File(), juce::String::fromUTF8("No se pudo iniciar el proceso 'yt-dlp'. Verifica que esté instalado."));
+                cb(false, juce::File(), juce::String::fromUTF8("No se pudo iniciar el proceso 'yt-dlp'."));
             });
         }
         return;
@@ -480,7 +609,6 @@ void AudioExtractorWorker::run()
             juce::String chunk = juce::String::fromUTF8(buffer, bytesRead);
             accumulatedOutput += chunk;
 
-            // Track output file destination if logged by yt-dlp
             int destIdx = chunk.indexOf("Destination:");
             if (destIdx >= 0)
             {
@@ -493,7 +621,6 @@ void AudioExtractorWorker::run()
                 }
             }
 
-            // Parse progress percentage
             int downloadIdx = chunk.indexOf("[download]");
             if (downloadIdx >= 0)
             {
@@ -533,7 +660,6 @@ void AudioExtractorWorker::run()
     if (threadShouldExit() || isCancelled.load())
         return;
 
-    // Locate the newly generated .wav file in the cache directory
     juce::File finalResultFile;
     if (parsedWavPath.isNotEmpty())
     {
@@ -544,13 +670,15 @@ void AudioExtractorWorker::run()
 
     if (!finalResultFile.existsAsFile())
     {
-        // Search files in cache created or modified after jobStartTime
         auto allWavs = cacheDir.findChildFiles(juce::File::findFiles, false, "*.wav");
         juce::File newest;
         juce::Time newestTime;
 
         for (auto& f : allWavs)
         {
+            if (f.getFileNameWithoutExtension().endsWithIgnoreCase("_derechos_ia"))
+                continue;
+
             auto modTime = f.getLastModificationTime();
             if (modTime.toMilliseconds() >= jobStartTime.toMilliseconds() - 5000)
             {
@@ -591,8 +719,7 @@ void AudioExtractorWorker::run()
         return;
     }
 
-    // Enforce 10-second hard cut & single-pass C++ DSP Anti-Click smoothing + -1dB normalization
-    if (!validateAndEnforceDuration(finalResultFile, sampleRateToUse))
+    if (!validateAndEnforceDuration(finalResultFile, sampleRateToUse, durationToExtract))
     {
         if (completionCallback)
         {
@@ -605,8 +732,8 @@ void AudioExtractorWorker::run()
 
     if (progressCallback)
     {
-        juce::MessageManager::callAsync([cb = progressCallback] {
-            cb(1.0f, juce::String::fromUTF8("¡Muestra de 10s extraída con éxito!"));
+        juce::MessageManager::callAsync([cb = progressCallback, durationToExtract] {
+            cb(1.0f, juce::String::fromUTF8("¡Muestra de ") + juce::String(durationToExtract) + juce::String::fromUTF8("s extraída con éxito!"));
         });
     }
 
@@ -618,7 +745,7 @@ void AudioExtractorWorker::run()
     }
 }
 
-bool AudioExtractorWorker::validateAndEnforceDuration(const juce::File& audioFile, int targetRate)
+bool AudioExtractorWorker::validateAndEnforceDuration(const juce::File& audioFile, int targetRate, int maxDurationSec)
 {
     juce::AudioFormatManager formatManager;
     formatManager.registerBasicFormats();
@@ -629,18 +756,16 @@ bool AudioExtractorWorker::validateAndEnforceDuration(const juce::File& audioFil
 
     double sampleRate = reader->sampleRate > 0.0 ? reader->sampleRate : (double)targetRate;
     juce::int64 lengthInSamples = reader->lengthInSamples;
-    juce::int64 maxAllowedSamples = static_cast<juce::int64>(sampleRate * MAX_DURATION_SECONDS);
+    juce::int64 maxAllowedSamples = static_cast<juce::int64>(sampleRate * juce::jlimit(1, 60, maxDurationSec));
 
-    // Read audio buffer
     juce::int64 samplesToRead = juce::jmin(lengthInSamples, maxAllowedSamples);
     if (samplesToRead <= 0)
         return false;
 
     juce::AudioBuffer<float> buffer((int)reader->numChannels, (int)samplesToRead);
     reader->read(&buffer, 0, (int)samplesToRead, 0, true, true);
-    reader.reset(); // Release file handle
+    reader.reset();
 
-    // DSP Anti-Click Micro-Fade (10ms in, 10ms out) in a single pass
     int fadeSamples = juce::jmin((int)(sampleRate * 0.01), (int)(samplesToRead / 2));
     if (fadeSamples > 0)
     {
@@ -651,7 +776,6 @@ bool AudioExtractorWorker::validateAndEnforceDuration(const juce::File& audioFil
         }
     }
 
-    // Normalization to -1.0 dB (approx 0.89125 amplitude)
     float currentPeak = buffer.getMagnitude(0, buffer.getNumSamples());
     if (currentPeak > 0.001f)
     {
@@ -661,7 +785,6 @@ bool AudioExtractorWorker::validateAndEnforceDuration(const juce::File& audioFil
             buffer.applyGain(gainFactor);
     }
 
-    // Rewrite sanitized WAV
     juce::File tempTrimmed = audioFile.getSiblingFile(audioFile.getFileNameWithoutExtension() + "_safe.wav");
     {
         std::unique_ptr<juce::FileOutputStream> outStream(tempTrimmed.createOutputStream());

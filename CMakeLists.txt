@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.22)
 # ==============================================================================
 # ClipSampler10 - Professional 10-Second YouTube Sample Grabber VSTi / AAX
 # ==============================================================================
-project(ClipSampler10 VERSION 2.1.0 LANGUAGES C CXX)
+project(ClipSampler VERSION 2.2.0 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -69,9 +69,9 @@ juce_add_plugin(ClipSampler10
     PLUGIN_MANUFACTURER_CODE    Clip
     PLUGIN_CODE                 Cs10
     FORMATS                     ${PLUGIN_FORMATS}
-    PRODUCT_NAME                "ClipSampler10"
-    BUNDLE_ID                   "com.audioinnovations.clipsampler10"
-    VERSION                     "2.1.0"
+    PRODUCT_NAME                "ClipSampler"
+    BUNDLE_ID                   "com.audioinnovations.clipsampler"
+    VERSION                     "2.2.0"
     AAX_CATEGORY                AAX_ePlugInCategory_SWGenerators
 )
 

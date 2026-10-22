@@ -7,26 +7,29 @@
 /**
  * WaveformComponent
  * 
- * Interactive waveform visualizer with real-time playhead tracking, dynamic format/SR badge
- * and external DAW drag-and-drop.
- * Supports dragging the rendered .wav directly onto any DAW audio track timeline.
+ * Dual-slot interactive waveform visualizer:
+ * - Slot 1: Displays the original extracted sample (3s / 10s / 30s).
+ * - Slot 2: Displays the "Derechos IA" altered sample (±3 semitones + phase decorrelation).
+ * Supports clicking to select the active slot for playback/MIDI, and dragging either waveform directly to the DAW.
  */
 class WaveformComponent : public juce::Component,
                           public juce::ChangeListener
 {
 public:
-    explicit WaveformComponent(ClipSampler10AudioProcessor& processorToUse);
+    WaveformComponent(ClipSampler10AudioProcessor& processorToUse, int slotIndexToUse, const juce::String& titleText);
     ~WaveformComponent() override;
 
     void paint(juce::Graphics& g) override;
 
     void changeListenerCallback(juce::ChangeBroadcaster* source) override;
 
-    // Mouse interaction for external drag-and-drop directly into DAW
+    void mouseDown(const juce::MouseEvent& event) override;
     void mouseDrag(const juce::MouseEvent& event) override;
 
 private:
     ClipSampler10AudioProcessor& processor;
+    int slotIndex = 1;
+    juce::String viewerTitle;
     bool isDragging = false;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(WaveformComponent)

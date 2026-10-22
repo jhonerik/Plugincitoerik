@@ -81,9 +81,9 @@ void LicenseOverlayComponent::refreshState()
 
     if (licenseManager.isLicensed())
     {
-        titleLabel.setText(juce::String::fromUTF8("✓ PRODUCTO ACTIVADO CON LICENCIA OFICIAL"), juce::dontSendNotification);
+        titleLabel.setText(juce::String::fromUTF8("✓ CLIPSAMPLER v2.2 — ACTIVADO CON LICENCIA OFICIAL"), juce::dontSendNotification);
         titleLabel.setColour(juce::Label::textColourId, juce::Colour(0xff00e676));
-        subtitleLabel.setText(juce::String::fromUTF8("Tu copia de ClipSampler10 está vinculada y autorizada en este equipo.\nClave activa: ")
+        subtitleLabel.setText(juce::String::fromUTF8("Tu copia de ClipSampler está vinculada y autorizada en este equipo.\nClave activa: ")
                               + licenseManager.getActivatedLicenseKey(), juce::dontSendNotification);
         continueTrialButton.setButtonText(juce::String::fromUTF8("Volver al Plugin"));
         continueTrialButton.setVisible(true);
@@ -112,7 +112,7 @@ void LicenseOverlayComponent::refreshState()
 
         if (licenseManager.isClockTampered())
         {
-            subtitleLabel.setText(juce::String::fromUTF8("Se detectó una alteración en la fecha/hora del sistema. El periodo de prueba ha sido bloqueado.\nIngresa tu código de licencia oficial para activar ClipSampler10."),
+            subtitleLabel.setText(juce::String::fromUTF8("Se detectó una alteración en la fecha/hora del sistema. El periodo de prueba ha sido bloqueado.\nIngresa tu código de licencia oficial para activar ClipSampler."),
                                   juce::dontSendNotification);
         }
         else
@@ -181,7 +181,9 @@ void LicenseOverlayComponent::paint(juce::Graphics& g)
     // Semi-transparent dark backdrop over the whole plugin window
     g.fillAll(juce::Colour(0xee0b0d12));
 
-    auto card = getLocalBounds().reduced(70, 58).toFloat();
+    const int cardW = juce::jlimit(620, 860, getWidth() - 120);
+    const int cardH = juce::jlimit(420, 520, getHeight() - 120);
+    auto card = getLocalBounds().withSizeKeepingCentre(cardW, cardH).toFloat();
 
     // Card background & border
     g.setColour(juce::Colour(0xff181c26));
@@ -197,7 +199,9 @@ void LicenseOverlayComponent::paint(juce::Graphics& g)
 
 void LicenseOverlayComponent::resized()
 {
-    auto card = getLocalBounds().reduced(95, 76);
+    const int cardW = juce::jlimit(620, 860, getWidth() - 120);
+    const int cardH = juce::jlimit(420, 520, getHeight() - 120);
+    auto card = getLocalBounds().withSizeKeepingCentre(cardW, cardH).reduced(28, 24);
 
     titleLabel.setBounds(card.removeFromTop(30));
     card.removeFromTop(6);
@@ -233,5 +237,5 @@ void LicenseOverlayComponent::resized()
     card.removeFromTop(6);
 
     // Continue Trial / Return Button
-    continueTrialButton.setBounds(card.removeFromTop(32).reduced(90, 0));
+    continueTrialButton.setBounds(card.removeFromTop(34).reduced(90, 0));
 }

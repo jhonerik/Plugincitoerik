@@ -140,7 +140,7 @@ if ($LASTEXITCODE -ne 0) {
     exit $LASTEXITCODE
 }
 
-$Vst3Path = Join-Path $BuildDir "ClipSampler10_artefacts\Release\VST3\ClipSampler10.vst3"
+$Vst3Path = Join-Path $BuildDir "ClipSampler10_artefacts\Release\VST3\ClipSampler.vst3"
 if (Test-Path $Vst3Path) {
     Write-Host "  [OK] Bundle VST3 generado en: $Vst3Path" -ForegroundColor Green
 }
