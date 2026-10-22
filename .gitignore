@@ -1,0 +1,26 @@
+# Build & Packaging Output
+build/
+dist_windows/
+dist_macos/
+staging_pkg/
+installer/Output/
+installer/*.pkg
+
+# IDE & Compilers
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+*.VC.db
+*.sln.docstates
+
+# JUCE Fetched Data & CMake Caches
+_deps/
+CMakeCache.txt
+CMakeFiles/
+
+# OS specific
+.DS_Store
+Thumbs.db
+desktop.ini
