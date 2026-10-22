@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.22)
 # ==============================================================================
 # ClipSampler10 - Professional 10-Second YouTube Sample Grabber VSTi / AAX
 # ==============================================================================
-project(ClipSampler10 VERSION 2.0.0 LANGUAGES C CXX)
+project(ClipSampler10 VERSION 2.1.0 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -71,19 +71,23 @@ juce_add_plugin(ClipSampler10
     FORMATS                     ${PLUGIN_FORMATS}
     PRODUCT_NAME                "ClipSampler10"
     BUNDLE_ID                   "com.audioinnovations.clipsampler10"
-    VERSION                     "2.0.0"
+    VERSION                     "2.1.0"
     AAX_CATEGORY                AAX_ePlugInCategory_SWGenerators
 )
 
 # ------------------------------------------------------------------------------
-# Modular Source Files (DSP / Services / UI)
+# Modular Source Files (DSP / Security / Services / UI)
 # ------------------------------------------------------------------------------
 target_sources(ClipSampler10
     PRIVATE
         Source/DSP/PluginProcessor.h
         Source/DSP/PluginProcessor.cpp
+        Source/Security/LicenseManager.h
+        Source/Security/LicenseManager.cpp
         Source/Services/AudioExtractorWorker.h
         Source/Services/AudioExtractorWorker.cpp
+        Source/UI/LicenseOverlayComponent.h
+        Source/UI/LicenseOverlayComponent.cpp
         Source/UI/PluginEditor.h
         Source/UI/PluginEditor.cpp
         Source/UI/WaveformComponent.h
@@ -94,6 +98,7 @@ target_include_directories(ClipSampler10
     PRIVATE
         Source
         Source/DSP
+        Source/Security
         Source/Services
         Source/UI
 )
@@ -109,6 +114,7 @@ target_link_libraries(ClipSampler10
         juce::juce_audio_processors
         juce::juce_audio_utils
         juce::juce_core
+        juce::juce_cryptography
         juce::juce_data_structures
         juce::juce_events
         juce::juce_graphics

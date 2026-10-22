@@ -4,14 +4,18 @@
 ClipSampler10AudioProcessorEditor::ClipSampler10AudioProcessorEditor(ClipSampler10AudioProcessor& p)
     : AudioProcessorEditor(&p),
       audioProcessor(p),
-      waveformComponent(p)
+      waveformComponent(p),
+      licenseOverlay(p.getLicenseManager(), [this] { updateLicenseUiState(); })
 {
     // Configure window size
     setSize(720, 560);
 
     // =========================================================================
-    // Header Maintenance Controls
+    // Header Maintenance & License Controls
     // =========================================================================
+    licenseBadgeButton.onClick = [this] { onLicenseBadgeClicked(); };
+    addAndMakeVisible(licenseBadgeButton);
+
     updateExtractorButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff222733));
     updateExtractorButton.setColour(juce::TextButton::textColourOffId, juce::Colour(0xffb0bac9));
     updateExtractorButton.onClick = [this] { onUpdateExtractorClicked(); };
@@ -153,6 +157,10 @@ ClipSampler10AudioProcessorEditor::ClipSampler10AudioProcessorEditor(ClipSampler
     exportWavButton.onClick = [this] { onExportWavClicked(); };
     addAndMakeVisible(exportWavButton);
 
+    // Modal License & 3-Day Trial Lock Overlay (always on top when visible)
+    addChildComponent(licenseOverlay);
+    updateLicenseUiState();
+
     // Start UI animation & state sync timer (30 FPS)
     startTimerHz(30);
 }
@@ -165,15 +173,24 @@ ClipSampler10AudioProcessorEditor::~ClipSampler10AudioProcessorEditor()
 
 void ClipSampler10AudioProcessorEditor::timerCallback()
 {
+    // Periodically verify 3-day trial expiration & clock integrity (~every 5 seconds at 30 Hz)
+    if (++licenseCheckTickCounter >= 150)
+    {
+        licenseCheckTickCounter = 0;
+        audioProcessor.getLicenseManager().verifyAndSyncState();
+        updateLicenseUiState();
+    }
+
     // Synchronize extraction and update state from Processor
+    const bool unlocked = audioProcessor.getLicenseManager().isUnlocked();
     const bool extracting = audioProcessor.isExtractionRunning();
     const bool updating = audioProcessor.isUpdateRunning();
 
-    if (extractButton.isEnabled() == extracting)
-        extractButton.setEnabled(!extracting);
+    if (extractButton.isEnabled() != (unlocked && !extracting))
+        extractButton.setEnabled(unlocked && !extracting);
 
-    if (updateExtractorButton.isEnabled() == updating)
-        updateExtractorButton.setEnabled(!updating);
+    if (updateExtractorButton.isEnabled() != (unlocked && !updating))
+        updateExtractorButton.setEnabled(unlocked && !updating);
 
     const double latestProgress = static_cast<double>(audioProcessor.getExtractionProgress());
     if (std::abs(currentProgressValue - latestProgress) > 0.001)
@@ -267,6 +284,38 @@ void ClipSampler10AudioProcessorEditor::onCleanCacheClicked()
     timerCallback();
 }
 
+void ClipSampler10AudioProcessorEditor::onLicenseBadgeClicked()
+{
+    licenseOverlay.refreshState();
+    licenseOverlay.setVisible(true);
+    licenseOverlay.toFront(true);
+}
+
+void ClipSampler10AudioProcessorEditor::updateLicenseUiState()
+{
+    auto& lm = audioProcessor.getLicenseManager();
+    licenseBadgeButton.setButtonText(lm.getHeaderStatusBadgeText());
+
+    if (lm.isLicensed())
+    {
+        licenseBadgeButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff0f3d29));
+        licenseBadgeButton.setColour(juce::TextButton::textColourOffId, juce::Colour(0xff00e676));
+    }
+    else if (lm.isTrialActive())
+    {
+        licenseBadgeButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff1b2b38));
+        licenseBadgeButton.setColour(juce::TextButton::textColourOffId, juce::Colour(0xff00e5ff));
+    }
+    else
+    {
+        licenseBadgeButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff4a121f));
+        licenseBadgeButton.setColour(juce::TextButton::textColourOffId, juce::Colour(0xffff5252));
+        licenseOverlay.refreshState();
+        licenseOverlay.setVisible(true);
+        licenseOverlay.toFront(true);
+    }
+}
+
 void ClipSampler10AudioProcessorEditor::onExportWavClicked()
 {
     auto currentFile = audioProcessor.getCurrentAudioFile();
@@ -316,7 +365,7 @@ void ClipSampler10AudioProcessorEditor::paint(juce::Graphics& g)
 
     g.setColour(juce::Colour(0xff00e5ff));
     g.setFont(juce::Font(20.0f, juce::Font::bold));
-    g.drawText("CLIPSAMPLER 10 v2.0", 20, 6, 260, 24, juce::Justification::left);
+    g.drawText("CLIPSAMPLER 10 v2.1", 20, 6, 260, 24, juce::Justification::left);
 
     g.setColour(juce::Colour(0xff738096));
     g.setFont(juce::Font(11.0f, juce::Font::plain));
@@ -328,11 +377,15 @@ void ClipSampler10AudioProcessorEditor::paint(juce::Graphics& g)
 
 void ClipSampler10AudioProcessorEditor::resized()
 {
-    // 0. Position Header Maintenance Buttons
+    licenseOverlay.setBounds(getLocalBounds());
+
+    // 0. Position Header Maintenance & License Status Buttons
     auto headerArea = getLocalBounds().removeFromTop(48).reduced(12, 10);
-    cleanCacheButton.setBounds(headerArea.removeFromRight(105));
-    headerArea.removeFromRight(8);
-    updateExtractorButton.setBounds(headerArea.removeFromRight(145));
+    cleanCacheButton.setBounds(headerArea.removeFromRight(95));
+    headerArea.removeFromRight(6);
+    updateExtractorButton.setBounds(headerArea.removeFromRight(135));
+    headerArea.removeFromRight(6);
+    licenseBadgeButton.setBounds(headerArea.removeFromRight(195));
 
     auto totalArea = getLocalBounds();
     totalArea.removeFromTop(54); // Space for top header

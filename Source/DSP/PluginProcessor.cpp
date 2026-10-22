@@ -124,6 +124,13 @@ void ClipSampler10AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
     for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
         buffer.clear(i, 0, buffer.getNumSamples());
 
+    // Security Gate: If the 3-day trial has expired and no license is active, mute DSP output completely
+    if (!licenseManager.isUnlocked())
+    {
+        buffer.clear();
+        return;
+    }
+
     // Detect MIDI Note-On events to animate playhead cursor
     for (const auto metadata : midiMessages)
     {
@@ -263,6 +270,13 @@ void ClipSampler10AudioProcessor::setStateInformation(const void* data, int size
 //==============================================================================
 void ClipSampler10AudioProcessor::startSampleExtraction(const juce::String& url, const juce::String& startTime)
 {
+    licenseManager.verifyAndSyncState();
+    if (!licenseManager.isUnlocked())
+    {
+        setStatusMessage(juce::String::fromUTF8("🔒 Periodo de prueba de 3 días finalizado. Activa tu licencia para continuar."));
+        return;
+    }
+
     lastUrl = url.trim();
     lastStartTime = startTime.trim();
 
@@ -425,6 +439,9 @@ bool ClipSampler10AudioProcessor::loadAudioFile(const juce::File& file)
 
 void ClipSampler10AudioProcessor::startPlayback()
 {
+    if (!licenseManager.isUnlocked())
+        return;
+
     if (totalSampleCount.load(std::memory_order_relaxed) > 0)
     {
         playheadPosition.store(0, std::memory_order_relaxed);

@@ -24,3 +24,8 @@ CMakeFiles/
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# Local License Database (contains customer keys) & Python cache
+license_system/*.db
+__pycache__/
+*.pyc

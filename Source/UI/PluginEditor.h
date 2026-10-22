@@ -4,6 +4,7 @@
 #include <juce_audio_processors/juce_audio_processors.h>
 #include "../DSP/PluginProcessor.h"
 #include "WaveformComponent.h"
+#include "LicenseOverlayComponent.h"
 
 /**
  * ClipSampler10AudioProcessorEditor
@@ -36,10 +37,14 @@ private:
     void onDragDawClicked();
     void onUpdateExtractorClicked();
     void onCleanCacheClicked();
+    void onLicenseBadgeClicked();
+    void updateLicenseUiState();
 
     ClipSampler10AudioProcessor& audioProcessor;
+    int licenseCheckTickCounter = 0;
 
-    // Header Maintenance Buttons
+    // Header Maintenance & License Status Buttons
+    juce::TextButton licenseBadgeButton;
     juce::TextButton updateExtractorButton { juce::String::fromUTF8("Actualizar yt-dlp (-U)") };
     juce::TextButton cleanCacheButton { juce::String::fromUTF8("Limpiar Caché") };
 
@@ -78,6 +83,9 @@ private:
 
     // FileChooser must be retained asynchronously
     std::unique_ptr<juce::FileChooser> fileChooser;
+
+    // Modal License & 3-Day Trial Lock Overlay
+    LicenseOverlayComponent licenseOverlay;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ClipSampler10AudioProcessorEditor)
 };

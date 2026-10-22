@@ -5,6 +5,7 @@
 #include <juce_audio_utils/juce_audio_utils.h>
 #include <atomic>
 #include "../Services/AudioExtractorWorker.h"
+#include "../Security/LicenseManager.h"
 
 /**
  * ClipSampler10AudioProcessor
@@ -104,6 +105,10 @@ public:
 
     juce::AudioFormatManager& getFormatManager() { return formatManager; }
 
+    /** Security & 3-Day Trial License Manager access */
+    LicenseManager& getLicenseManager() { return licenseManager; }
+    const LicenseManager& getLicenseManager() const { return licenseManager; }
+
     // Session state accessors
     juce::String getLastUrl() const { return lastUrl; }
     void setLastUrl(const juce::String& url) { lastUrl = url; }
@@ -121,6 +126,9 @@ private:
 
     // Background worker owned by Processor so closing Editor never aborts extraction
     AudioExtractorWorker extractorWorker;
+
+    // Commercial 3-Day Trial & Cryptographic License Security Engine
+    LicenseManager licenseManager;
 
     // Audio formats and waveform thumbnail
     juce::AudioFormatManager formatManager;
