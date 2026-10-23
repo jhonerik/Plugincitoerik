@@ -139,7 +139,8 @@ target_compile_definitions(ClipSampler10
 )
 
 if(MSVC)
-    target_compile_options(ClipSampler10 PRIVATE /utf-8)
+    target_compile_options(ClipSampler10 PRIVATE /utf-8 /GS)
+    target_link_options(ClipSampler10 PRIVATE /DYNAMICBASE /NXCOMPAT)
 endif()
 
 # Enable Link-Time Optimization (LTO) in Release builds

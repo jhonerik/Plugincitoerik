@@ -7,15 +7,138 @@
 
 namespace
 {
-    // Master cryptographic signing secret shared ONLY with the developer's License Generator
-    constexpr const char* kMasterSigningSecret = "CS10_MASTER_SIG_2026_AUDIOINNOVATIONS_9F8E7D6C5B4A392817263544";
-    constexpr const char* kVaultEncryptionSalt = "CS10_VAULT_AES_SALT_7741_anti_reset_v2";
+    // Compile-time XOR macro: ensures plaintext characters NEVER appear in the compiled .vst3 binary (.rdata)
+    #define CS_OBF_BYTE(ch, idx) static_cast<uint8_t>(static_cast<uint8_t>(ch) ^ static_cast<uint8_t>((((idx) * 37) + 0x6B) & 0xFF))
+
+    // Obfuscated representation of "CS10_MASTER_SIG_2026_AUDIOINNOVATIONS_9F8E7D6C5B4A392817263544" (62 chars)
+    static constexpr uint8_t kObfMasterSecret[62] = {
+        CS_OBF_BYTE('C', 0),  CS_OBF_BYTE('S', 1),  CS_OBF_BYTE('1', 2),  CS_OBF_BYTE('0', 3),
+        CS_OBF_BYTE('_', 4),  CS_OBF_BYTE('M', 5),  CS_OBF_BYTE('A', 6),  CS_OBF_BYTE('S', 7),
+        CS_OBF_BYTE('T', 8),  CS_OBF_BYTE('E', 9),  CS_OBF_BYTE('R', 10), CS_OBF_BYTE('_', 11),
+        CS_OBF_BYTE('S', 12), CS_OBF_BYTE('I', 13), CS_OBF_BYTE('G', 14), CS_OBF_BYTE('_', 15),
+        CS_OBF_BYTE('2', 16), CS_OBF_BYTE('0', 17), CS_OBF_BYTE('2', 18), CS_OBF_BYTE('6', 19),
+        CS_OBF_BYTE('_', 20), CS_OBF_BYTE('A', 21), CS_OBF_BYTE('U', 22), CS_OBF_BYTE('D', 23),
+        CS_OBF_BYTE('I', 24), CS_OBF_BYTE('O', 25), CS_OBF_BYTE('I', 26), CS_OBF_BYTE('N', 27),
+        CS_OBF_BYTE('N', 28), CS_OBF_BYTE('O', 29), CS_OBF_BYTE('V', 30), CS_OBF_BYTE('A', 31),
+        CS_OBF_BYTE('T', 32), CS_OBF_BYTE('I', 33), CS_OBF_BYTE('O', 34), CS_OBF_BYTE('N', 35),
+        CS_OBF_BYTE('S', 36), CS_OBF_BYTE('_', 37), CS_OBF_BYTE('9', 38), CS_OBF_BYTE('F', 39),
+        CS_OBF_BYTE('8', 40), CS_OBF_BYTE('E', 41), CS_OBF_BYTE('7', 42), CS_OBF_BYTE('D', 43),
+        CS_OBF_BYTE('6', 44), CS_OBF_BYTE('C', 45), CS_OBF_BYTE('5', 46), CS_OBF_BYTE('B', 47),
+        CS_OBF_BYTE('4', 48), CS_OBF_BYTE('A', 49), CS_OBF_BYTE('3', 50), CS_OBF_BYTE('9', 51),
+        CS_OBF_BYTE('2', 52), CS_OBF_BYTE('8', 53), CS_OBF_BYTE('1', 54), CS_OBF_BYTE('7', 55),
+        CS_OBF_BYTE('2', 56), CS_OBF_BYTE('6', 57), CS_OBF_BYTE('3', 58), CS_OBF_BYTE('5', 59),
+        CS_OBF_BYTE('4', 60), CS_OBF_BYTE('4', 61)
+    };
+
+    // Obfuscated representation of "CS10_VAULT_AES_SALT_7741_anti_reset_v2" (38 chars)
+    static constexpr uint8_t kObfVaultSalt[38] = {
+        CS_OBF_BYTE('C', 0),  CS_OBF_BYTE('S', 1),  CS_OBF_BYTE('1', 2),  CS_OBF_BYTE('0', 3),
+        CS_OBF_BYTE('_', 4),  CS_OBF_BYTE('V', 5),  CS_OBF_BYTE('A', 6),  CS_OBF_BYTE('U', 7),
+        CS_OBF_BYTE('L', 8),  CS_OBF_BYTE('T', 9),  CS_OBF_BYTE('_', 10), CS_OBF_BYTE('A', 11),
+        CS_OBF_BYTE('E', 12), CS_OBF_BYTE('S', 13), CS_OBF_BYTE('_', 14), CS_OBF_BYTE('S', 15),
+        CS_OBF_BYTE('A', 16), CS_OBF_BYTE('L', 17), CS_OBF_BYTE('T', 18), CS_OBF_BYTE('_', 19),
+        CS_OBF_BYTE('7', 20), CS_OBF_BYTE('7', 21), CS_OBF_BYTE('4', 22), CS_OBF_BYTE('1', 23),
+        CS_OBF_BYTE('_', 24), CS_OBF_BYTE('a', 25), CS_OBF_BYTE('n', 26), CS_OBF_BYTE('t', 27),
+        CS_OBF_BYTE('i', 28), CS_OBF_BYTE('_', 29), CS_OBF_BYTE('r', 30), CS_OBF_BYTE('e', 31),
+        CS_OBF_BYTE('s', 32), CS_OBF_BYTE('e', 33), CS_OBF_BYTE('t', 34), CS_OBF_BYTE('_', 35),
+        CS_OBF_BYTE('v', 36), CS_OBF_BYTE('2', 37)
+    };
+
+    juce::String decodeObfuscatedBytes(const uint8_t* data, size_t len)
+    {
+        char stackBuf[128] = { 0 };
+        const size_t safeLen = juce::jmin(len, sizeof(stackBuf) - 1);
+        for (size_t i = 0; i < safeLen; ++i)
+            stackBuf[i] = static_cast<char>(data[i] ^ static_cast<uint8_t>((((i) * 37) + 0x6B) & 0xFF));
+        stackBuf[safeLen] = '\0';
+        juce::String result(stackBuf);
+        juce::zeromem(stackBuf, sizeof(stackBuf));
+        return result;
+    }
+
+    void markFileHiddenOnWindows(const juce::File& f)
+    {
+    #if JUCE_WINDOWS
+        if (f.existsAsFile())
+        {
+            DWORD attrs = GetFileAttributesW(f.getFullPathName().toWideCharPointer());
+            if (attrs != INVALID_FILE_ATTRIBUTES && (attrs & FILE_ATTRIBUTE_HIDDEN) == 0)
+                SetFileAttributesW(f.getFullPathName().toWideCharPointer(), attrs | FILE_ATTRIBUTE_HIDDEN);
+        }
+    #else
+        juce::ignoreUnused(f);
+    #endif
+    }
 }
 
 LicenseManager::LicenseManager()
     : machineId(buildHardwareMachineId())
 {
+    // Derive a unique 64-bit hardware canary seed from this machine's ID
+    juce::SHA256 seedHash((machineId + "_CANARY_V24").toUTF8());
+    const auto* raw = static_cast<const uint8_t*>(seedHash.getRawData().getData());
+    machineCanarySeed = 0;
+    for (int i = 0; i < 8; ++i)
+        machineCanarySeed = (machineCanarySeed << 8) | static_cast<juce::uint64>(raw[i]);
+
     verifyAndSyncState();
+}
+
+bool LicenseManager::isDebuggerAttached()
+{
+#if JUCE_WINDOWS
+    if (IsDebuggerPresent() != FALSE)
+        return true;
+
+    BOOL remoteDbg = FALSE;
+    if (CheckRemoteDebuggerPresent(GetCurrentProcess(), &remoteDbg) != FALSE && remoteDbg != FALSE)
+        return true;
+#endif
+    return false;
+}
+
+juce::uint64 LicenseManager::computeExpectedCanary(bool unlockedState) const
+{
+    if (!unlockedState)
+        return machineCanarySeed ^ 0xDEAD10CC55AA0011ULL;
+    return (machineCanarySeed ^ 0xA55A9966F00DCAFEULL) + 0x1337C0DEULL;
+}
+
+bool LicenseManager::isLicensed() const
+{
+    if (!licensedFlag.load(std::memory_order_relaxed))
+        return false;
+    return runtimeCanaryToken.load(std::memory_order_relaxed) == computeExpectedCanary(true);
+}
+
+bool LicenseManager::isTrialActive() const
+{
+    if (!trialActiveFlag.load(std::memory_order_relaxed) || clockTamperedFlag.load(std::memory_order_relaxed))
+        return false;
+    if (remainingTrialSeconds.load(std::memory_order_relaxed) <= 0)
+        return false;
+    return runtimeCanaryToken.load(std::memory_order_relaxed) == computeExpectedCanary(true);
+}
+
+bool LicenseManager::isUnlocked() const
+{
+    return (isLicensed() || isTrialActive()) && !isDebuggerAttached();
+}
+
+bool LicenseManager::verifyRuntimeIntegrity() const
+{
+    if (isDebuggerAttached())
+        return false;
+
+    const juce::uint64 currentCanary = runtimeCanaryToken.load(std::memory_order_relaxed);
+    const juce::uint64 validCanary = computeExpectedCanary(true);
+    if (currentCanary != validCanary)
+        return false;
+
+    return licensedFlag.load(std::memory_order_relaxed)
+        || (trialActiveFlag.load(std::memory_order_relaxed)
+            && !clockTamperedFlag.load(std::memory_order_relaxed)
+            && remainingTrialSeconds.load(std::memory_order_relaxed) > 0);
 }
 
 juce::String LicenseManager::buildHardwareMachineId()
@@ -36,10 +159,11 @@ juce::String LicenseManager::buildHardwareMachineId()
     rawComponents << machineGuid << "_" << juce::String::toHexString((juce::int64)volumeSerial);
 #endif
 
-    // 3. Combine with CPU vendor, model, and core count
+    // 3. Combine with CPU vendor, model, core count, and computer hostname
     rawComponents << "_" << juce::SystemStats::getCpuVendor()
                   << "_" << juce::SystemStats::getCpuModel()
-                  << "_" << juce::String(juce::SystemStats::getNumCpus());
+                  << "_" << juce::String(juce::SystemStats::getNumCpus())
+                  << "_" << juce::SystemStats::getComputerName();
 
     juce::SHA256 sha(rawComponents.toUTF8());
     juce::String hex = sha.toHexString().toUpperCase();
@@ -56,21 +180,33 @@ juce::String LicenseManager::computeLicenseSignature(const juce::String& normali
     juce::String cleanTier = tierCode.trim().toUpperCase();
     juce::String cleanSerial = serialBlock.trim().toUpperCase();
 
-    juce::String payload = cleanMch + "|" + cleanTier + "|" + cleanSerial + "|" + kMasterSigningSecret;
-    juce::SHA256 firstPass(payload.toUTF8());
-    juce::String secondPayload = firstPass.toHexString().toUpperCase() + "|" + kMasterSigningSecret;
-    juce::SHA256 secondPass(secondPayload.toUTF8());
+    juce::String masterSecret = decodeObfuscatedBytes(kObfMasterSecret, sizeof(kObfMasterSecret));
 
-    return secondPass.toHexString().toUpperCase().substring(0, 8);
+    // Round 1
+    juce::String payload1 = cleanMch + "|" + cleanTier + "|" + cleanSerial + "|" + masterSecret;
+    juce::String pass1 = juce::SHA256(payload1.toUTF8()).toHexString().toUpperCase();
+
+    // Round 2
+    juce::String payload2 = pass1 + "|" + masterSecret + "|" + cleanMch;
+    juce::String pass2 = juce::SHA256(payload2.toUTF8()).toHexString().toUpperCase();
+
+    // Round 3 (Final signature derivation)
+    juce::String payload3 = pass2 + "|V24_HARDENED|" + cleanSerial + "|" + masterSecret;
+    juce::String pass3 = juce::SHA256(payload3.toUTF8()).toHexString().toUpperCase();
+
+    return pass3.substring(0, 8);
 }
 
 bool LicenseManager::verifyCryptographicKeyForMachine(const juce::String& cleanKey,
                                                       const juce::String& targetMachineId,
                                                       juce::String& outErrorMsg)
 {
-    // Expected format:
-    // CS10-<TIER/HW_HASH4>-<SERIAL4>-<SIG4_A>-<SIG4_B>
-    // Example: CS10-8F3A-K92M-7C1D-E40B
+    if (isDebuggerAttached())
+    {
+        outErrorMsg = juce::String::fromUTF8("Error de seguridad: cierra cualquier depurador (debugger) activo.");
+        return false;
+    }
+
     auto tokens = juce::StringArray::fromTokens(cleanKey.trim().toUpperCase(), "-", "");
     if (tokens.size() != 5 || tokens[0] != "CS10")
     {
@@ -78,9 +214,9 @@ bool LicenseManager::verifyCryptographicKeyForMachine(const juce::String& cleanK
         return false;
     }
 
-    const juce::String block1 = tokens[1]; // 4-char hardware tag or "UNIV" (after online bind)
-    const juce::String serialBlock = tokens[2]; // 4-char unique license serial
-    const juce::String providedSig = tokens[3] + tokens[4]; // 8-char cryptographic signature
+    const juce::String block1 = tokens[1];
+    const juce::String serialBlock = tokens[2];
+    const juce::String providedSig = tokens[3] + tokens[4];
 
     if (block1.length() != 4 || serialBlock.length() != 4 || providedSig.length() != 8)
     {
@@ -88,22 +224,26 @@ bool LicenseManager::verifyCryptographicKeyForMachine(const juce::String& cleanK
         return false;
     }
 
-    // Extract the 4-char hardware tag from targetMachineId ("MCH-ABCD-1234-5678" -> "ABCD")
     auto mchTokens = juce::StringArray::fromTokens(targetMachineId.toUpperCase(), "-", "");
     juce::String expectedHwTag = (mchTokens.size() >= 2) ? mchTokens[1] : "0000";
 
-    // Check if the key is bound to a different machine ID
     if (block1 != expectedHwTag)
     {
-        outErrorMsg = juce::String::fromUTF8("Esta licencia pertenece a otra computadora y no puede usarse en este equipo (ID: ")
+        outErrorMsg = juce::String::fromUTF8("Esta licencia pertenece a otra computadora y no puede copiarse ni usarse en este equipo (ID: ")
                     + targetMachineId + ").";
         return false;
     }
 
     const juce::String expectedSig = computeLicenseSignature(targetMachineId, block1, serialBlock);
-    if (providedSig != expectedSig)
+
+    // Constant-time character comparison to prevent timing side-channel attacks
+    int diff = 0;
+    for (int i = 0; i < 8; ++i)
+        diff |= (int)(providedSig[i] ^ expectedSig[i]);
+
+    if (diff != 0)
     {
-        outErrorMsg = juce::String::fromUTF8("Código de licencia inválido o firma criptográfica corrupta.");
+        outErrorMsg = juce::String::fromUTF8("Código de licencia inválido o firma criptográfica no autorizada.");
         return false;
     }
 
@@ -129,13 +269,35 @@ juce::File LicenseManager::getSecondaryVaultFile()
     return dir.getChildFile(".cs10_sec_vault.dat");
 }
 
-juce::String LicenseManager::getRegistryVaultPath()
+juce::File LicenseManager::getStealthTertiaryVaultFile() const
+{
+    // Camouflaged system cache anchor so deleting ClipSampler folders cannot reset the 3-day trial
+    auto localAppDir = juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory)
+                           .getParentDirectory()
+                           .getChildFile("Local")
+                           .getChildFile("Microsoft")
+                           .getChildFile("CLR_v4.0_Cache");
+    if (!localAppDir.exists())
+        localAppDir.createDirectory();
+
+    juce::String hwTag = machineId.substring(4, 8).toLowerCase();
+    return localAppDir.getChildFile(".sys_drv_" + hwTag + ".bin");
+}
+
+juce::String LicenseManager::getRegistryVaultPathPrimary()
 {
     return "HKEY_CURRENT_USER\\Software\\Classes\\CLSID\\{C78912A3-B245-429C-8A91-58FF807B4391}\\VaultState";
 }
 
+juce::String LicenseManager::getRegistryVaultPathSecondary()
+{
+    return "HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\SessionInfo\\CS_AudioVault";
+}
+
 juce::String LicenseManager::encryptVaultPayload(const VaultData& data) const
 {
+    juce::String vaultSalt = decodeObfuscatedBytes(kObfVaultSalt, sizeof(kObfVaultSalt));
+
     juce::ValueTree vt("Vault");
     vt.setProperty("f", data.firstRunUtc, nullptr);
     vt.setProperty("l", data.lastSeenUtc, nullptr);
@@ -145,15 +307,13 @@ juce::String LicenseManager::encryptVaultPayload(const VaultData& data) const
 
     juce::String xmlStr = vt.toXmlString(juce::XmlElement::TextFormat().singleLine());
 
-    // Compute integrity MAC over plaintext + machineId + salt
-    juce::String macInput = xmlStr + "|" + machineId + "|" + kVaultEncryptionSalt;
+    juce::String macInput = xmlStr + "|" + machineId + "|" + vaultSalt;
     juce::String macHex = juce::SHA256(macInput.toUTF8()).toHexString().substring(0, 16);
 
     juce::String combined = macHex + "|" + xmlStr;
     juce::MemoryBlock mb(combined.toRawUTF8(), combined.getNumBytesAsUTF8());
 
-    // Derive key stream from machineId + salt
-    juce::SHA256 keyHash((machineId + kVaultEncryptionSalt).toUTF8());
+    juce::SHA256 keyHash((machineId + vaultSalt).toUTF8());
     auto keyBytes = keyHash.getRawData();
     const uint8_t* keyPtr = static_cast<const uint8_t*>(keyBytes.getData());
     const size_t keyLen = keyBytes.getSize();
@@ -175,7 +335,9 @@ bool LicenseManager::decryptVaultPayload(const juce::String& cipherHex, VaultDat
     if (mb.getSize() < 18)
         return false;
 
-    juce::SHA256 keyHash((machineId + kVaultEncryptionSalt).toUTF8());
+    juce::String vaultSalt = decodeObfuscatedBytes(kObfVaultSalt, sizeof(kObfVaultSalt));
+
+    juce::SHA256 keyHash((machineId + vaultSalt).toUTF8());
     auto keyBytes = keyHash.getRawData();
     const uint8_t* keyPtr = static_cast<const uint8_t*>(keyBytes.getData());
     const size_t keyLen = keyBytes.getSize();
@@ -192,7 +354,7 @@ bool LicenseManager::decryptVaultPayload(const juce::String& cipherHex, VaultDat
     juce::String storedMac = combined.substring(0, 16);
     juce::String xmlStr = combined.substring(17);
 
-    juce::String expectedMac = juce::SHA256((xmlStr + "|" + machineId + "|" + kVaultEncryptionSalt).toUTF8())
+    juce::String expectedMac = juce::SHA256((xmlStr + "|" + machineId + "|" + vaultSalt).toUTF8())
                                    .toHexString()
                                    .substring(0, 16);
     if (storedMac != expectedMac)
@@ -213,17 +375,25 @@ bool LicenseManager::decryptVaultPayload(const juce::String& cipherHex, VaultDat
 void LicenseManager::loadAndMergeAnchors(VaultData& mergedData)
 {
     std::vector<VaultData> foundAnchors;
+    juce::int64 latestFileModSec = 0;
 
 #if JUCE_WINDOWS
-    juce::String regHex = juce::WindowsRegistry::getValue(getRegistryVaultPath(), {});
-    VaultData regData;
-    if (decryptVaultPayload(regHex, regData))
-        foundAnchors.push_back(regData);
+    for (const auto& regPath : { getRegistryVaultPathPrimary(), getRegistryVaultPathSecondary() })
+    {
+        juce::String regHex = juce::WindowsRegistry::getValue(regPath, {});
+        VaultData regData;
+        if (decryptVaultPayload(regHex, regData))
+            foundAnchors.push_back(regData);
+    }
 #endif
 
     auto loadFileAnchor = [&](const juce::File& f) {
         if (f.existsAsFile())
         {
+            juce::int64 fileMod = f.getLastModificationTime().toMilliseconds() / 1000LL;
+            if (fileMod > latestFileModSec)
+                latestFileModSec = fileMod;
+
             VaultData fileData;
             if (decryptVaultPayload(f.loadFileAsString(), fileData))
                 foundAnchors.push_back(fileData);
@@ -232,12 +402,12 @@ void LicenseManager::loadAndMergeAnchors(VaultData& mergedData)
 
     loadFileAnchor(getPrimaryVaultFile());
     loadFileAnchor(getSecondaryVaultFile());
+    loadFileAnchor(getStealthTertiaryVaultFile());
 
     const juce::int64 nowSec = juce::Time::getCurrentTime().toMilliseconds() / 1000LL;
 
     if (foundAnchors.empty())
     {
-        // First time ever running ClipSampler10 on this machine: start 3-day trial
         mergedData.firstRunUtc = nowSec;
         mergedData.lastSeenUtc = nowSec;
         mergedData.clockTampered = false;
@@ -246,7 +416,7 @@ void LicenseManager::loadAndMergeAnchors(VaultData& mergedData)
         return;
     }
 
-    // Anti-reset merge: take the OLDEST firstRunUtc and NEWEST lastSeenUtc across all anchors
+    // Anti-reset merge: take the OLDEST firstRunUtc and NEWEST lastSeenUtc across all 5 anchors
     mergedData = foundAnchors[0];
     for (const auto& anchor : foundAnchors)
     {
@@ -265,6 +435,10 @@ void LicenseManager::loadAndMergeAnchors(VaultData& mergedData)
             mergedData.boundMachineId = anchor.boundMachineId;
         }
     }
+
+    // Also enforce file-system timestamp monotonicity (defeats RunAsDate / clock-freezing tools)
+    if (latestFileModSec > mergedData.lastSeenUtc)
+        mergedData.lastSeenUtc = latestFileModSec;
 }
 
 void LicenseManager::saveToAllAnchors(const VaultData& data) const
@@ -272,11 +446,21 @@ void LicenseManager::saveToAllAnchors(const VaultData& data) const
     const juce::String encryptedHex = encryptVaultPayload(data);
 
 #if JUCE_WINDOWS
-    juce::WindowsRegistry::setValue(getRegistryVaultPath(), encryptedHex);
+    juce::WindowsRegistry::setValue(getRegistryVaultPathPrimary(), encryptedHex);
+    juce::WindowsRegistry::setValue(getRegistryVaultPathSecondary(), encryptedHex);
 #endif
 
-    getPrimaryVaultFile().replaceWithText(encryptedHex);
-    getSecondaryVaultFile().replaceWithText(encryptedHex);
+    auto f1 = getPrimaryVaultFile();
+    auto f2 = getSecondaryVaultFile();
+    auto f3 = getStealthTertiaryVaultFile();
+
+    f1.replaceWithText(encryptedHex);
+    f2.replaceWithText(encryptedHex);
+    f3.replaceWithText(encryptedHex);
+
+    markFileHiddenOnWindows(f1);
+    markFileHiddenOnWindows(f2);
+    markFileHiddenOnWindows(f3);
 }
 
 void LicenseManager::verifyAndSyncState()
@@ -286,8 +470,8 @@ void LicenseManager::verifyAndSyncState()
 
     const juce::int64 nowSec = juce::Time::getCurrentTime().toMilliseconds() / 1000LL;
 
-    // Detect system clock rollback (allow 15-minute tolerance for minor NTP drift)
-    if (nowSec + 900 < data.lastSeenUtc)
+    // Detect system clock rollback (strict 5-minute tolerance for NTP)
+    if (nowSec + 300 < data.lastSeenUtc)
     {
         data.clockTampered = true;
     }
@@ -296,7 +480,6 @@ void LicenseManager::verifyAndSyncState()
         data.lastSeenUtc = nowSec;
     }
 
-    // Verify if stored license key is valid for this machine
     bool validLicense = false;
     if (data.activatedKey.isNotEmpty() && data.boundMachineId == machineId)
     {
@@ -304,7 +487,6 @@ void LicenseManager::verifyAndSyncState()
         validLicense = verifyCryptographicKeyForMachine(data.activatedKey, machineId, dummyErr);
     }
 
-    // Calculate 3-day trial remaining time
     const juce::int64 elapsedSec = juce::jmax<juce::int64>(0, nowSec - data.firstRunUtc);
     const juce::int64 remSec = data.clockTampered
         ? 0
@@ -315,18 +497,73 @@ void LicenseManager::verifyAndSyncState()
         currentActivatedKey = validLicense ? data.activatedKey : juce::String();
     }
 
+    const bool trialOk = (!data.clockTampered && remSec > 0);
+    const bool unlocked = (validLicense || trialOk) && !isDebuggerAttached();
+
     licensedFlag.store(validLicense, std::memory_order_relaxed);
     clockTamperedFlag.store(data.clockTampered, std::memory_order_relaxed);
     remainingTrialSeconds.store(remSec, std::memory_order_relaxed);
-    trialActiveFlag.store(!data.clockTampered && remSec > 0, std::memory_order_relaxed);
+    trialActiveFlag.store(trialOk, std::memory_order_relaxed);
+    runtimeCanaryToken.store(computeExpectedCanary(unlocked), std::memory_order_relaxed);
 
-    // Sync back to all anchors so deleting one file never resets the trial
     saveToAllAnchors(data);
+
+    // If licensed, periodically verify with the license server in the background that the key hasn't been revoked
+    if (validLicense)
+        verifyOnlineRevocationHeartbeat();
+}
+
+void LicenseManager::verifyOnlineRevocationHeartbeat(const juce::String& verifyEndpointUrl)
+{
+    juce::String keyToCheck = getActivatedLicenseKey();
+    if (keyToCheck.isEmpty() || heartbeatInProgress.exchange(true))
+        return;
+
+    juce::String mchCopy = machineId;
+    juce::Thread::launch([this, verifyEndpointUrl, keyToCheck, mchCopy] {
+        juce::URL url(verifyEndpointUrl);
+        juce::DynamicObject::Ptr bodyObj = new juce::DynamicObject();
+        bodyObj->setProperty("license_key", keyToCheck);
+        bodyObj->setProperty("machine_id", mchCopy);
+        url = url.withPOSTData(juce::JSON::toString(juce::var(bodyObj.get()), true));
+
+        auto options = juce::URL::InputStreamOptions(juce::URL::ParameterHandling::inPostData)
+                           .withExtraHeaders("Content-Type: application/json\r\n")
+                           .withConnectionTimeoutMs(2200);
+
+        std::unique_ptr<juce::InputStream> stream = url.createInputStream(options);
+        if (stream != nullptr)
+        {
+            juce::String resp = stream->readEntireStreamAsString();
+            juce::var parsed = juce::JSON::parse(resp);
+            if (auto* obj = parsed.getDynamicObject())
+            {
+                bool revoked = static_cast<bool>(obj->getProperty("revoked"));
+                if (revoked)
+                {
+                    // License was revoked or bound to another PC in the database: wipe local license!
+                    VaultData data;
+                    loadAndMergeAnchors(data);
+                    data.activatedKey.clear();
+                    saveToAllAnchors(data);
+                    licensedFlag.store(false, std::memory_order_relaxed);
+                    const bool stillTrial = trialActiveFlag.load(std::memory_order_relaxed);
+                    runtimeCanaryToken.store(computeExpectedCanary(stillTrial), std::memory_order_relaxed);
+                }
+            }
+        }
+        heartbeatInProgress.store(false, std::memory_order_relaxed);
+    });
 }
 
 LicenseManager::ActivationResult LicenseManager::activateLicense(const juce::String& licenseKeyInput,
                                                                  const juce::String& serverEndpointUrl)
 {
+    if (isDebuggerAttached())
+    {
+        return { false, juce::String::fromUTF8("Activación bloqueada: se detectó un depurador externo en ejecución.") };
+    }
+
     juce::String cleanKey = licenseKeyInput.trim().toUpperCase();
     if (cleanKey.isEmpty())
     {
@@ -335,8 +572,6 @@ LicenseManager::ActivationResult LicenseManager::activateLicense(const juce::Str
 
     juce::String finalBoundKey = cleanKey;
 
-    // 1. If the key is a Universal/Web Auto-Bind key (CS10-AUTO-XXXX-XXXX-XXXX),
-    //    contact the License Server DB to bind it to this Machine ID on first use
     auto tokens = juce::StringArray::fromTokens(cleanKey, "-", "");
     if (tokens.size() == 5 && tokens[0] == "CS10" && tokens[1] == "AUTO")
     {
@@ -379,7 +614,6 @@ LicenseManager::ActivationResult LicenseManager::activateLicense(const juce::Str
     }
     else
     {
-        // Also notify online server asynchronously if reachable so the Admin DB records the activation timestamp & Machine ID
         juce::String mchCopy = machineId;
         juce::String keyCopy = cleanKey;
         juce::String endpointCopy = serverEndpointUrl;
@@ -398,14 +632,12 @@ LicenseManager::ActivationResult LicenseManager::activateLicense(const juce::Str
         });
     }
 
-    // 2. Cryptographically verify the key against this computer's Hardware Machine ID
     juce::String errorMsg;
     if (!verifyCryptographicKeyForMachine(finalBoundKey, machineId, errorMsg))
     {
         return { false, errorMsg };
     }
 
-    // 3. Persist activated license into all encrypted anchors
     VaultData data;
     loadAndMergeAnchors(data);
     data.activatedKey = finalBoundKey;

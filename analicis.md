@@ -429,3 +429,20 @@ Se han implementado y verificado las siguientes mejoras estructurales y de códi
 5. **Conversor de Audio a MIDI (`🎹 Arrastrar .MIDI` junto a `🎵 Arrastrar .WAV`):**
    * [`generateMidiFileForSlot()`](file:///c:/Users/joncl/Downloads/Plugin/Source/DSP/PluginProcessor.cpp) analiza las frecuencias fundamentales ($f_0$) por autocorrelación normalizada y las transientes rítmicas del audio para construir un archivo estándar `.mid` con tempo ajustado al BPM detectado, listo para arrastrar y soltar directamente en el Piano Roll del DAW.
 
+---
+
+## 9. 🛡️ Auditoría de Seguridad y Endurecimiento Anti-Piratería (`v2.3.1` Security Hardening)
+
+Se realizó una auditoría defensiva sobre [`Source/Security/LicenseManager.h`](file:///c:/Users/joncl/Downloads/Plugin/Source/Security/LicenseManager.h), [`Source/Security/LicenseManager.cpp`](file:///c:/Users/joncl/Downloads/Plugin/Source/Security/LicenseManager.cpp), [`Source/DSP/PluginProcessor.cpp`](file:///c:/Users/joncl/Downloads/Plugin/Source/DSP/PluginProcessor.cpp), [`CMakeLists.txt`](file:///c:/Users/joncl/Downloads/Plugin/CMakeLists.txt) y [`license_system/license_server.py`](file:///c:/Users/joncl/Downloads/Plugin/license_system/license_server.py).
+
+| # | Vulnerabilidad Detectada | Nivel | Medida de Seguridad Aplicada |
+| :---: | :--- | :---: | :--- |
+| **1** | **Exposición de `kMasterSigningSecret` y `kVaultEncryptionSalt` en texto plano en la sección `.rdata` del binario `.vst3`** (visible con `strings` o editores hexadecimales). | 🔴 Crítico | **Ofuscación XOR en Tiempo de Compilación (`CS_OBF_BYTE`) + Limpieza de Stack (`juce::zeromem`):** Las claves ahora se almacenan como arreglos de bytes cifrados posicionalmente en tiempo de compilación, se reconstruyen durante microsegundos en memoria local y se borran inmediatamente. Ninguna cadena secreta aparece en el ejecutable. |
+| **2** | **Punto único de parcheo booleano (`licensedFlag` / `isUnlocked()`)** vulnerable a *byte-patching* (`JMP`/`MOV AL, 1`) o edición de RAM. | 🔴 Crítico | **Canario Criptográfico Dinámico de 64 bits (`runtimeCanaryToken` + `verifyRuntimeIntegrity()`):** El desbloqueo exige que coincida un token matemático de 64 bits derivado del `MachineID` del equipo, verificado de forma distribuida en `processBlock()`, `startSampleExtraction()`, `applyDerechosTransformation()` y `applyFxMacroToTargetSlot()`. |
+| **3** | **Ausencia de detección de depuradores (*debuggers*) y comparación vulnerable a tiempos.** | 🟠 Alto | **Protección Anti-Debug (`IsDebuggerPresent` + `CheckRemoteDebuggerPresent`) y Comparación en Tiempo Constante:** Bloquea intentos de inspección dinámica durante la activación y compara las firmas criptográficas en tiempo constante. |
+| **4** | **Firma criptográfica de 2 pasos y huella de hardware básica.** | 🟠 Alto | **Firma en Cascada de 3 Rondas (`SHA-256` Multi-Salted) + Huella de Hardware Extendida:** `buildHardwareMachineId()` incorpora `MachineGuid`, Serial de Volumen `C:\`, fabricante/modelo/núcleos de CPU y `ComputerName` del sistema. |
+| **5** | **Posibilidad de buscar y borrar los 3 anclajes de la prueba de 3 días o congelar el reloj con herramientas externas (`RunAsDate`).** | 🟠 Alto | **5 Anclajes Cruzados + Anclaje Camuflado (`CLR_v4.0_Cache\.sys_drv_<hash>.bin`) + Atributo `FILE_ATTRIBUTE_HIDDEN` + Monotonicidad de Sistema de Archivos:** Se redujo la ventana NTP a 5 minutos y se cruza con la fecha real de modificación en disco de los archivos ocultos. |
+| **6** | **Licencias revocadas en el servidor seguían activas indefinidamente en la PC del usuario y webhook sin token.** | 🟠 Alto | **Heartbeat Asíncrono de Revocación Online (`/api/verify`) + `X-Webhook-Secret`:** El plugin verifica silenciosamente contra `/api/verify` si la licencia fue revocada o clonada, desactivándola automáticamente en los 5 anclajes si fue revocada. |
+| **7** | **Banderas de protección de memoria del binario en compilación MSVC.** | 🟡 Medio | Se añadieron `/GS`, `/DYNAMICBASE` (ASLR) y `/NXCOMPAT` (DEP) en [`CMakeLists.txt`](file:///c:/Users/joncl/Downloads/Plugin/CMakeLists.txt). |
+
+

@@ -28,8 +28,9 @@ from datetime import datetime
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from urllib.parse import parse_qs, urlparse
 
-# Clave maestra idéntica a kMasterSigningSecret en Source/Security/LicenseManager.cpp
+# Clave maestra idéntica a kObfMasterSecret decodificada en Source/Security/LicenseManager.cpp
 MASTER_SIGNING_SECRET = "CS10_MASTER_SIG_2026_AUDIOINNOVATIONS_9F8E7D6C5B4A392817263544"
+WEBHOOK_API_SECRET = os.environ.get("CLIPSAMPLER_WEBHOOK_SECRET", "WH_SEC_CLIPSAMPLER_2026_PRO")
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_PATH = os.path.join(BASE_DIR, "licenses.db")
@@ -37,17 +38,20 @@ PORT = 8765
 
 
 def compute_cpp_license_signature(machine_id: str, tier_code: str, serial_block: str) -> str:
-    """Replica exactamente LicenseManager::computeLicenseSignature del plugin C++."""
+    """Replica exactamente las 3 rondas criptográficas de LicenseManager::computeLicenseSignature del plugin C++."""
     clean_mch = machine_id.strip().upper()
     clean_tier = tier_code.strip().upper()
     clean_serial = serial_block.strip().upper()
 
-    payload = f"{clean_mch}|{clean_tier}|{clean_serial}|{MASTER_SIGNING_SECRET}"
-    first_pass = hashlib.sha256(payload.encode("utf-8")).hexdigest().upper()
+    payload1 = f"{clean_mch}|{clean_tier}|{clean_serial}|{MASTER_SIGNING_SECRET}"
+    pass1 = hashlib.sha256(payload1.encode("utf-8")).hexdigest().upper()
 
-    second_payload = f"{first_pass}|{MASTER_SIGNING_SECRET}"
-    second_pass = hashlib.sha256(second_payload.encode("utf-8")).hexdigest().upper()
-    return second_pass[:8]
+    payload2 = f"{pass1}|{MASTER_SIGNING_SECRET}|{clean_mch}"
+    pass2 = hashlib.sha256(payload2.encode("utf-8")).hexdigest().upper()
+
+    payload3 = f"{pass2}|V24_HARDENED|{clean_serial}|{MASTER_SIGNING_SECRET}"
+    pass3 = hashlib.sha256(payload3.encode("utf-8")).hexdigest().upper()
+    return pass3[:8]
 
 
 def generate_machine_bound_key(machine_id: str, serial_block: str = "") -> str:
@@ -437,6 +441,12 @@ class LicenseRequestHandler(BaseHTTPRequestHandler):
 
         # 1. Generar licencia desde el Dashboard o desde un Webhook de página web
         if parsed.path in ("/api/generate", "/api/webhook/generate"):
+            if parsed.path == "/api/webhook/generate":
+                provided_secret = self.headers.get("X-Webhook-Secret", "") or body.get("webhook_secret", "")
+                if provided_secret != WEBHOOK_API_SECRET:
+                    self._send_json({"success": False, "message": "No autorizado: X-Webhook-Secret inválido."}, 401)
+                    return
+
             mode = body.get("license_mode", "AUTO_WEB").strip().upper()
             machine_id = body.get("machine_id", "").strip().upper()
             client_name = body.get("client_name", "Cliente Web").strip()
@@ -560,6 +570,28 @@ class LicenseRequestHandler(BaseHTTPRequestHandler):
             conn.commit()
             conn.close()
             self._send_json({"success": True})
+            return
+
+        # 5. Heartbeat de verificación online anti-piratería y revocación en tiempo real (/api/verify)
+        if parsed.path == "/api/verify":
+            lic_key = body.get("license_key", "").strip().upper()
+            machine_id = body.get("machine_id", "").strip().upper()
+            conn = sqlite3.connect(DB_PATH)
+            conn.row_factory = sqlite3.Row
+            row = conn.execute(
+                "SELECT * FROM licenses WHERE license_key = ? OR bound_license_key = ?",
+                (lic_key, lic_key),
+            ).fetchone()
+            conn.close()
+
+            if row is None:
+                self._send_json({"success": True, "revoked": False})
+                return
+
+            is_revoked = (row["status"] != "ACTIVE") or (
+                bool(row["machine_id"]) and row["machine_id"].strip().upper() != machine_id
+            )
+            self._send_json({"success": True, "revoked": is_revoked, "status": row["status"]})
             return
 
         self._send_json({"success": False, "message": "Endpoint no encontrado"}, 404)

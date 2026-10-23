@@ -101,7 +101,7 @@ void ClipSampler10AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
     for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
         buffer.clear(i, 0, buffer.getNumSamples());
 
-    if (!licenseManager.isUnlocked())
+    if (!licenseManager.isUnlocked() || !licenseManager.verifyRuntimeIntegrity())
     {
         buffer.clear();
         return;
@@ -478,9 +478,9 @@ void ClipSampler10AudioProcessor::detectVideoDuration(const juce::String& url)
 void ClipSampler10AudioProcessor::startSampleExtraction(const juce::String& url, const juce::String& startTime, int durationSeconds)
 {
     licenseManager.verifyAndSyncState();
-    if (!licenseManager.isUnlocked())
+    if (!licenseManager.isUnlocked() || !licenseManager.verifyRuntimeIntegrity())
     {
-        setStatusMessage(juce::String::fromUTF8("🔒 Periodo de prueba de 3 días finalizado. Activa tu licencia para continuar."));
+        setStatusMessage(juce::String::fromUTF8("🔒 Periodo de prueba de 3 días finalizado o licencia requerida. Activa tu licencia para continuar."));
         return;
     }
 
@@ -596,6 +596,13 @@ bool ClipSampler10AudioProcessor::analyzeOriginalCopyright(juce::String& outRepo
 
 bool ClipSampler10AudioProcessor::applyDerechosTransformation(int semitoneShift, juce::String& outReport)
 {
+    if (!licenseManager.isUnlocked() || !licenseManager.verifyRuntimeIntegrity())
+    {
+        outReport = juce::String::fromUTF8("🔒 Activación requerida para usar la suite Derechos IA.");
+        setStatusMessage(outReport);
+        return false;
+    }
+
     auto origFile = getSlotAudioFile(1);
     if (!origFile.existsAsFile())
     {
@@ -1163,6 +1170,13 @@ void ClipSampler10AudioProcessor::setAutoSyncEnabled(bool enabled)
 
 bool ClipSampler10AudioProcessor::applyFxMacroToTargetSlot(juce::String& outReport)
 {
+    if (!licenseManager.isUnlocked() || !licenseManager.verifyRuntimeIntegrity())
+    {
+        outReport = juce::String::fromUTF8("🔒 Activación requerida para imprimir efectos FX Macro.");
+        setStatusMessage(outReport);
+        return false;
+    }
+
     const int targetSlot = fxTargetSlot.load(std::memory_order_relaxed);
     auto srcFile = getSlotAudioFile(targetSlot);
     if (!srcFile.existsAsFile())
