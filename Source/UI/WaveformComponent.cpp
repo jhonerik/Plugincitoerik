@@ -33,35 +33,39 @@ void WaveformComponent::mouseDown(const juce::MouseEvent& event)
         auto slotFile = processor.getSlotAudioFile(slotIndex);
         if (slotFile.existsAsFile())
         {
-            // Activamos esta ranura (Audio 1 o Audio 2) para efectos, reproducción y exportación MIDI/WAV
+            // Activamos esta ranura (Audio 1 o Audio 2) en memoria de forma instantánea (sin recargar disco)
             processor.setActiveSlot(slotIndex);
+
+            auto waveBounds = getLocalBounds().toFloat();
+            waveBounds.removeFromTop(22.0f);
+            waveBounds = waveBounds.reduced(8.0f, 4.0f);
+            const float clickNorm = (waveBounds.getWidth() > 10.0f)
+                ? juce::jlimit(0.0f, 0.9999f, (event.position.x - waveBounds.getX()) / waveBounds.getWidth())
+                : 0.0f;
 
             // Si el modo Rebanador MPC está activo, reproducimos inmediatamente la rodaja donde se hizo clic
             if (processor.isAutoChopEnabled())
             {
                 auto slices = processor.getChopSlices(slotIndex);
-                if (!slices.empty())
+                if (!slices.empty() && waveBounds.getWidth() > 10.0f)
                 {
-                    auto waveBounds = getLocalBounds().toFloat();
-                    waveBounds.removeFromTop(22.0f);
-                    waveBounds = waveBounds.reduced(8.0f, 4.0f);
-
-                    if (waveBounds.getWidth() > 10.0f)
+                    for (size_t i = 0; i < slices.size(); ++i)
                     {
-                        float clickNorm = juce::jlimit(0.0f, 0.9999f, (event.position.x - waveBounds.getX()) / waveBounds.getWidth());
-                        for (size_t i = 0; i < slices.size(); ++i)
+                        if (clickNorm >= slices[i].startNorm && clickNorm <= slices[i].endNorm)
                         {
-                            if (clickNorm >= slices[i].startNorm && clickNorm <= slices[i].endNorm)
-                            {
-                                processor.triggerChopSlice((int)i);
-                                processor.setStatusMessage(juce::String::fromUTF8("Rebanador MPC [Audio ")
-                                                           + juce::String(slotIndex) + "]: Reproduciendo rodaja "
-                                                           + slices[i].noteName + " (Nota MIDI " + juce::String(slices[i].midiNote) + ")");
-                                break;
-                            }
+                            processor.triggerChopSlice((int)i);
+                            processor.setStatusMessage(juce::String::fromUTF8("Rebanador MPC [Audio ")
+                                                       + juce::String(slotIndex) + "]: Reproduciendo rodaja "
+                                                       + slices[i].noteName + " (Nota MIDI " + juce::String(slices[i].midiNote) + ")");
+                            break;
                         }
                     }
                 }
+            }
+            else
+            {
+                // En modo normal/cromático, hacer clic sobre la onda reproduce suavemente desde ese punto
+                processor.playFromNormalizedPosition(slotIndex, clickNorm);
             }
 
             if (auto* parent = getParentComponent())

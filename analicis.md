@@ -486,3 +486,20 @@ Se realizó una auditoría defensiva sobre [`Source/Security/LicenseManager.h`](
 4. **Manual de Usuario y Comentarios en Español para Desarrolladores:**
    * Se creó [`MANUAL_DE_USUARIO.md`](file:///c:/Users/joncl/Downloads/Plugin/MANUAL_DE_USUARIO.md) con instrucciones paso a paso de todas las funciones del plugin.
    * Se documentaron en español todos los archivos fuente C++ (`PluginProcessor`, `PluginEditor`, `WaveformComponent`, `AudioExtractorWorker`, `LicenseManager`, `LicenseOverlayComponent`), `CMakeLists.txt`, `build_windows.ps1` e `installer/windows_installer.iss`.
+
+---
+
+## 12. 🔊 Optimización del Motor de Reproducción DSP en Tiempo Real (100% Lock-Free + Interpolación Cúbica de Hermite + Polifonía Anti-Click)
+
+Se rediseñó el motor de reproducción de [`Source/DSP/PluginProcessor.h`](file:///c:/Users/joncl/Downloads/Plugin/Source/DSP/PluginProcessor.h), [`Source/DSP/PluginProcessor.cpp`](file:///c:/Users/joncl/Downloads/Plugin/Source/DSP/PluginProcessor.cpp) y [`Source/UI/WaveformComponent.cpp`](file:///c:/Users/joncl/Downloads/Plugin/Source/UI/WaveformComponent.cpp) para eliminar por completo los cortes, el *lag* y el sonido rasgado durante la reproducción en tiempo real del Audio 1 y Audio 2 y al tocar notas MIDI:
+
+1. **Eliminación Total de Contención de Locks en `processBlock()` (`PlaybackData` Inmutable + `SpinLock` de Nanosegundos):**
+   * Anteriormente, `processBlock()` intentaba tomar `ScopedTryLock(bufferLock)` en cada bloque y, cuando coincidía con el temporizador de 30 Hz de la UI o con un clic del ratón, omitía el bloque completo dejando huecos de silencio (*dropouts*).
+   * Ahora el hilo de audio adquiere un `std::shared_ptr<PlaybackData>` inmutable mediante un `SpinLock` de solo copia de puntero (nanosegundos) y libera los buffers antiguos fuera del hilo de audio (`retiredPlaybackData`), garantizando **cero bloques perdidos**.
+2. **Precarga Simultánea en RAM de Audio 1 y Audio 2 (`slot1PlaybackData` / `slot2PlaybackData`):**
+   * Ambos slots permanecen listos en memoria a la frecuencia de muestreo del DAW. Cambiar entre el Visor 1 y el Visor 2 o hacer clic sobre una rodaja ya no vuelve a abrir ni remuestrear el archivo `.wav` desde el disco (`O(1)` instantáneo, cero *lag*).
+3. **Corrección de Doble Reproducción Simultánea en Modo MIDI Cromático y Sample-Accurate MIDI:**
+   * Se unificaron el modo **Rebanador MPC (`Auto-Chop`)**, el modo **Cromático Polifónico (8 voces)** y el botón **Play** en un único motor de 8 voces con división exacta al sample (`metadata.samplePosition`), eliminando la duplicación de fase que ocurría entre `juce::Synthesiser` y el reproductor de buffer.
+4. **Interpolación Cúbica de Hermite de 4 Puntos (`interpolateHermite4pt`) y Envolventes Anti-Click:**
+   * Se reemplazó la interpolación lineal de 2 puntos por interpolación cúbica de Hermite (Catmull-Rom) de 4 puntos y 3er orden, eliminando el *aliasing* metálico al usar Pitch Shift o Sincronización de BPM.
+   * Cada voz aplica micro-rampas de ataque (`fadeInSamples`), liberación suave (`fadeOutSamples`) y *crossfade* automático al re-disparar rodajas MPC, además de mantener el estado continuo del efecto Lo-Fi (`lofiHoldCounter`) y `juce::SmoothedValue` entre bloques.

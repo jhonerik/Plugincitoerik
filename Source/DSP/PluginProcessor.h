@@ -189,6 +189,7 @@ public:
     /** Inicia o detiene la reproducción del audio activo. */
     void startPlayback();
     void stopPlayback();
+    void playFromNormalizedPosition(int slotIndex, float normalizedPos);
     bool isAudioPlaying() const { return isPlaying.load(std::memory_order_relaxed); }
     float getPlaybackProgress() const;
 
@@ -245,8 +246,7 @@ private:
     juce::AudioThumbnail originalThumbnail;
     juce::AudioThumbnail transformedThumbnail;
 
-    mutable juce::CriticalSection bufferLock;
-    juce::AudioBuffer<float> sampleBuffer;
+    mutable juce::CriticalSection bufferLock;   // Protege SOLO rutas de archivos y vectores de rodajas para la UI (el hilo de audio NUNCA lo toma)
     juce::File originalLoadedFile;
     juce::File transformedLoadedFile;
     juce::File slot1MidiFile;
@@ -295,13 +295,92 @@ private:
     std::atomic<bool> metadataInProgress { false };
     std::atomic<float> extractionProgress { 0.0f };
 
-    // Punteros de reproducción en tiempo real con interpolación fraccionaria
+    // Estado de reproducción publicado por el hilo de audio para que la UI lo lea (solo lectura desde la UI)
     std::atomic<bool> isPlaying { false };
-    std::atomic<double> fractionalPlayhead { 0.0 };
     std::atomic<int> playheadPosition { 0 };
-    std::atomic<int> playbackEndSample { 0 };
     std::atomic<int> totalSampleCount { 0 };
     std::atomic<int> activePlayingSlice { -1 };
+
+    //==============================================================================
+    // Motor de Reproducción v2.5 (Lock-Free + Interpolación Hermite + Anti-Click)
+    //==============================================================================
+    /**
+     * Paquete inmutable de audio listo para reproducir. El hilo de mensajes crea uno nuevo
+     * cada vez que cambia la muestra activa y lo publica con un simple intercambio de puntero,
+     * de modo que el hilo de audio jamás espera a la interfaz ni lee un buffer a medio escribir.
+     */
+    struct PlaybackData
+    {
+        juce::AudioBuffer<float> buffer;   ///< Audio PCM ya remuestreado al Sample Rate del DAW.
+        std::vector<ChopSlice> slices;     ///< Rodajas MPC que corresponden exactamente a este buffer.
+        int slotIndex = 1;                 ///< Ranura de origen (1 = Original, 2 = Derechos IA).
+        juce::uint32 generation = 0;       ///< Contador único para detectar cambios de buffer en el hilo de audio.
+    };
+
+    /** Voz de reproducción polifónica con envolvente anti-click (fade-in, fade-out y crossfade). */
+    struct PlaybackVoice
+    {
+        bool active = false;
+        bool releasing = false;       ///< true mientras hace fade-out (detenida, NoteOff o reemplazada por otra rodaja).
+        double position = 0.0;        ///< Posición fraccionaria de lectura dentro del buffer.
+        double notePitchRatio = 1.0;  ///< Ratio de tono de la nota MIDI (1.0 en modo MPC/Play; 2^((nota-60)/12) en modo Cromático).
+        int endSample = 0;            ///< Último sample (exclusivo) de la región a reproducir.
+        int sliceIndex = -1;          ///< Rodaja MPC que suena (-1 = muestra completa).
+        int midiNote = -1;            ///< Nota MIDI asociada en modo cromático (-1 = disparo one-shot).
+        float gain = 0.0f;            ///< Ganancia actual de la envolvente.
+        float targetGain = 1.0f;      ///< Ganancia final tras el fade-in (velocity MIDI).
+        float gainStep = 0.0f;        ///< Incremento de ganancia por sample (positivo = fade-in, negativo = fade-out).
+        juce::uint32 order = 0;       ///< Orden de disparo (la voz más reciente define el cabezal visual).
+    };
+
+    std::shared_ptr<PlaybackData> acquirePlaybackData() const;
+    void publishPlaybackData(std::shared_ptr<PlaybackData> newData);
+    void requestPlayRegion(int startSample, int endSample, int sliceIndex);
+    void startVoice(const PlaybackData& data, int startSample, int endSample, int sliceIndex, float velocityGain, double notePitchRatio = 1.0, int midiNote = -1, bool chokeExisting = true);
+    void releaseVoiceForMidiNote(int midiNote);
+    void releaseAllVoices();
+    void killAllVoices();
+    void handlePendingTransportCommand(const PlaybackData& data);
+    void triggerNoteFromMidi(const PlaybackData& data, int midiNote, float velocity, bool chopMode);
+    void renderVoices(const PlaybackData& data, juce::AudioBuffer<float>& out, int startSample, int numSamples);
+    void publishPlaybackStateToUi();
+    void processMacroFx(juce::AudioBuffer<float>& buffer);
+
+    std::shared_ptr<PlaybackData> livePlaybackData;                 // Puntero activo en el hilo de audio (protegido por playbackDataLock)
+    std::shared_ptr<PlaybackData> slot1PlaybackData;                // Caché en RAM de Audio 1 para cambio instantáneo sin leer disco
+    std::shared_ptr<PlaybackData> slot2PlaybackData;                // Caché en RAM de Audio 2 para cambio instantáneo sin leer disco
+    mutable juce::SpinLock playbackDataLock;                        // Solo protege la COPIA del puntero (nanosegundos)
+    std::vector<std::shared_ptr<PlaybackData>> retiredPlaybackData; // Buffers antiguos liberados fuera del hilo de audio
+    juce::CriticalSection retiredLock;
+    std::atomic<juce::uint32> playbackGenerationCounter { 0 };
+
+    static constexpr int kNumPlaybackVoices = 8;                    // 8 voces polifónicas con crossfade suave sin cortes
+    PlaybackVoice voices[kNumPlaybackVoices];
+    juce::uint32 voiceOrderCounter = 0;
+    juce::uint32 lastRenderedGeneration = 0;
+
+    // Comandos de transporte enviados por la UI al hilo de audio (sin locks)
+    std::atomic<int> pendingTransportCommand { 0 };               // 0 = ninguno, 1 = detener, 2 = reproducir
+    std::atomic<int> pendingStartSample { 0 };
+    std::atomic<int> pendingEndSample { 0 };
+    std::atomic<int> pendingSliceIndex { -1 };
+
+    // Suavizado de parámetros para eliminar ruido de "cremallera" (zipper noise)
+    juce::SmoothedValue<float, juce::ValueSmoothingTypes::Multiplicative> smoothedPlaybackRate { 1.0f };
+    juce::SmoothedValue<float> smoothedMasterGain { 1.0f };
+    juce::SmoothedValue<float> smoothedToneAlpha { 1.0f };
+    double currentSampleRateHz = 44100.0;
+    int fadeInSamples = 64;       // ~1.5 ms: conserva el ataque de las transientes sin producir clicks
+    int fadeOutSamples = 288;     // ~6 ms: crossfade al detener o re-disparar
+    int endFadeSamples = 144;     // ~3 ms: suaviza el final de cada región / rodaja
+
+    // Estado persistente del Lo-Fi entre bloques (evita discontinuidades periódicas)
+    float lofiHeldSample[2] { 0.0f, 0.0f };
+    int lofiHoldCounter[2] { 0, 0 };
+
+    // Caché de la verificación de licencia en el hilo de audio (se re-evalúa ~4 veces por segundo)
+    bool cachedAudioUnlocked = false;
+    int licenseRecheckCountdown = 0;
 
     std::shared_ptr<std::atomic<bool>> aliveFlag = std::make_shared<std::atomic<bool>>(true);
 
