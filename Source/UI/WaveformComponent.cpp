@@ -27,6 +27,35 @@ void WaveformComponent::mouseDown(const juce::MouseEvent& event)
         if (slotFile.existsAsFile())
         {
             processor.setActiveSlot(slotIndex);
+
+            // If Auto-Chop (MPC Mode) is enabled, clicking on a slice auditions that slice!
+            if (processor.isAutoChopEnabled())
+            {
+                auto slices = processor.getChopSlices(slotIndex);
+                if (!slices.empty())
+                {
+                    auto waveBounds = getLocalBounds().toFloat();
+                    waveBounds.removeFromTop(22.0f);
+                    waveBounds = waveBounds.reduced(8.0f, 4.0f);
+
+                    if (waveBounds.getWidth() > 10.0f)
+                    {
+                        float clickNorm = juce::jlimit(0.0f, 0.9999f, (event.position.x - waveBounds.getX()) / waveBounds.getWidth());
+                        for (size_t i = 0; i < slices.size(); ++i)
+                        {
+                            if (clickNorm >= slices[i].startNorm && clickNorm <= slices[i].endNorm)
+                            {
+                                processor.triggerChopSlice((int)i);
+                                processor.setStatusMessage(juce::String::fromUTF8("🥁 Auto-Chop MPC [Audio ")
+                                                           + juce::String(slotIndex) + "]: Disparando slice "
+                                                           + slices[i].noteName + " (Nota MIDI " + juce::String(slices[i].midiNote) + ")");
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+
             if (auto* parent = getParentComponent())
                 parent->repaint();
             else
@@ -44,7 +73,7 @@ void WaveformComponent::mouseDrag(const juce::MouseEvent& event)
     if (!slotFile.existsAsFile())
         return;
 
-    if (event.getDistanceFromDragStart() > 6)
+    if (event.getDistanceFromDragStart() > 7)
     {
         auto* container = juce::DragAndDropContainer::findParentDragContainerFor(this);
         if (container != nullptr)
@@ -70,35 +99,52 @@ void WaveformComponent::paint(juce::Graphics& g)
     auto& thumb = processor.getThumbnail(slotIndex);
     const double totalLength = thumb.getTotalLength();
 
-    // 1. Sleek Glassmorphism / Dark Obsidian container
+    // 1. Sleek Obsidian Container
     g.setColour(juce::Colour(0xff12141a));
     g.fillRoundedRectangle(bounds, 8.0f);
 
     juce::Colour accentCol = (slotIndex == 2) ? juce::Colour(0xff00e676) : juce::Colour(0xff00e5ff);
-    juce::Colour borderCol = (isActiveSlot && totalLength > 0.0) ? accentCol.withAlpha(0.85f) : juce::Colour(0xff252b3b);
+    juce::Colour borderCol = (isActiveSlot && totalLength > 0.0) ? accentCol.withAlpha(0.90f) : juce::Colour(0xff252b3b);
     g.setColour(borderCol);
-    g.drawRoundedRectangle(bounds.reduced(0.75f), 8.0f, isActiveSlot ? 1.8f : 1.0f);
+    g.drawRoundedRectangle(bounds.reduced(0.75f), 8.0f, isActiveSlot ? 1.9f : 1.0f);
 
-    auto headerBar = bounds.removeFromTop(22.0f).reduced(10.0f, 2.0f);
+    auto headerBar = bounds.removeFromTop(21.0f).reduced(10.0f, 1.0f);
     g.setColour(accentCol);
     g.setFont(juce::Font(11.5f, juce::Font::bold));
-    g.drawText(viewerTitle + (isActiveSlot && totalLength > 0.0 ? juce::String::fromUTF8("  [● ACTIVO EN DAW / MIDI]") : ""),
-               headerBar.removeFromLeft(headerBar.getWidth() * 0.65f),
+    g.drawText(viewerTitle + (isActiveSlot && totalLength > 0.0 ? juce::String::fromUTF8("  [● ACTIVO EN FX / MIDI]") : ""),
+               headerBar.removeFromLeft(headerBar.getWidth() * 0.54f),
                juce::Justification::centredLeft);
 
-    auto waveformArea = bounds.reduced(8.0f, 6.0f);
-
-    // 2. Grid lines for quarter-duration divisions
-    g.setColour(juce::Colour(0xff1a2130));
-    for (int i = 1; i < 4; ++i)
-    {
-        float x = waveformArea.getX() + (waveformArea.getWidth() * (i / 4.0f));
-        g.drawVerticalLine((int)x, waveformArea.getY(), waveformArea.getBottom());
-    }
+    auto waveformArea = bounds.reduced(8.0f, 4.0f);
 
     if (totalLength > 0.0)
     {
-        // 3. Render Waveform (Slot 1 = Cyan, Slot 2 = Neon Emerald/Purple for Derechos AI)
+        const bool chopMode = processor.isAutoChopEnabled();
+        auto slices = processor.getChopSlices(slotIndex);
+        const int playingSlice = isActiveSlot && processor.isAudioPlaying() ? processor.getActivePlayingSlice() : -1;
+
+        // If Auto-Chop MPC Mode is active, reserve top 18px strip inside waveform for "| C1 | C#1 | D1 | D#1 | E1 | F1 | F#1 |"
+        juce::Rectangle<float> mpcNoteBar;
+        if (chopMode && !slices.empty())
+        {
+            mpcNoteBar = waveformArea.removeFromTop(18.0f);
+            g.setColour(juce::Colour(0xff191e2b));
+            g.fillRect(mpcNoteBar);
+            g.setColour(juce::Colour(0xff2d364d));
+            g.drawHorizontalLine((int)mpcNoteBar.getBottom(), mpcNoteBar.getX(), mpcNoteBar.getRight());
+        }
+
+        // Highlight active playing MPC slice background
+        if (chopMode && playingSlice >= 0 && playingSlice < (int)slices.size())
+        {
+            const auto& activeS = slices[(size_t)playingSlice];
+            float sx = waveformArea.getX() + activeS.startNorm * waveformArea.getWidth();
+            float sw = (activeS.endNorm - activeS.startNorm) * waveformArea.getWidth();
+            g.setColour(juce::Colour(0x33ffab00));
+            g.fillRect(sx, mpcNoteBar.getY(), sw, waveformArea.getBottom() - mpcNoteBar.getY());
+        }
+
+        // 2. Render Waveform (Slot 1 = Cyan, Slot 2 = Neon Emerald/Purple for Derechos AI)
         juce::Colour topWave = (slotIndex == 2) ? juce::Colour(0xff00e676) : juce::Colour(0xff00e5ff);
         juce::Colour botWave = (slotIndex == 2) ? juce::Colour(0xff7c4dff) : juce::Colour(0xff0088cc);
 
@@ -108,9 +154,50 @@ void WaveformComponent::paint(juce::Graphics& g)
 
         thumb.drawChannels(g, waveformArea.toNearestInt(), 0.0, totalLength, 1.0f);
 
-        // 4. Subtle center line
+        // 3. Subtle center line
         g.setColour(topWave.withAlpha(0.22f));
         g.drawHorizontalLine((int)waveformArea.getCentreY(), waveformArea.getX(), waveformArea.getRight());
+
+        // 4. Draw MPC Auto-Chop Slice Divider Lines & MIDI Note Headers (C1 .. G2)
+        if (chopMode && !slices.empty())
+        {
+            g.setFont(juce::Font(10.5f, juce::Font::bold));
+            for (size_t i = 0; i < slices.size(); ++i)
+            {
+                const auto& s = slices[i];
+                float xStart = waveformArea.getX() + s.startNorm * waveformArea.getWidth();
+                float xEnd   = waveformArea.getX() + s.endNorm * waveformArea.getWidth();
+                float sliceW = xEnd - xStart;
+
+                // Vertical slice divider line
+                if (i > 0)
+                {
+                    g.setColour(juce::Colour(0xccffab00));
+                    const float dashLengths[2] = { 4.0f, 3.0f };
+                    g.drawDashedLine(juce::Line<float>(xStart, mpcNoteBar.getY(), xStart, waveformArea.getBottom()),
+                                     dashLengths, 2, 1.3f);
+                }
+
+                // Note label in MPC header strip ("C1", "C#1", "D1", etc.)
+                juce::Rectangle<float> padBox(xStart, mpcNoteBar.getY(), sliceW, mpcNoteBar.getHeight());
+                bool isThisSlicePlaying = ((int)i == playingSlice);
+                g.setColour(isThisSlicePlaying ? juce::Colour(0xffffab00) : juce::Colour(0xffe0e6ed));
+                if (sliceW >= 20.0f)
+                {
+                    g.drawText(s.noteName, padBox.toNearestInt(), juce::Justification::centred, false);
+                }
+            }
+        }
+        else
+        {
+            // Standard quarter-duration grid lines when Auto-Chop is off
+            g.setColour(juce::Colour(0xff1a2130));
+            for (int i = 1; i < 4; ++i)
+            {
+                float x = waveformArea.getX() + (waveformArea.getWidth() * (i / 4.0f));
+                g.drawVerticalLine((int)x, waveformArea.getY(), waveformArea.getBottom());
+            }
+        }
 
         // 5. Draw active playhead cursor if this slot is currently playing
         if (isActiveSlot && processor.isAudioPlaying())
@@ -118,33 +205,36 @@ void WaveformComponent::paint(juce::Graphics& g)
             float progress = processor.getPlaybackProgress();
             float playheadX = waveformArea.getX() + (waveformArea.getWidth() * progress);
 
-            g.setColour(juce::Colour(0x66ffffff));
+            g.setColour(juce::Colour(0x88ffffff));
             g.drawVerticalLine((int)playheadX, waveformArea.getY(), waveformArea.getBottom());
 
             g.setColour(juce::Colour(0xffff0055));
-            g.fillRect(playheadX - 1.0f, waveformArea.getY(), 2.0f, waveformArea.getHeight());
+            g.fillRect(playheadX - 1.2f, waveformArea.getY(), 2.4f, waveformArea.getHeight());
         }
 
-        // 6. Dynamic Time and Format Badge in top-right of viewer
-        double srKhz = processor.getLoadedFileSampleRate() / 1000.0;
-        juce::String badgeText = juce::String(totalLength, 1) + "s | 24-bit | " + juce::String(srKhz, 1) + " kHz";
+        // 6. Dynamic BPM + Musical Key (Tonalidad) + Duration Badge in top-right of viewer
+        double bpm = processor.getDetectedBpm(slotIndex);
+        juce::String key = processor.getDetectedKey(slotIndex);
+        juce::String badgeText = juce::String::fromUTF8("🥁 ") + juce::String(bpm, 1) + " BPM | "
+                               + juce::String::fromUTF8("🎹 Key: ") + key + " | "
+                               + juce::String(totalLength, 1) + "s";
         if (slotIndex == 2)
         {
             int st = processor.getLastAppliedSemitones();
             badgeText = ((st > 0) ? ("+" + juce::String(st)) : juce::String(st)) + " st IA | " + badgeText;
         }
 
-        g.setColour(juce::Colour(0xccffffff));
+        g.setColour(juce::Colour(0xeeffffff));
         g.setFont(juce::Font(11.0f, juce::Font::bold));
         g.drawText(badgeText, headerBar, juce::Justification::centredRight);
     }
     else
     {
         g.setColour(juce::Colour(0x55ffffff));
-        g.setFont(juce::Font(12.5f, juce::Font::italic));
+        g.setFont(juce::Font(12.0f, juce::Font::italic));
         juce::String placeholder = (slotIndex == 1)
-            ? juce::String::fromUTF8("1. Aquí aparecerá el audio original tras pulsar Extraer 3s, 10s o 30s...")
-            : juce::String::fromUTF8("2. Aquí aparecerá el audio modificado al pulsar el botón '🛡️ Derechos (±3 st IA)'...");
+            ? juce::String::fromUTF8("1. Aquí aparecerá el Audio 1 con Auto-Chop MPC (C1-G2), BPM y Key tras pulsar Extraer 3s/10s/30s...")
+            : juce::String::fromUTF8("2. Aquí aparecerá el Audio 2 modificado al pulsar '🛡️ Derechos (±3 st IA)'...");
         g.drawText(placeholder, waveformArea, juce::Justification::centred);
     }
 }

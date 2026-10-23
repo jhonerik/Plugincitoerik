@@ -391,3 +391,41 @@ Se han implementado y verificado las siguientes mejoras estructurales y de códi
    * Se desactivaron codecs innecesarios (`FLAC`, `OGGVORBIS`, `MP3`, `LAME`, `WINDOWS_MEDIA_FORMAT`), se quitó `juce_audio_devices` explícito y se activó **LTO (`INTERPROCEDURAL_OPTIMIZATION_RELEASE TRUE`)**.
    * Se corrigió [`installer/windows_installer.iss`](file:///c:/Users/joncl/Downloads/Plugin/installer/windows_installer.iss) eliminando el `Check: ToolsDirectoryExists` defectuoso, filtrando `*.exe` e instalando en `{commonappdata}\ClipSampler10\tools`, con salida unificada en `dist_windows/`.
    * *(Pendiente para fase macOS: ajustes de `installer/build_pkg.sh` cuando decidas compilar el `.pkg` en Mac).*
+
+---
+
+## 8. 🚀 Historial Documentado de Evolución (v2.0.0 → v2.3.0)
+
+### Versión `v2.0.0` (`50ca01f`) — Barra Interactiva de Tiempo de Inicio
+* Se añadió el deslizador horizontal interactivo (`startTimeSlider`) sincronizado bidireccionalmente con el campo `startTimeEditor` (`MM:SS`).
+
+### Versión `v2.1.0` (`b647068`) — Seguridad Anti-Piratería, Trial de 3 Días y Generador de Licencias
+* [`Source/Security/LicenseManager.h`](file:///c:/Users/joncl/Downloads/Plugin/Source/Security/LicenseManager.h) y [`Source/Security/LicenseManager.cpp`](file:///c:/Users/joncl/Downloads/Plugin/Source/Security/LicenseManager.cpp): Huella de hardware de Windows (`MCH-XXXX-XXXX-XXXX`), bóveda triple redundante anti-reseteo y anti-retroceso de reloj para los 3 días de prueba, y validación criptográfica de licencias `CS10-XXXX-XXXX-XXXX-XXXX`.
+* [`Source/UI/LicenseOverlayComponent.h`](file:///c:/Users/joncl/Downloads/Plugin/Source/UI/LicenseOverlayComponent.h) y [`Source/UI/LicenseOverlayComponent.cpp`](file:///c:/Users/joncl/Downloads/Plugin/Source/UI/LicenseOverlayComponent.cpp): Modal de activación integrado en el plugin.
+* [`license_system/license_server.py`](file:///c:/Users/joncl/Downloads/Plugin/license_system/license_server.py): Servidor local + panel web + base de datos SQLite y esquema para Supabase.
+
+### Versión `v2.2.0` (`60ca548`) — Renombrado a ClipSampler, Redimensionable, 3s/10s/30s, Doble Visor y Suite Derechos IA
+* Renombrado oficial del producto a **`ClipSampler`** (sin el `10`), con limpieza automática de `ClipSampler10.vst3` en el instalador.
+* Ventana libremente redimensionable (`setResizable(true, true)`) con escalado proporcional de fuentes (`ScalablePluginLookAndFeel`).
+* Detección automática de la duración total del video de YouTube (`Inicio: MM:SS | Fin Video: MM:SS`).
+* Tres botones dedicados de extracción: **`3 Segundos`**, **`10 Segundos`** y **`30 Segundos`**.
+* Visor dividido en 2 paneles ([`WaveformComponent`](file:///c:/Users/joncl/Downloads/Plugin/Source/UI/WaveformComponent.cpp)): Visor 1 (Audio Original) y Visor 2 (Audio Modificado por Derechos IA).
+* Suite de 3 botones de Derechos de Autor: Detectar Copyright (Audio 1), Derechos IA ($\pm 3$ semitonos + dispersión de fase all-pass + micro-modulación estéreo), y Verificar Audio 2 (Sin Derechos).
+
+### Versión `v2.3.0` — Modo Auto-Chop MPC (C1–G2), Perillas FX Macro, Detector BPM/Key, Audio a MIDI y Botón Condicional "Nueva Extracción"
+1. **Condición "🔄 Nueva Extracción" (`hasBothAudiosReady()` + `resetForNewExtraction()`):**
+   * El botón **`🔄 Nueva Extracción (Limpiar Todo)`** permanece bloqueado hasta que el usuario tiene tanto el **Audio 1** como el **Audio 2** cargados. Al activarse y pulsarlo, limpia ambos visores, reinicia las tajadas MPC, resetea las perillas FX Macro, limpia la URL y deja el plugin listo desde cero.
+2. **Modo "Auto-Chop" Estilo MPC (`computeTransientSlices` de `C1` a `G2`):**
+   * Detecta automáticamente los golpes de ritmo (transientes por flujo de energía) del audio y dibuja líneas divisorias verticales junto con la barra superior de notas MIDI (`| C1 | C#1 | D1 | D#1 | E1 | F1 | F#1 | ...`) en ambos visores de onda.
+   * Asigna cada rodaja cromáticamente a las teclas MIDI desde **`C1` (nota 36) hasta `G2` (nota 55)** para tocar y reordenar el sample en vivo desde el controlador MIDI o haciendo clic directamente sobre cada rodaja en el visor.
+3. **Perillas Principales de Efectos (`🎛️ FX Macro`) Seleccionables para Audio 1 o Audio 2:**
+   * Selector de objetivo (`🎯 Audio 1` / `🎯 Audio 2`) + botón **`💾 Aplicar FX`**.
+   * **Perilla `📻 Lo-Fi 12-Bit` (`0% - 100%`):** Reducción de cuantización estilo sampler vintage de 12 bits + diezmado *sample-and-hold* y saturación cálida.
+   * **Perilla `🌀 Pitch` (`-12 st a +12 st`):** Cambio de tono en semitonos en tiempo real y renderizable al archivo `.WAV`.
+   * **Perilla `🎚️ Filtro` (`15% - 100%`):** Filtro paso-bajo cálido de un polo.
+4. **Detector Automático de BPM + Tonalidad (`Key`) y Botón `🔗 Sync` (Auto-Sync):**
+   * Calcula el tempo (`BPM`) por autocorrelación de envolvente de ataques y la tonalidad musical (`Key`, ej. `Am`, `C Maj`, `F#m`) mediante banco de resonadores Goertzel de 12 clases de altura correlacionado con los perfiles de Krumhansl-Schmuckler.
+   * El botón **`🔗 Sync`** sincroniza automáticamente la velocidad de reproducción del sample con el BPM del DAW anfitrión.
+5. **Conversor de Audio a MIDI (`🎹 Arrastrar .MIDI` junto a `🎵 Arrastrar .WAV`):**
+   * [`generateMidiFileForSlot()`](file:///c:/Users/joncl/Downloads/Plugin/Source/DSP/PluginProcessor.cpp) analiza las frecuencias fundamentales ($f_0$) por autocorrelación normalizada y las transientes rítmicas del audio para construir un archivo estándar `.mid` con tempo ajustado al BPM detectado, listo para arrastrar y soltar directamente en el Piano Roll del DAW.
+

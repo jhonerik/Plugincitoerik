@@ -4,20 +4,30 @@
 #include <juce_audio_formats/juce_audio_formats.h>
 #include <juce_audio_utils/juce_audio_utils.h>
 #include <atomic>
+#include <vector>
 #include "../Services/AudioExtractorWorker.h"
 #include "../Security/LicenseManager.h"
 
 /**
- * ClipSampler10AudioProcessor (ClipSampler v2.2)
+ * Represents a single rhythmic transient slice in MPC "Auto-Chop" mode,
+ * mapped chromatically from C1 (MIDI 36) to G2 (MIDI 55).
+ */
+struct ChopSlice
+{
+    int midiNote = 36;
+    juce::String noteName;
+    int startSample = 0;
+    int endSample = 0;
+    float startNorm = 0.0f;
+    float endNorm = 1.0f;
+};
+
+/**
+ * ClipSampler10AudioProcessor (ClipSampler v2.3)
  * 
- * VSTi / AAX Virtual Instrument DSP Engine & Dual-Slot AI Copyright Evasion Coordinator.
- * Features:
- * - Multi-duration YouTube extraction: 3s, 10s, or 30s.
- * - Automatic YouTube video duration & Content ID metadata detection.
- * - Dual Waveform Slots:
- *     Slot 1: Original Extracted Audio (3s / 10s / 30s)
- *     Slot 2: "Derechos IA" Transformed Audio (±3 Semitones + Spectral/Phase Fingerprint Evasion)
- * - Built-in Copyright Risk Detector (Audio 1) & Post-Transform Fingerprint Verifier (Audio 2).
+ * VSTi / AAX Virtual Instrument DSP Engine, MPC Auto-Chop Slicer,
+ * BPM & Musical Key Detector, FX Macro Processor, Audio-to-MIDI Converter,
+ * and Dual-Slot AI Copyright Evasion Coordinator.
  */
 class ClipSampler10AudioProcessor : public juce::AudioProcessor
 {
@@ -62,7 +72,7 @@ public:
     static juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
 
     //==============================================================================
-    // ClipSampler v2.2 Custom Control, Multi-Duration & Derechos AI API
+    // ClipSampler v2.3 Custom Control, Multi-Duration & Derechos AI API
     //==============================================================================
     /** Starts a background YouTube extraction for the specified duration (3s, 10s, or 30s). */
     void startSampleExtraction(const juce::String& url, const juce::String& startTime, int durationSeconds = 10);
@@ -82,9 +92,78 @@ public:
     /** Verifies whether Slot 2 (Transformed Audio) is sufficiently decorrelated from Slot 1's copyright fingerprint. */
     bool verifyTransformedAudioCopyrightFree(juce::String& outReport);
 
+    /** Returns true if the given slot (1 or 2) currently has a valid audio file loaded. */
+    bool hasSlotAudio(int slotIndex) const;
+
+    /**
+     * Condition requested for v2.3:
+     * Returns true ONLY when BOTH Audio 1 (Original) and Audio 2 (Transformed/Extraído 2) are loaded,
+     * enabling the "🔄 Nueva Extracción" button to wipe and reset the entire plugin state.
+     */
+    bool hasBothAudiosReady() const;
+
+    /**
+     * Clears both waveform slots, slices, BPM/Key metadata, FX state, and URL/time fields
+     * so the plugin is completely clean for a brand-new extraction.
+     */
+    void resetForNewExtraction();
+
     /** Switches active playback/MIDI/drag slot (1 = Original, 2 = Transformado Derechos). */
     void setActiveSlot(int slotIndex);
     int getActiveSlot() const { return activeSlot.load(std::memory_order_relaxed); }
+
+    //==============================================================================
+    // v2.3: MPC Auto-Chop Mode (Transient Detection C1 -> G2)
+    //==============================================================================
+    void setAutoChopEnabled(bool enabled);
+    bool isAutoChopEnabled() const { return autoChopEnabled.load(std::memory_order_relaxed); }
+
+    /** Re-runs transient detection on the specified slot and populates C1..G2 slices. */
+    void analyzeAutoChopAndMusicData(int slotIndex);
+
+    /** Returns the list of detected MPC transient slices for the requested slot (1 or 2). */
+    std::vector<ChopSlice> getChopSlices(int slotIndex) const;
+
+    /** Triggers playback of a specific MPC slice index (0 = C1, 1 = C#1, etc.) on the active slot. */
+    void triggerChopSlice(int sliceIndex);
+
+    /** Returns the currently playing slice index, or -1 if playing full sample / stopped. */
+    int getActivePlayingSlice() const { return activePlayingSlice.load(std::memory_order_relaxed); }
+
+    //==============================================================================
+    // v2.3: FX Macro (Lo-Fi 12-Bit, Pitch Semitones, Filter, Auto-Sync) per Slot
+    //==============================================================================
+    void setFxTargetSlot(int slotIndex);
+    int getFxTargetSlot() const { return fxTargetSlot.load(std::memory_order_relaxed); }
+
+    void setLofiAmount(float amount0to1);
+    float getLofiAmount() const { return fxLofiAmount.load(std::memory_order_relaxed); }
+
+    void setFxPitchSemitones(float semitones);
+    float getFxPitchSemitones() const { return fxPitchSemitones.load(std::memory_order_relaxed); }
+
+    void setFxToneFilter(float tone0to1);
+    float getFxToneFilter() const { return fxToneFilter.load(std::memory_order_relaxed); }
+
+    void setAutoSyncEnabled(bool enabled);
+    bool isAutoSyncEnabled() const { return autoSyncEnabled.load(std::memory_order_relaxed); }
+
+    /** Bakes the current FX Macro (Lo-Fi 12-Bit, Pitch, Tone, Auto-Sync) into the target slot (1 or 2). */
+    bool applyFxMacroToTargetSlot(juce::String& outReport);
+
+    //==============================================================================
+    // v2.3: Automatic BPM + Musical Key (Tonalidad) Detection
+    //==============================================================================
+    double getDetectedBpm(int slotIndex) const;
+    juce::String getDetectedKey(int slotIndex) const;
+    double getHostBpm() const { return currentHostBpm.load(std::memory_order_relaxed); }
+
+    //==============================================================================
+    // v2.3: Audio-to-MIDI Converter (Drag & Drop .MIDI for Piano Roll)
+    //==============================================================================
+    /** Analyses pitched notes & rhythmic onsets in the given slot and writes a .mid file. */
+    juce::File generateMidiFileForSlot(int slotIndex);
+    juce::File getCurrentMidiFile();
 
     /** Triggers an asynchronous yt-dlp -U update managed safely by the Processor. */
     void startExtractorUpdate();
@@ -148,8 +227,13 @@ public:
     juce::String getLastStartTime() const { return lastStartTime; }
     void setLastStartTime(const juce::String& time) { lastStartTime = time; }
 
+    static juce::String midiNoteToName(int midiNote);
+
 private:
     bool activateSlotBuffer(const juce::File& file, int slotIndex);
+    static std::vector<ChopSlice> computeTransientSlices(const juce::AudioBuffer<float>& buffer, double sampleRate);
+    static double estimateBpmFromBuffer(const juce::AudioBuffer<float>& buffer, double sampleRate);
+    static juce::String estimateMusicalKeyFromBuffer(const juce::AudioBuffer<float>& buffer, double sampleRate);
 
     juce::AudioProcessorValueTreeState apvts;
 
@@ -168,8 +252,29 @@ private:
     juce::AudioBuffer<float> sampleBuffer;
     juce::File originalLoadedFile;
     juce::File transformedLoadedFile;
+    juce::File slot1MidiFile;
+    juce::File slot2MidiFile;
     std::atomic<int> activeSlot { 1 };
     std::atomic<double> loadedFileSampleRate { 44100.0 };
+
+    // Auto-Chop MPC & BPM/Key state per slot
+    std::atomic<bool> autoChopEnabled { true };
+    std::vector<ChopSlice> slot1Slices;
+    std::vector<ChopSlice> slot2Slices;
+    std::atomic<double> slot1Bpm { 0.0 };
+    std::atomic<double> slot2Bpm { 0.0 };
+    juce::String slot1Key { "--" };
+    juce::String slot2Key { "--" };
+    std::atomic<double> currentHostBpm { 120.0 };
+
+    // FX Macro state
+    std::atomic<int> fxTargetSlot { 1 };
+    std::atomic<float> fxLofiAmount { 0.0f };       // 0.0 .. 1.0 (Lo-Fi 12-Bit & sample hold)
+    std::atomic<float> fxPitchSemitones { 0.0f };   // -12.0 .. +12.0 semitones
+    std::atomic<float> fxToneFilter { 1.0f };       // 0.1 .. 1.0 low-pass warmth
+    std::atomic<bool> autoSyncEnabled { false };
+    float lofiFilterStateL = 0.0f;
+    float lofiFilterStateR = 0.0f;
 
     // Stored session parameters
     juce::String lastUrl;
@@ -193,10 +298,13 @@ private:
     std::atomic<bool> metadataInProgress { false };
     std::atomic<float> extractionProgress { 0.0f };
 
-    // Atomic playback status
+    // Real-time playback state (supports fractional resampling for Pitch + Auto-Sync + Auto-Chop slice bounds)
     std::atomic<bool> isPlaying { false };
+    std::atomic<double> fractionalPlayhead { 0.0 };
     std::atomic<int> playheadPosition { 0 };
+    std::atomic<int> playbackEndSample { 0 };
     std::atomic<int> totalSampleCount { 0 };
+    std::atomic<int> activePlayingSlice { -1 };
 
     std::shared_ptr<std::atomic<bool>> aliveFlag = std::make_shared<std::atomic<bool>>(true);
 

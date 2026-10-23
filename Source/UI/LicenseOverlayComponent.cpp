@@ -81,7 +81,7 @@ void LicenseOverlayComponent::refreshState()
 
     if (licenseManager.isLicensed())
     {
-        titleLabel.setText(juce::String::fromUTF8("✓ CLIPSAMPLER v2.2 — ACTIVADO CON LICENCIA OFICIAL"), juce::dontSendNotification);
+        titleLabel.setText(juce::String::fromUTF8("✓ CLIPSAMPLER v2.3 — ACTIVADO CON LICENCIA OFICIAL"), juce::dontSendNotification);
         titleLabel.setColour(juce::Label::textColourId, juce::Colour(0xff00e676));
         subtitleLabel.setText(juce::String::fromUTF8("Tu copia de ClipSampler está vinculada y autorizada en este equipo.\nClave activa: ")
                               + licenseManager.getActivatedLicenseKey(), juce::dontSendNotification);
