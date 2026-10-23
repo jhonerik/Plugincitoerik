@@ -1,14 +1,16 @@
-# Documentación Técnica Completa: ClipSampler10 (VSTi & AAX)
+# Documentación Técnica Completa: ClipSampler v2.4 (VSTi & AAX)
 
-Bienvenido a la documentación técnica, de arquitectura y de despliegue del plugin de audio **ClipSampler10**. Este documento detalla la estructura interna, las decisiones de diseño DSP, el funcionamiento multihilo, la integración con DAWs, los scripts de automatización y los procedimientos de compilación e instalación.
+Bienvenido a la documentación técnica, de arquitectura y de despliegue del plugin de audio **ClipSampler v2.4**. Este documento detalla la estructura interna, las decisiones de diseño DSP, el funcionamiento multihilo, la integración con DAWs, los scripts de automatización y los procedimientos de compilación e instalación.
+
+> 📖 Para instrucciones de uso orientadas al productor musical, consulta [`MANUAL_DE_USUARIO.md`](./MANUAL_DE_USUARIO.md).
 
 ---
 
 ## 1. Introducción y Propósito del Proyecto
 
-**ClipSampler10** es un instrumento virtual multiplataforma (Windows 10/11 64-bit y macOS Universal Binary) desarrollado sobre el framework **JUCE (v7/v8)** y **CMake**.
+**ClipSampler v2.4** es un instrumento virtual multiplataforma (Windows 10/11 64-bit y macOS Universal Binary) desarrollado sobre el framework **JUCE (v7/v8)** y **CMake**.
 
-Su objetivo principal es permitir a productores musicales, diseñadores de sonido y beatmakers extraer fragmentos de audio de alta fidelidad con un **límite estricto e infranqueable de 10 segundos** directamente desde enlaces de YouTube, previsualizarlos en sincronía con el motor de audio del DAW y arrastrarlos directamente a la línea de tiempo o dispararlos melódicamente vía MIDI en el Piano Roll.
+Su objetivo principal es permitir a productores musicales, diseñadores de sonido y beatmakers extraer fragmentos de audio de alta fidelidad (**3s, 10s o 30s**) directamente desde enlaces de **YouTube, TikTok e Instagram**, procesarlos con IA Anti-Copyright (`Derechos IA`), rebanarlos automáticamente al estilo **MPC Auto-Chop**, convertirlos de **Audio a MIDI** y arrastrarlos directamente a la línea de tiempo del DAW.
 
 ---
 

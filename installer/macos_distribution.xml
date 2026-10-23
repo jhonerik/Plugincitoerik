@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <installer-gui-script minSpecVersion="2">
-    <title>ClipSampler10 Audio Plugin</title>
+    <title>ClipSampler Audio Plugin</title>
     <options customize="always" require-scripts="false" hostArchitectures="x86_64,arm64" />
     
     <!-- Políticas de Usuario y Acuerdo de Licencia (EULA) -->
@@ -18,21 +18,21 @@
     <!-- 1. VST3 Choice -->
     <choice id="choice_vst3" 
             title="VST3 Plugin" 
-            description="Instala el instrumento virtual ClipSampler10 en /Library/Audio/Plug-Ins/VST3/ClipSampler10.vst3 para DAWs compatibles (Cubase, Ableton Live, Studio One, FL Studio, Reaper)."
+            description="Instala el instrumento virtual ClipSampler en /Library/Audio/Plug-Ins/VST3/ClipSampler.vst3 para DAWs compatibles (Cubase, Ableton Live, Studio One, FL Studio, Reaper)."
             start_selected="true">
-        <pkg-ref id="com.audioinnovations.clipsampler10.vst3" />
+        <pkg-ref id="com.audioinnovations.clipsampler.vst3" />
     </choice>
 
     <!-- 2. AAX Choice -->
     <choice id="choice_aax" 
             title="AAX Plugin (Pro Tools)" 
-            description="Instala el instrumento virtual ClipSampler10 en /Library/Application Support/Avid/Audio/Plug-Ins/ClipSampler10.aaxplugin para Avid Pro Tools."
+            description="Instala el instrumento virtual ClipSampler en /Library/Application Support/Avid/Audio/Plug-Ins/ClipSampler.aaxplugin para Avid Pro Tools."
             start_selected="true">
-        <pkg-ref id="com.audioinnovations.clipsampler10.aax" />
+        <pkg-ref id="com.audioinnovations.clipsampler.aax" />
     </choice>
 
     <!-- Package References -->
-    <pkg-ref id="com.audioinnovations.clipsampler10.vst3" version="1.0.0" onConclusion="none">ClipSampler10_VST3.pkg</pkg-ref>
-    <pkg-ref id="com.audioinnovations.clipsampler10.aax" version="1.0.0" onConclusion="none">ClipSampler10_AAX.pkg</pkg-ref>
+    <pkg-ref id="com.audioinnovations.clipsampler.vst3" version="2.4.0" onConclusion="none">ClipSampler_VST3.pkg</pkg-ref>
+    <pkg-ref id="com.audioinnovations.clipsampler.aax" version="2.4.0" onConclusion="none">ClipSampler_AAX.pkg</pkg-ref>
 
 </installer-gui-script>

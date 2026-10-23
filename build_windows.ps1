@@ -1,18 +1,26 @@
-# ClipSampler10 - Automated Build & Packaging Script for Windows
+# ==============================================================================
+# ClipSampler v2.4 - Script Automatizado de Compilación y Empaquetado (Windows)
+# Compila el plugin VST3/AAX en modo Release y genera el instalador oficial .exe
+# ==============================================================================
 $ErrorActionPreference = "Stop"
 
 Write-Host "==========================================================" -ForegroundColor Cyan
-Write-Host "   ClipSampler10 - Sistema de Compilacion (Windows)       " -ForegroundColor Cyan
+Write-Host "   ClipSampler v2.4 - Sistema de Compilación (Windows)    " -ForegroundColor Cyan
 Write-Host "==========================================================" -ForegroundColor Cyan
 
 $ProjectRoot = $PSScriptRoot
 $BuildDir = Join-Path $ProjectRoot "build"
 $DistDir = Join-Path $ProjectRoot "dist_windows"
 
-# 1. Comprobacion de herramientas necesarias
+# Limpiar carpetas antiguas que tenían el sufijo "10" (ClipSampler10*) dentro de build/
+if (Test-Path $BuildDir) {
+    Get-ChildItem -Path $BuildDir -Filter "ClipSampler10*" -Force -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+}
+
+# 1. Comprobación de herramientas necesarias en el sistema
 Write-Host "`n[1/5] Verificando herramientas del sistema..." -ForegroundColor Yellow
 
-# CMake
+# Buscar CMake en PATH o en ubicaciones estándar de Visual Studio / WinGet
 $CmakeCmd = Get-Command cmake -ErrorAction SilentlyContinue
 if (-not $CmakeCmd) {
     $PotentialCmake = @(
@@ -36,7 +44,7 @@ if ($CmakeCmd) {
     exit 1
 }
 
-# Inno Setup (ISCC)
+# Buscar Inno Setup (ISCC) para empaquetar el instalador .exe
 $IsccCmd = Get-Command iscc -ErrorAction SilentlyContinue
 if (-not $IsccCmd) {
     $PotentialIscc = @(
@@ -57,7 +65,7 @@ if ($IsccCmd) {
     Write-Host "  [AVISO] Inno Setup no encontrado en PATH." -ForegroundColor Yellow
 }
 
-# yt-dlp y ffmpeg
+# Verificar herramientas de extracción multimedia (yt-dlp y ffmpeg)
 $YtDlp = Get-Command yt-dlp -ErrorAction SilentlyContinue
 if ($YtDlp) {
     Write-Host "  [OK] yt-dlp detectado." -ForegroundColor Green
@@ -72,7 +80,7 @@ if ($FFmpeg) {
     Write-Host "  [AVISO] ffmpeg no encontrado en PATH." -ForegroundColor Yellow
 }
 
-# 2. Verificacion del compilador de Visual Studio C++
+# 2. Verificación del compilador C++ de Visual Studio 2022 (MSVC)
 Write-Host "`n[2/5] Verificando compilador de C++ (Visual Studio 2022)..." -ForegroundColor Yellow
 
 $VsInstaller = Join-Path ${env:ProgramFiles(x86)} "Microsoft Visual Studio\Installer\setup.exe"
@@ -91,7 +99,7 @@ if (Test-Path $VsWhere) {
 }
 
 if (-not $HasMsvc) {
-    Write-Host "  [AVISO] El compilador de C++ de Visual Studio aun no esta instalado." -ForegroundColor Yellow
+    Write-Host "  [AVISO] El compilador de C++ de Visual Studio aún no está instalado." -ForegroundColor Yellow
     Write-Host "  Instalando la carga de trabajo de C++ (Visual Studio Workload VCTools)..." -ForegroundColor Cyan
 
     if (-not $VsInstallPath) {
@@ -103,17 +111,17 @@ if (-not $HasMsvc) {
         if ($Process.ExitCode -eq 0 -or $Process.ExitCode -eq 3010) {
             Write-Host "  [OK] Compilador C++ instalado correctamente!" -ForegroundColor Green
         } else {
-            Write-Host "  [ERROR] Fallo la instalacion automatica de Visual Studio C++ (Codigo: $($Process.ExitCode))." -ForegroundColor Red
+            Write-Host "  [ERROR] Falló la instalación automática de Visual Studio C++ (Código: $($Process.ExitCode))." -ForegroundColor Red
             exit 1
         }
     } else {
-        Write-Host "  [ERROR] No se encontro el instalador de Visual Studio." -ForegroundColor Red
+        Write-Host "  [ERROR] No se encontró el instalador de Visual Studio." -ForegroundColor Red
         exit 1
     }
 }
 
-# 3. Configuracion de CMake
-Write-Host "`n[3/5] Configurando proyecto con CMake (MSVC x64)..." -ForegroundColor Yellow
+# 3. Configuración del proyecto con CMake (Generador Visual Studio 17 2022 x64)
+Write-Host "`n[3/5] Configurando proyecto ClipSampler con CMake (MSVC x64)..." -ForegroundColor Yellow
 $CmakeArgs = @(
     "-B", $BuildDir,
     "-G", "Visual Studio 17 2022",
@@ -128,24 +136,24 @@ if ($env:AAX_SDK_PATH -and (Test-Path $env:AAX_SDK_PATH)) {
 
 & cmake @CmakeArgs
 if ($LASTEXITCODE -ne 0) {
-    Write-Host "  [ERROR] Error durante la configuracion de CMake." -ForegroundColor Red
+    Write-Host "  [ERROR] Error durante la configuración de CMake." -ForegroundColor Red
     exit $LASTEXITCODE
 }
 
-# 4. Compilacion en Release
-Write-Host "`n[4/5] Compilando plugin ClipSampler10 en modo Release..." -ForegroundColor Yellow
+# 4. Compilación del objetivo ClipSampler en modo Release
+Write-Host "`n[4/5] Compilando plugin ClipSampler en modo Release..." -ForegroundColor Yellow
 & cmake --build $BuildDir --config Release --parallel
 if ($LASTEXITCODE -ne 0) {
-    Write-Host "  [ERROR] Error durante la compilacion de C++." -ForegroundColor Red
+    Write-Host "  [ERROR] Error durante la compilación de C++." -ForegroundColor Red
     exit $LASTEXITCODE
 }
 
-$Vst3Path = Join-Path $BuildDir "ClipSampler10_artefacts\Release\VST3\ClipSampler.vst3"
+$Vst3Path = Join-Path $BuildDir "ClipSampler_artefacts\Release\VST3\ClipSampler.vst3"
 if (Test-Path $Vst3Path) {
     Write-Host "  [OK] Bundle VST3 generado en: $Vst3Path" -ForegroundColor Green
 }
 
-# 5. Generacion del instalador ejecutable .exe con Inno Setup
+# 5. Generación del instalador ejecutable (.exe) con Inno Setup
 Write-Host "`n[5/5] Generando instalador ejecutable (.exe) con Inno Setup..." -ForegroundColor Yellow
 if (Test-Path $DistDir) {
     Remove-Item -Path (Join-Path $DistDir "*.exe") -Force -ErrorAction SilentlyContinue
@@ -159,14 +167,14 @@ if ($IsccCmd -or (Get-Command iscc -ErrorAction SilentlyContinue)) {
     if ($LASTEXITCODE -eq 0) {
         Write-Host "  [OK] Instalador compilado exitosamente!" -ForegroundColor Green
     } else {
-        Write-Host "  [ERROR] Inno Setup fallo al generar el instalador." -ForegroundColor Red
+        Write-Host "  [ERROR] Inno Setup falló al generar el instalador." -ForegroundColor Red
         exit $LASTEXITCODE
     }
 } else {
     Write-Host "  [AVISO] Inno Setup no disponible para crear el .exe." -ForegroundColor Yellow
 }
 
-# Actualizar metadatos de fecha de creacion y modificacion (evita el cache NTFS Tunneling de Windows)
+# Actualizar marcas de tiempo para evitar el caché NTFS Tunneling de Windows Explorer
 $Now = Get-Date
 try {
     if (Test-Path $DistDir) {
@@ -182,7 +190,7 @@ if ($FinalExes) {
         $exe.LastWriteTime = $Now
         $exe.LastAccessTime = $Now
         Write-Host "`n==========================================================" -ForegroundColor Cyan
-        Write-Host "   Proceso de compilacion completado con exito!          " -ForegroundColor Green
+        Write-Host "   Proceso de compilación completado con éxito!           " -ForegroundColor Green
         Write-Host "==========================================================" -ForegroundColor Cyan
         Write-Host "  EJECUTABLE LISTO: $($exe.FullName)" -ForegroundColor Green
         Write-Host "  Fecha Creado/Modificado: $($exe.LastWriteTime)" -ForegroundColor Green

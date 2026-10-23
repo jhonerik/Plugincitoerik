@@ -4,22 +4,26 @@
 #include <algorithm>
 
 //==============================================================================
-juce::String ClipSampler10AudioProcessor::midiNoteToName(int midiNote)
+// Convierte un número de nota MIDI (0-127) a su nombre musical (ej. 36 -> "C1")
+//==============================================================================
+juce::String ClipSamplerAudioProcessor::midiNoteToName(int midiNote)
 {
     static const char* noteNames[12] = { "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B" };
     int clamped = juce::jlimit(0, 127, midiNote);
-    int octave = (clamped / 12) - 2; // MIDI 36 -> C1, MIDI 60 -> C3
+    int octave = (clamped / 12) - 2; // MIDI 36 corresponde a C1, MIDI 60 a C3
     return juce::String(noteNames[clamped % 12]) + juce::String(octave);
 }
 
 //==============================================================================
-juce::AudioProcessorValueTreeState::ParameterLayout ClipSampler10AudioProcessor::createParameterLayout()
+// Define los parámetros automatizables expuestos al DAW anfitrión
+//==============================================================================
+juce::AudioProcessorValueTreeState::ParameterLayout ClipSamplerAudioProcessor::createParameterLayout()
 {
     std::vector<std::unique_ptr<juce::RangedAudioParameter>> params;
 
     params.push_back(std::make_unique<juce::AudioParameterFloat>(
         juce::ParameterID { "masterGain", 1 },
-        "Master Gain",
+        "Ganancia Master",
         juce::NormalisableRange<float>(0.0f, 2.0f, 0.01f),
         1.0f));
 
@@ -27,50 +31,60 @@ juce::AudioProcessorValueTreeState::ParameterLayout ClipSampler10AudioProcessor:
 }
 
 //==============================================================================
-ClipSampler10AudioProcessor::ClipSampler10AudioProcessor()
+// Constructor y Destructor del Procesador Principal
+//==============================================================================
+ClipSamplerAudioProcessor::ClipSamplerAudioProcessor()
     : AudioProcessor(BusesProperties().withOutput("Output", juce::AudioChannelSet::stereo(), true)),
       apvts(*this, nullptr, "ClipSamplerState", createParameterLayout()),
       originalThumbnail(512, formatManager, thumbnailCache),
       transformedThumbnail(512, formatManager, thumbnailCache),
-      currentStatusMessage(juce::String::fromUTF8("Listo. Pega un enlace de YouTube, detecta su duración y elige 3s, 10s o 30s.")),
-      currentCopyrightBadge(juce::String::fromUTF8("COPYRIGHT: Pendiente de análisis"))
+      currentStatusMessage(juce::String::fromUTF8("Listo. Elige plataforma (YouTube, TikTok o Instagram), pega el enlace y extrae 3s, 10s o 30s.")),
+      currentCopyrightBadge(juce::String::fromUTF8("DERECHOS: Pendiente de análisis"))
 {
+    // Registramos formatos básicos de audio (WAV, AIFF)
     formatManager.registerBasicFormats();
 
+    // Inicializamos las 8 voces polifónicas del sampler MIDI
     for (int i = 0; i < NUM_VOICES; ++i)
         sampler.addVoice(new juce::SamplerVoice());
 }
 
-ClipSampler10AudioProcessor::~ClipSampler10AudioProcessor()
+ClipSamplerAudioProcessor::~ClipSamplerAudioProcessor()
 {
+    // Marcamos el procesador como inactivo para ignorar callbacks asíncronos pendientes
     aliveFlag->store(false, std::memory_order_release);
     extractorWorker.cancelExtraction();
 }
 
 //==============================================================================
-const juce::String ClipSampler10AudioProcessor::getName() const
+// Propiedades Descriptivas del Plugin
+//==============================================================================
+const juce::String ClipSamplerAudioProcessor::getName() const
 {
     return "ClipSampler";
 }
 
-bool ClipSampler10AudioProcessor::acceptsMidi() const { return true; }
-bool ClipSampler10AudioProcessor::producesMidi() const { return false; }
-bool ClipSampler10AudioProcessor::isMidiEffect() const { return false; }
-double ClipSampler10AudioProcessor::getTailLengthSeconds() const { return 0.0; }
+bool ClipSamplerAudioProcessor::acceptsMidi() const { return true; }
+bool ClipSamplerAudioProcessor::producesMidi() const { return false; }
+bool ClipSamplerAudioProcessor::isMidiEffect() const { return false; }
+double ClipSamplerAudioProcessor::getTailLengthSeconds() const { return 0.0; }
 
-int ClipSampler10AudioProcessor::getNumPrograms() { return 1; }
-int ClipSampler10AudioProcessor::getCurrentProgram() { return 0; }
-void ClipSampler10AudioProcessor::setCurrentProgram(int) {}
-const juce::String ClipSampler10AudioProcessor::getProgramName(int) { return {}; }
-void ClipSampler10AudioProcessor::changeProgramName(int, const juce::String&) {}
+int ClipSamplerAudioProcessor::getNumPrograms() { return 1; }
+int ClipSamplerAudioProcessor::getCurrentProgram() { return 0; }
+void ClipSamplerAudioProcessor::setCurrentProgram(int) {}
+const juce::String ClipSamplerAudioProcessor::getProgramName(int) { return {}; }
+void ClipSamplerAudioProcessor::changeProgramName(int, const juce::String&) {}
 
 //==============================================================================
-void ClipSampler10AudioProcessor::prepareToPlay(double sampleRate, int /*samplesPerBlock*/)
+// Preparación de Frecuencia de Muestreo y Recursos de Tiempo Real
+//==============================================================================
+void ClipSamplerAudioProcessor::prepareToPlay(double sampleRate, int /*samplesPerBlock*/)
 {
     sampler.setCurrentPlaybackSampleRate(sampleRate);
     lofiFilterStateL = 0.0f;
     lofiFilterStateR = 0.0f;
 
+    // Si la frecuencia de muestreo del DAW cambió, remuestreamos el archivo activo
     auto fileToReload = getCurrentAudioFile();
     if (fileToReload.existsAsFile() && std::abs(loadedFileSampleRate.load(std::memory_order_relaxed) - sampleRate) > 1.0)
     {
@@ -78,12 +92,12 @@ void ClipSampler10AudioProcessor::prepareToPlay(double sampleRate, int /*samples
     }
 }
 
-void ClipSampler10AudioProcessor::releaseResources()
+void ClipSamplerAudioProcessor::releaseResources()
 {
     stopPlayback();
 }
 
-bool ClipSampler10AudioProcessor::isBusesLayoutSupported(const BusesLayout& layouts) const
+bool ClipSamplerAudioProcessor::isBusesLayoutSupported(const BusesLayout& layouts) const
 {
     if (layouts.getMainOutputChannelSet() != juce::AudioChannelSet::mono()
      && layouts.getMainOutputChannelSet() != juce::AudioChannelSet::stereo())
@@ -92,7 +106,10 @@ bool ClipSampler10AudioProcessor::isBusesLayoutSupported(const BusesLayout& layo
     return true;
 }
 
-void ClipSampler10AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
+//==============================================================================
+// Bucle Principal de Audio en Tiempo Real (Wait-Free / Sin Bloqueos)
+//==============================================================================
+void ClipSamplerAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
 {
     juce::ScopedNoDenormals noDenormals;
     auto totalNumInputChannels  = getTotalNumInputChannels();
@@ -101,13 +118,14 @@ void ClipSampler10AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
     for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
         buffer.clear(i, 0, buffer.getNumSamples());
 
+    // Verificación criptográfica de licencia / periodo de prueba de 3 días en tiempo real
     if (!licenseManager.isUnlocked() || !licenseManager.verifyRuntimeIntegrity())
     {
         buffer.clear();
         return;
     }
 
-    // Query DAW Host BPM if available
+    // Consultamos el BPM actual del DAW anfitrión para el modo de Sincronización Automática
     if (auto* ph = getPlayHead())
     {
         if (auto pos = ph->getPosition())
@@ -123,7 +141,7 @@ void ClipSampler10AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
     const bool chopMode = autoChopEnabled.load(std::memory_order_relaxed);
     const int curSlot = activeSlot.load(std::memory_order_relaxed);
 
-    // Handle MIDI input (MPC Auto-Chop Mode C1..G2 vs Chromatic Sampler Mode)
+    // 1. Gestión de entrada MIDI: Modo Rebanador MPC (C1..G2) vs Modo Cromático Estándar
     if (chopMode)
     {
         for (const auto metadata : midiMessages)
@@ -138,7 +156,7 @@ void ClipSampler10AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
                     if (!slices.empty())
                     {
                         int note = msg.getNoteNumber();
-                        int sliceIdx = note - 36; // C1 = 36
+                        int sliceIdx = note - 36; // C1 (nota 36) dispara la primera rodaja
                         if (sliceIdx < 0 || sliceIdx >= (int)slices.size())
                             sliceIdx = ((note % (int)slices.size()) + (int)slices.size()) % (int)slices.size();
 
@@ -152,7 +170,7 @@ void ClipSampler10AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
                 }
             }
         }
-        // Clear MIDI buffer so standard chromatic synth doesn't double-render over Auto-Chop
+        // Limpiamos el buffer MIDI para que el sintetizador cromático no duplique el sonido
         midiMessages.clear();
     }
     else
@@ -172,6 +190,7 @@ void ClipSampler10AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
         sampler.renderNextBlock(buffer, midiMessages, 0, buffer.getNumSamples());
     }
 
+    // 2. Renderizado del cabezal de reproducción con interpolación lineal fraccionaria (Tono + Sinc. BPM)
     if (isPlaying.load(std::memory_order_relaxed))
     {
         double fracPos = fractionalPlayhead.load(std::memory_order_relaxed);
@@ -196,7 +215,7 @@ void ClipSampler10AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
             {
                 if (sampleBuffer.getNumSamples() >= total && sampleBuffer.getNumChannels() > 0)
                 {
-                    // Compute playback speed from Pitch FX knob + Auto-Sync ratio
+                    // Calculamos la velocidad de reproducción según la perilla de Tono (Pitch) y el botón Sinc. BPM
                     const float pitchSt = fxPitchSemitones.load(std::memory_order_relaxed);
                     double playbackRate = std::pow(2.0, (double)pitchSt / 12.0);
 
@@ -248,13 +267,12 @@ void ClipSampler10AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
         }
     }
 
-    // Apply real-time FX Macro (Lo-Fi 12-Bit Crusher + Warm Low-Pass Tone Filter)
+    // 3. Procesamiento de Efectos Macro en tiempo real (Lo-Fi 12-Bit + Filtro Paso-Bajo)
     const float lofiAmt = fxLofiAmount.load(std::memory_order_relaxed);
     const float toneCutoff = fxToneFilter.load(std::memory_order_relaxed);
 
     if (lofiAmt > 0.005f || toneCutoff < 0.99f)
     {
-        // 12-bit quantization levels + sample-and-hold decimation factor
         const float levels = juce::jmap(lofiAmt, 0.0f, 1.0f, 4096.0f, 28.0f);
         const int holdFactor = juce::jmax(1, juce::roundToInt(1.0f + lofiAmt * 14.0f));
         const float lpAlpha = juce::jlimit(0.04f, 1.0f, toneCutoff * toneCutoff);
@@ -282,6 +300,7 @@ void ClipSampler10AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
         }
     }
 
+    // 4. Ganancia Master automatizable
     if (auto* gainParam = apvts.getRawParameterValue("masterGain"))
     {
         const float gain = gainParam->load(std::memory_order_relaxed);
@@ -291,15 +310,19 @@ void ClipSampler10AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
 }
 
 //==============================================================================
-bool ClipSampler10AudioProcessor::hasEditor() const { return true; }
+// Instanciación del Editor Visual
+//==============================================================================
+bool ClipSamplerAudioProcessor::hasEditor() const { return true; }
 
-juce::AudioProcessorEditor* ClipSampler10AudioProcessor::createEditor()
+juce::AudioProcessorEditor* ClipSamplerAudioProcessor::createEditor()
 {
-    return new ClipSampler10AudioProcessorEditor(*this);
+    return new ClipSamplerAudioProcessorEditor(*this);
 }
 
 //==============================================================================
-void ClipSampler10AudioProcessor::getStateInformation(juce::MemoryBlock& destData)
+// Guardado y Restauración del Estado del Proyecto en el DAW
+//==============================================================================
+void ClipSamplerAudioProcessor::getStateInformation(juce::MemoryBlock& destData)
 {
     auto state = apvts.copyState();
     state.setProperty("selectedPlatform", selectedPlatform.load(), nullptr);
@@ -325,7 +348,7 @@ void ClipSampler10AudioProcessor::getStateInformation(juce::MemoryBlock& destDat
     state.writeToStream(stream);
 }
 
-void ClipSampler10AudioProcessor::setStateInformation(const void* data, int sizeInBytes)
+void ClipSamplerAudioProcessor::setStateInformation(const void* data, int sizeInBytes)
 {
     if (data == nullptr || sizeInBytes <= 0)
         return;
@@ -374,7 +397,9 @@ void ClipSampler10AudioProcessor::setStateInformation(const void* data, int size
 }
 
 //==============================================================================
-bool ClipSampler10AudioProcessor::hasSlotAudio(int slotIndex) const
+// Gestión de Ranuras de Audio y Reinicio ("Nueva Extracción")
+//==============================================================================
+bool ClipSamplerAudioProcessor::hasSlotAudio(int slotIndex) const
 {
     const juce::ScopedLock sl(bufferLock);
     if (slotIndex == 2)
@@ -382,13 +407,13 @@ bool ClipSampler10AudioProcessor::hasSlotAudio(int slotIndex) const
     return originalLoadedFile.existsAsFile();
 }
 
-bool ClipSampler10AudioProcessor::hasBothAudiosReady() const
+bool ClipSamplerAudioProcessor::hasBothAudiosReady() const
 {
     const juce::ScopedLock sl(bufferLock);
     return originalLoadedFile.existsAsFile() && transformedLoadedFile.existsAsFile();
 }
 
-void ClipSampler10AudioProcessor::resetForNewExtraction()
+void ClipSamplerAudioProcessor::resetForNewExtraction()
 {
     stopPlayback();
     extractorWorker.cancelExtraction();
@@ -416,7 +441,7 @@ void ClipSampler10AudioProcessor::resetForNewExtraction()
         slot2Key = "--";
         detectedVideoTitle.clear();
         detectedLicenseInfo.clear();
-        currentCopyrightBadge = juce::String::fromUTF8("COPYRIGHT: Pendiente de análisis");
+        currentCopyrightBadge = juce::String::fromUTF8("DERECHOS: Pendiente de análisis");
     }
 
     lastUrl.clear();
@@ -435,11 +460,13 @@ void ClipSampler10AudioProcessor::resetForNewExtraction()
     fxToneFilter.store(1.0f, std::memory_order_relaxed);
     autoSyncEnabled.store(false, std::memory_order_relaxed);
 
-    setStatusMessage(juce::String::fromUTF8("✨ ¡Nueva extracción lista! Ambos visores y efectos han sido limpiados. Pega una nueva URL."));
+    setStatusMessage(juce::String::fromUTF8("¡Nueva extracción lista! Ambos visores y efectos han sido limpiados. Pega un nuevo enlace."));
 }
 
 //==============================================================================
-void ClipSampler10AudioProcessor::detectVideoDuration(const juce::String& url)
+// Detección de Duración y Extracción Multi-Plataforma (YouTube / TikTok / Instagram)
+//==============================================================================
+void ClipSamplerAudioProcessor::detectVideoDuration(const juce::String& url)
 {
     juce::String cleanUrl = url.trim();
     if (cleanUrl.isEmpty())
@@ -451,7 +478,7 @@ void ClipSampler10AudioProcessor::detectVideoDuration(const juce::String& url)
 
     const SourcePlatform platform = getSelectedPlatform();
     const juce::String platName = AudioExtractorWorker::getPlatformName(platform);
-    setStatusMessage(juce::String::fromUTF8("🔍 Detectando duración y metadatos en ") + platName + "...");
+    setStatusMessage(juce::String::fromUTF8("Detectando duración y metadatos en ") + platName + "...");
     auto weakAlive = aliveFlag;
 
     AudioExtractorWorker::fetchVideoMetadata(cleanUrl, platform, [this, weakAlive, platName](const AudioExtractorWorker::VideoMetadata& meta) {
@@ -470,7 +497,7 @@ void ClipSampler10AudioProcessor::detectVideoDuration(const juce::String& url)
             }
 
             juce::String durFormatted = AudioExtractorWorker::formatSecondsToMMSS(meta.durationSeconds);
-            setStatusMessage(juce::String::fromUTF8("✓ [") + platName + juce::String::fromUTF8("] Detectado [00:00 -> ") + durFormatted + "]: " + meta.title);
+            setStatusMessage(juce::String::fromUTF8("[") + platName + juce::String::fromUTF8("] Detectado [00:00 -> ") + durFormatted + "]: " + meta.title);
         }
         else
         {
@@ -479,12 +506,12 @@ void ClipSampler10AudioProcessor::detectVideoDuration(const juce::String& url)
     });
 }
 
-void ClipSampler10AudioProcessor::startSampleExtraction(const juce::String& url, const juce::String& startTime, int durationSeconds)
+void ClipSamplerAudioProcessor::startSampleExtraction(const juce::String& url, const juce::String& startTime, int durationSeconds)
 {
     licenseManager.verifyAndSyncState();
     if (!licenseManager.isUnlocked() || !licenseManager.verifyRuntimeIntegrity())
     {
-        setStatusMessage(juce::String::fromUTF8("🔒 Periodo de prueba de 3 días finalizado o licencia requerida. Activa tu licencia para continuar."));
+        setStatusMessage(juce::String::fromUTF8("Periodo de prueba de 3 días finalizado o licencia requerida. Activa tu licencia para continuar."));
         return;
     }
 
@@ -530,7 +557,7 @@ void ClipSampler10AudioProcessor::startSampleExtraction(const juce::String& url,
             {
                 loadAudioFileIntoSlot(resultFile, 1);
 
-                // If TikTok/Instagram clip didn't report total duration prior to download, update from actual audio length
+                // Si TikTok o Instagram no reportaron la duración previa, la actualizamos con la duración real del audio
                 if (detectedVideoDurationSec.load(std::memory_order_relaxed) <= 0)
                 {
                     int actualLenSec = juce::jmax(1, (int)std::ceil(originalThumbnail.getTotalLength()));
@@ -540,7 +567,7 @@ void ClipSampler10AudioProcessor::startSampleExtraction(const juce::String& url,
                 copyrightVerifyState.store(0, std::memory_order_relaxed);
                 {
                     const juce::ScopedLock sl(statusLock);
-                    currentCopyrightBadge = juce::String::fromUTF8("COPYRIGHT [") + platName.toUpperCase() + juce::String::fromUTF8("]: Muestra en Visor 1 (Sin verificar)");
+                    currentCopyrightBadge = juce::String::fromUTF8("DERECHOS [") + platName.toUpperCase() + juce::String::fromUTF8("]: Muestra en Visor 1 (Sin verificar)");
                 }
                 extractionProgress.store(1.0f, std::memory_order_relaxed);
 
@@ -548,8 +575,8 @@ void ClipSampler10AudioProcessor::startSampleExtraction(const juce::String& url,
                 juce::String key = getDetectedKey(1);
                 setStatusMessage(juce::String::fromUTF8("¡Muestra de ") + platName + " (" + juce::String(clampedDuration)
                                  + juce::String::fromUTF8("s) lista en Visor 1! [")
-                                 + juce::String(bpm, 1) + " BPM | Key: " + key
-                                 + juce::String::fromUTF8(" | Auto-Chop C1-G2]. Pulsa '🛡️ Derechos' para generar Audio 2."));
+                                 + juce::String(bpm, 1) + " BPM | Tono: " + key
+                                 + juce::String::fromUTF8(" | Rebanador C1-G2]. Pulsa '2. Derechos IA' para generar Audio 2."));
             }
             else
             {
@@ -561,7 +588,10 @@ void ClipSampler10AudioProcessor::startSampleExtraction(const juce::String& url,
         });
 }
 
-bool ClipSampler10AudioProcessor::analyzeOriginalCopyright(juce::String& outReport)
+//==============================================================================
+// Suite de 3 Pasos de Derechos de Autor e Inteligencia Artificial (±3 Semitonos + Fase)
+//==============================================================================
+bool ClipSamplerAudioProcessor::analyzeOriginalCopyright(juce::String& outReport)
 {
     auto origFile = getSlotAudioFile(1);
     if (!origFile.existsAsFile())
@@ -574,7 +604,7 @@ bool ClipSampler10AudioProcessor::analyzeOriginalCopyright(juce::String& outRepo
     std::unique_ptr<juce::AudioFormatReader> reader(formatManager.createReaderFor(origFile));
     if (reader == nullptr || reader->lengthInSamples <= 0)
     {
-        outReport = juce::String::fromUTF8("No se pudo leer el archivo original para el análisis de copyright.");
+        outReport = juce::String::fromUTF8("No se pudo leer el archivo original para el análisis de derechos.");
         setStatusMessage(outReport);
         return false;
     }
@@ -587,19 +617,19 @@ bool ClipSampler10AudioProcessor::analyzeOriginalCopyright(juce::String& outRepo
     float peak = buf.getMagnitude(0, numSamples);
     float crestFactor = (rms > 0.0001f) ? (peak / rms) : 1.0f;
 
-    bool hasYtCopy = detectedHasCopyrightMeta.load(std::memory_order_relaxed);
+    bool hasCopyMeta = detectedHasCopyrightMeta.load(std::memory_order_relaxed);
     copyrightVerifyState.store(1, std::memory_order_relaxed);
 
     juce::String badge;
-    if (hasYtCopy || crestFactor < 12.0f)
+    if (hasCopyMeta || crestFactor < 12.0f)
     {
-        badge = juce::String::fromUTF8("⚠️ RIESGO COPYRIGHT: Huella Original Detectada (100% Match)");
-        outReport = juce::String::fromUTF8("⚠️ [ALERTA DE DERECHOS]: El Audio 1 coincide al 100% con el espectro original de YouTube (Content ID activo). Pulsa el botón '🛡️ Derechos (±3 st)' para alterarlo.");
+        badge = juce::String::fromUTF8("RIESGO DERECHOS: Huella Original Detectada (100% Coincidencia)");
+        outReport = juce::String::fromUTF8("[ALERTA DE DERECHOS]: El Audio 1 coincide al 100% con el espectro original. Pulsa '2. Derechos IA (±3 st)' para alterarlo.");
     }
     else
     {
-        badge = juce::String::fromUTF8("ℹ️ COPYRIGHT: Licencia CC, pero huella idéntica al video");
-        outReport = juce::String::fromUTF8("ℹ️ Audio con metadatos CC, pero conserva la onda exacta del video. Se recomienda pulsar '🛡️ Derechos' para uso seguro.");
+        badge = juce::String::fromUTF8("DERECHOS: Licencia abierta, pero conserva huella original");
+        outReport = juce::String::fromUTF8("Audio con licencia abierta, pero conserva la onda exacta del video. Se recomienda pulsar '2. Derechos IA' para uso seguro.");
     }
 
     {
@@ -610,11 +640,11 @@ bool ClipSampler10AudioProcessor::analyzeOriginalCopyright(juce::String& outRepo
     return true;
 }
 
-bool ClipSampler10AudioProcessor::applyDerechosTransformation(int semitoneShift, juce::String& outReport)
+bool ClipSamplerAudioProcessor::applyDerechosTransformation(int semitoneShift, juce::String& outReport)
 {
     if (!licenseManager.isUnlocked() || !licenseManager.verifyRuntimeIntegrity())
     {
-        outReport = juce::String::fromUTF8("🔒 Activación requerida para usar la suite Derechos IA.");
+        outReport = juce::String::fromUTF8("Activación requerida para usar la suite Derechos IA.");
         setStatusMessage(outReport);
         return false;
     }
@@ -622,7 +652,7 @@ bool ClipSampler10AudioProcessor::applyDerechosTransformation(int semitoneShift,
     auto origFile = getSlotAudioFile(1);
     if (!origFile.existsAsFile())
     {
-        outReport = juce::String::fromUTF8("Primero extrae una muestra de 3s, 10s o 30s en el Visor 1 antes de aplicar '🛡️ Derechos'.");
+        outReport = juce::String::fromUTF8("Primero extrae una muestra de 3s, 10s o 30s en el Visor 1 antes de aplicar '2. Derechos IA'.");
         setStatusMessage(outReport);
         return false;
     }
@@ -648,7 +678,7 @@ bool ClipSampler10AudioProcessor::applyDerechosTransformation(int semitoneShift,
     reader->read(&inBuffer, 0, inSamples, 0, true, true);
     reader.reset();
 
-    // 1. Pitch Shift by ±3 Semitones (ratio = 2^(semitones / 12.0)) + subtle micro-detune (0.15 semitones)
+    // 1. Cambio de Tono (Pitch Shift) de ±3 Semitonos + micro-desafinación de 0.15 st mediante interpolación de Lagrange
     const double effectiveSemitones = static_cast<double>(semitoneShift) + (semitoneShift > 0 ? 0.15 : -0.15);
     const double speedRatio = std::pow(2.0, effectiveSemitones / 12.0);
     const int outSamples = juce::jmax(64, (int)std::floor(inSamples / speedRatio));
@@ -664,7 +694,7 @@ bool ClipSampler10AudioProcessor::applyDerechosTransformation(int semitoneShift,
                                   outSamples);
     }
 
-    // 2. Acoustic Fingerprint Evasion DSP
+    // 2. Dispersión de Fase All-Pass + Micro-Modulación Estéreo para descorrelacionar la huella acústica
     const double lfoFreq = 1.75;
     const float allPassCoeff = (semitoneShift > 0) ? 0.42f : -0.42f;
 
@@ -747,24 +777,24 @@ bool ClipSampler10AudioProcessor::applyDerechosTransformation(int semitoneShift,
     fxTargetSlot.store(2, std::memory_order_relaxed);
 
     juce::String signStr = (semitoneShift > 0) ? ("+" + juce::String(semitoneShift)) : juce::String(semitoneShift);
-    outReport = juce::String::fromUTF8("🛡️ ¡Audio 2 generado (") + signStr
-              + juce::String::fromUTF8(" st IA) en Visor 2! Botón '🔄 Nueva Extracción' habilitado. Pulsa '✅ Verificar Sin Derechos'.");
+    outReport = juce::String::fromUTF8("¡Audio 2 generado (") + signStr
+              + juce::String::fromUTF8(" st IA) en Visor 2! Botón 'Nueva Extracción' habilitado. Pulsa '3. Verificar Audio 2'.");
     {
         const juce::ScopedLock sl(statusLock);
-        currentCopyrightBadge = juce::String::fromUTF8("🛡️ AUDIO 2 GENERADO (") + signStr + juce::String::fromUTF8(" st) - Listo para verificar");
+        currentCopyrightBadge = juce::String::fromUTF8("AUDIO 2 GENERADO (") + signStr + juce::String::fromUTF8(" st) - Listo para verificar");
     }
     setStatusMessage(outReport);
     return true;
 }
 
-bool ClipSampler10AudioProcessor::verifyTransformedAudioCopyrightFree(juce::String& outReport)
+bool ClipSamplerAudioProcessor::verifyTransformedAudioCopyrightFree(juce::String& outReport)
 {
     auto origFile = getSlotAudioFile(1);
     auto transFile = getSlotAudioFile(2);
 
     if (!origFile.existsAsFile() || !transFile.existsAsFile())
     {
-        outReport = juce::String::fromUTF8("Primero extrae una muestra (Visor 1) y pulsa '🛡️ Derechos' para generar el Audio 2 (Visor 2) antes de verificar.");
+        outReport = juce::String::fromUTF8("Primero extrae una muestra (Visor 1) y pulsa '2. Derechos IA' para generar el Audio 2 (Visor 2) antes de verificar.");
         setStatusMessage(outReport);
         return false;
     }
@@ -815,31 +845,31 @@ bool ClipSampler10AudioProcessor::verifyTransformedAudioCopyrightFree(juce::Stri
     juce::String pctFormatted(divergencePct, 1);
     {
         const juce::ScopedLock sl(statusLock);
-        currentCopyrightBadge = juce::String::fromUTF8("✅ VERIFICADO SIN COPYRIGHT (") + pctFormatted + "% Divergencia IA)";
+        currentCopyrightBadge = juce::String::fromUTF8("VERIFICADO SIN DERECHOS (") + pctFormatted + "% Divergencia IA)";
     }
 
-    outReport = juce::String::fromUTF8("✅ [VERIFICADO LIBRE DE DERECHOS]: El Audio 2 tiene ") + pctFormatted
-              + juce::String::fromUTF8("% de divergencia de huella respecto al original (") + stText
-              + juce::String::fromUTF8(" semitonos + fase IA). Apto para arrastrar .WAV o .MIDI al DAW.");
+    outReport = juce::String::fromUTF8("[VERIFICADO LIBRE DE DERECHOS]: El Audio 2 tiene ") + pctFormatted
+              + juce::String::fromUTF8("% de divergencia espectral respecto al original (") + stText
+              + juce::String::fromUTF8(" semitonos + fase IA). Listo para arrastrar .WAV o .MIDI al DAW.");
     setStatusMessage(outReport);
     return true;
 }
 
 //==============================================================================
-// v2.3: MPC Auto-Chop (Transient Slicer C1 -> G2) & BPM + Key Analysis
+// Algoritmo Rebanador MPC (Detección de Transientes C1 -> G2), BPM y Tonalidad
 //==============================================================================
-void ClipSampler10AudioProcessor::setAutoChopEnabled(bool enabled)
+void ClipSamplerAudioProcessor::setAutoChopEnabled(bool enabled)
 {
     autoChopEnabled.store(enabled, std::memory_order_relaxed);
 }
 
-std::vector<ChopSlice> ClipSampler10AudioProcessor::getChopSlices(int slotIndex) const
+std::vector<ChopSlice> ClipSamplerAudioProcessor::getChopSlices(int slotIndex) const
 {
     const juce::ScopedLock sl(bufferLock);
     return (slotIndex == 2) ? slot2Slices : slot1Slices;
 }
 
-void ClipSampler10AudioProcessor::triggerChopSlice(int sliceIndex)
+void ClipSamplerAudioProcessor::triggerChopSlice(int sliceIndex)
 {
     if (!licenseManager.isUnlocked())
         return;
@@ -858,14 +888,14 @@ void ClipSampler10AudioProcessor::triggerChopSlice(int sliceIndex)
     }
 }
 
-std::vector<ChopSlice> ClipSampler10AudioProcessor::computeTransientSlices(const juce::AudioBuffer<float>& buffer, double sampleRate)
+std::vector<ChopSlice> ClipSamplerAudioProcessor::computeTransientSlices(const juce::AudioBuffer<float>& buffer, double sampleRate)
 {
     std::vector<ChopSlice> result;
     const int totalSamples = buffer.getNumSamples();
     if (totalSamples <= 256 || sampleRate <= 0.0)
         return result;
 
-    // 1. Compute energy envelope & positive spectral/energy flux in 10ms hops
+    // 1. Calculamos la envolvente de energía RMS en ventanas de 10 ms y su derivada positiva (flujo de ataque)
     const int hop = juce::jmax(64, (int)(sampleRate * 0.010));
     const int numFrames = totalSamples / hop;
     if (numFrames < 4)
@@ -900,7 +930,7 @@ std::vector<ChopSlice> ClipSampler10AudioProcessor::computeTransientSlices(const
     }
     meanFlux /= (float)numFrames;
 
-    // Minimum distance between slices (~0.24s for 3s/10s, ~0.75s for 30s so we fit within 16..20 pads C1..G2)
+    // 2. Selección de picos de ataque (transientes) respetando una separación mínima entre rodajas
     const double totalDurationSec = (double)totalSamples / sampleRate;
     const double minSliceSec = juce::jmax(0.22, totalDurationSec / 16.0);
     const int minHopDist = juce::jmax(4, (int)(minSliceSec * sampleRate / hop));
@@ -920,12 +950,12 @@ std::vector<ChopSlice> ClipSampler10AudioProcessor::computeTransientSlices(const
         {
             onsetSamples.push_back(f * hop);
             lastFrame = f;
-            if ((int)onsetSamples.size() >= 16) // Up to 16 MPC pads (C1 .. D#2 / G2)
+            if ((int)onsetSamples.size() >= 16)
                 break;
         }
     }
 
-    // If audio has smooth pads or fewer than 8 transient peaks, subdivide longest segments so C1..G#1/G2 are always playable
+    // 3. Si el audio es melódico/ambiente con pocos golpes percusivos, subdividimos hasta tener mínimo 8 rodajas
     while ((int)onsetSamples.size() < 8)
     {
         int bestIdx = 0;
@@ -948,14 +978,13 @@ std::vector<ChopSlice> ClipSampler10AudioProcessor::computeTransientSlices(const
         onsetSamples.insert(onsetSamples.begin() + bestIdx + 1, midSample);
     }
 
-    // Cap at 20 slices (C1 = 36 through G2 = 55)
     if ((int)onsetSamples.size() > 20)
         onsetSamples.resize(20);
 
     for (size_t i = 0; i < onsetSamples.size(); ++i)
     {
         ChopSlice s;
-        s.midiNote = 36 + (int)i; // 36 = C1 .. 55 = G2
+        s.midiNote = 36 + (int)i; // Mapeo cromático C1 (36) a G2 (55)
         s.noteName = midiNoteToName(s.midiNote);
         s.startSample = onsetSamples[i];
         s.endSample = (i + 1 < onsetSamples.size()) ? onsetSamples[i + 1] : totalSamples;
@@ -967,13 +996,13 @@ std::vector<ChopSlice> ClipSampler10AudioProcessor::computeTransientSlices(const
     return result;
 }
 
-double ClipSampler10AudioProcessor::estimateBpmFromBuffer(const juce::AudioBuffer<float>& buffer, double sampleRate)
+double ClipSamplerAudioProcessor::estimateBpmFromBuffer(const juce::AudioBuffer<float>& buffer, double sampleRate)
 {
     const int totalSamples = buffer.getNumSamples();
     if (totalSamples < (int)(sampleRate * 1.2) || sampleRate <= 0.0)
         return 120.0;
 
-    // Envelope at 200 Hz frame rate
+    // Calculamos la envolvente de ataques a 200 Hz y buscamos periodicidad por autocorrelación entre 72 y 172 BPM
     const double envRate = 200.0;
     const int hop = juce::jmax(32, (int)std::round(sampleRate / envRate));
     const int numFrames = juce::jmin(3000, totalSamples / hop);
@@ -995,7 +1024,6 @@ double ClipSampler10AudioProcessor::estimateBpmFromBuffer(const juce::AudioBuffe
         prevE = e;
     }
 
-    // Search BPM between 72 and 172 BPM
     const int minLag = juce::jmax(10, (int)std::round((60.0 / 172.0) * envRate));
     const int maxLag = juce::jmin(numFrames / 2, (int)std::round((60.0 / 72.0) * envRate));
 
@@ -1011,7 +1039,6 @@ double ClipSampler10AudioProcessor::estimateBpmFromBuffer(const juce::AudioBuffe
 
         corr /= (double)juce::jmax(1, count);
 
-        // Mild perceptual prior centering around 118 BPM
         double bpmCandidate = 60.0 * envRate / (double)lag;
         double prior = 1.0 - 0.08 * std::abs(bpmCandidate - 118.0) / 60.0;
         double score = corr * prior;
@@ -1024,14 +1051,14 @@ double ClipSampler10AudioProcessor::estimateBpmFromBuffer(const juce::AudioBuffe
     }
 
     double detectedBpm = (60.0 * envRate) / (double)bestLag;
-    detectedBpm = std::round(detectedBpm * 2.0) * 0.5; // Snap to nearest 0.5 BPM
+    detectedBpm = std::round(detectedBpm * 2.0) * 0.5;
     return juce::jlimit(70.0, 175.0, detectedBpm);
 }
 
-juce::String ClipSampler10AudioProcessor::estimateMusicalKeyFromBuffer(const juce::AudioBuffer<float>& buffer, double sampleRate)
+juce::String ClipSamplerAudioProcessor::estimateMusicalKeyFromBuffer(const juce::AudioBuffer<float>& buffer, double sampleRate)
 {
     static const char* pitchNames[12] = { "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B" };
-    // Krumhansl-Schmuckler key profiles
+    // Perfiles tonales de Krumhansl-Schmuckler para escalas Mayores y Menores
     static const double majorProfile[12] = { 6.35, 2.23, 3.48, 2.33, 4.38, 4.09, 2.52, 5.19, 2.39, 3.66, 2.29, 2.88 };
     static const double minorProfile[12] = { 6.33, 2.68, 3.52, 5.38, 2.60, 3.53, 2.54, 4.75, 3.98, 2.69, 3.34, 3.17 };
 
@@ -1042,7 +1069,7 @@ juce::String ClipSampler10AudioProcessor::estimateMusicalKeyFromBuffer(const juc
     double chroma[12] = { 0.0 };
     const float* samples = buffer.getReadPointer(0);
 
-    // Analyze up to 16 evenly spaced frames of 2048 samples using Goertzel resonators across octaves 2..4
+    // Banco de resonadores de Goertzel en las 12 clases de altura cromática (octavas 2 a 4)
     const int frameSize = 2048;
     const int numFrames = juce::jmin(14, juce::jmax(1, totalSamples / frameSize));
     const int stride = juce::jmax(frameSize, totalSamples / numFrames);
@@ -1051,7 +1078,7 @@ juce::String ClipSampler10AudioProcessor::estimateMusicalKeyFromBuffer(const juc
     {
         for (int oct = 2; oct <= 4; ++oct)
         {
-            int midi = (oct + 1) * 12 + pc; // C2 = 36
+            int midi = (oct + 1) * 12 + pc;
             double freq = 440.0 * std::pow(2.0, (midi - 69) / 12.0);
             double omega = 2.0 * juce::MathConstants<double>::pi * freq / sampleRate;
             double coeff = 2.0 * std::cos(omega);
@@ -1101,18 +1128,18 @@ juce::String ClipSampler10AudioProcessor::estimateMusicalKeyFromBuffer(const juc
     return bestKey;
 }
 
-double ClipSampler10AudioProcessor::getDetectedBpm(int slotIndex) const
+double ClipSamplerAudioProcessor::getDetectedBpm(int slotIndex) const
 {
     return (slotIndex == 2) ? slot2Bpm.load(std::memory_order_relaxed) : slot1Bpm.load(std::memory_order_relaxed);
 }
 
-juce::String ClipSampler10AudioProcessor::getDetectedKey(int slotIndex) const
+juce::String ClipSamplerAudioProcessor::getDetectedKey(int slotIndex) const
 {
     const juce::ScopedLock sl(statusLock);
     return (slotIndex == 2) ? slot2Key : slot1Key;
 }
 
-void ClipSampler10AudioProcessor::analyzeAutoChopAndMusicData(int slotIndex)
+void ClipSamplerAudioProcessor::analyzeAutoChopAndMusicData(int slotIndex)
 {
     auto file = getSlotAudioFile(slotIndex);
     if (!file.existsAsFile())
@@ -1154,9 +1181,9 @@ void ClipSampler10AudioProcessor::analyzeAutoChopAndMusicData(int slotIndex)
 }
 
 //==============================================================================
-// v2.3: FX Macro (Lo-Fi 12-Bit, Pitch Semitones, Tone, Auto-Sync)
+// Configuración e Impresión Permanente de Efectos Macro (Lo-Fi, Tono, Filtro, Sinc. BPM)
 //==============================================================================
-void ClipSampler10AudioProcessor::setFxTargetSlot(int slotIndex)
+void ClipSamplerAudioProcessor::setFxTargetSlot(int slotIndex)
 {
     const int target = (slotIndex == 2) ? 2 : 1;
     fxTargetSlot.store(target, std::memory_order_relaxed);
@@ -1164,31 +1191,31 @@ void ClipSampler10AudioProcessor::setFxTargetSlot(int slotIndex)
         setActiveSlot(target);
 }
 
-void ClipSampler10AudioProcessor::setLofiAmount(float amount0to1)
+void ClipSamplerAudioProcessor::setLofiAmount(float amount0to1)
 {
     fxLofiAmount.store(juce::jlimit(0.0f, 1.0f, amount0to1), std::memory_order_relaxed);
 }
 
-void ClipSampler10AudioProcessor::setFxPitchSemitones(float semitones)
+void ClipSamplerAudioProcessor::setFxPitchSemitones(float semitones)
 {
     fxPitchSemitones.store(juce::jlimit(-12.0f, 12.0f, semitones), std::memory_order_relaxed);
 }
 
-void ClipSampler10AudioProcessor::setFxToneFilter(float tone0to1)
+void ClipSamplerAudioProcessor::setFxToneFilter(float tone0to1)
 {
     fxToneFilter.store(juce::jlimit(0.1f, 1.0f, tone0to1), std::memory_order_relaxed);
 }
 
-void ClipSampler10AudioProcessor::setAutoSyncEnabled(bool enabled)
+void ClipSamplerAudioProcessor::setAutoSyncEnabled(bool enabled)
 {
     autoSyncEnabled.store(enabled, std::memory_order_relaxed);
 }
 
-bool ClipSampler10AudioProcessor::applyFxMacroToTargetSlot(juce::String& outReport)
+bool ClipSamplerAudioProcessor::applyFxMacroToTargetSlot(juce::String& outReport)
 {
     if (!licenseManager.isUnlocked() || !licenseManager.verifyRuntimeIntegrity())
     {
-        outReport = juce::String::fromUTF8("🔒 Activación requerida para imprimir efectos FX Macro.");
+        outReport = juce::String::fromUTF8("Activación requerida para aplicar efectos.");
         setStatusMessage(outReport);
         return false;
     }
@@ -1198,7 +1225,7 @@ bool ClipSampler10AudioProcessor::applyFxMacroToTargetSlot(juce::String& outRepo
     if (!srcFile.existsAsFile())
     {
         outReport = juce::String::fromUTF8("Primero carga o extrae el Audio ") + juce::String(targetSlot)
-                  + juce::String::fromUTF8(" antes de aplicar los efectos FX Macro.");
+                  + juce::String::fromUTF8(" antes de aplicar los efectos.");
         setStatusMessage(outReport);
         return false;
     }
@@ -1238,7 +1265,6 @@ bool ClipSampler10AudioProcessor::applyFxMacroToTargetSlot(juce::String& outRepo
         interp.process(speedRatio, inBuf.getReadPointer(ch), outBuf.getWritePointer(ch), outSamples);
     }
 
-    // Apply Lo-Fi 12-Bit & Tone Filter
     const float levels = juce::jmap(lofiAmt, 0.0f, 1.0f, 4096.0f, 28.0f);
     const int holdFactor = juce::jmax(1, juce::roundToInt(1.0f + lofiAmt * 14.0f));
     const float lpAlpha = juce::jlimit(0.04f, 1.0f, toneAmt * toneAmt);
@@ -1279,25 +1305,25 @@ bool ClipSampler10AudioProcessor::applyFxMacroToTargetSlot(juce::String& outRepo
         writer->writeFromAudioSampleBuffer(outBuf, 0, outSamples);
     }
 
-    // Reset real-time FX knobs to neutral after baking so the effect isn't applied twice
+    // Reiniciamos las perillas en tiempo real tras imprimir el efecto en el archivo WAV
     fxLofiAmount.store(0.0f, std::memory_order_relaxed);
     fxPitchSemitones.store(0.0f, std::memory_order_relaxed);
     fxToneFilter.store(1.0f, std::memory_order_relaxed);
 
     loadAudioFileIntoSlot(fxFile, targetSlot);
 
-    outReport = juce::String::fromUTF8("🎛️ ¡FX Macro (Lo-Fi 12-Bit: ")
-              + juce::String(juce::roundToInt(lofiAmt * 100.0f)) + "% | Pitch: "
-              + juce::String(pitchSt, 1) + juce::String::fromUTF8(" st) impreso en el Audio ")
+    outReport = juce::String::fromUTF8("¡Efectos (Lo-Fi 12b: ")
+              + juce::String(juce::roundToInt(lofiAmt * 100.0f)) + "% | Tono: "
+              + juce::String(pitchSt, 1) + juce::String::fromUTF8(" st) aplicados al Audio ")
               + juce::String(targetSlot) + "!";
     setStatusMessage(outReport);
     return true;
 }
 
 //==============================================================================
-// v2.3: Audio-to-MIDI Converter (Drag & Drop .MIDI for DAW Piano Roll)
+// Conversor de Audio a MIDI (.mid) por Autocorrelación de Frecuencia Fundamental (f0)
 //==============================================================================
-juce::File ClipSampler10AudioProcessor::generateMidiFileForSlot(int slotIndex)
+juce::File ClipSamplerAudioProcessor::generateMidiFileForSlot(int slotIndex)
 {
     const int targetSlot = (slotIndex == 2 && hasSlotAudio(2)) ? 2 : 1;
     auto audioFile = getSlotAudioFile(targetSlot);
@@ -1320,17 +1346,15 @@ juce::File ClipSampler10AudioProcessor::generateMidiFileForSlot(int slotIndex)
     const double secondsPerTick = (60.0 / bpm) / (double)tpqn;
 
     juce::MidiMessageSequence seq;
-    // Set Tempo Meta Event
     int microsecondsPerQuarter = (int)std::round(60000000.0 / bpm);
     auto tempoMeta = juce::MidiMessage::tempoMetaEvent(microsecondsPerQuarter);
     tempoMeta.setTimeStamp(0.0);
     seq.addEvent(tempoMeta);
 
-    // Frame-based autocorrelation pitch tracker (window = 40ms, hop = 25ms)
     const int winSize = juce::jmax(512, (int)(sr * 0.040));
     const int hopSize = juce::jmax(256, (int)(sr * 0.025));
-    const int minLag = juce::jmax(8, (int)(sr / 980.0));  // ~B5
-    const int maxLag = juce::jmin(winSize / 2, (int)(sr / 55.0)); // ~A1
+    const int minLag = juce::jmax(8, (int)(sr / 980.0));
+    const int maxLag = juce::jmin(winSize / 2, (int)(sr / 55.0));
 
     struct DetectedNoteEvent
     {
@@ -1355,7 +1379,6 @@ juce::File ClipSampler10AudioProcessor::generateMidiFileForSlot(int slotIndex)
         int detectedMidi = -1;
         if (rms > 0.015f)
         {
-            // Normalized autocorrelation for fundamental frequency f0
             float bestCorr = 0.0f;
             int bestLag = -1;
             const int searchLen = winSize / 2;
@@ -1406,7 +1429,7 @@ juce::File ClipSampler10AudioProcessor::generateMidiFileForSlot(int slotIndex)
     if (currentMidi != -1 && (totalSamples - currentStart) >= (int)(sr * 0.045))
         rawNotes.push_back({ currentMidi, currentStart, totalSamples, currentRmsMax });
 
-    // If audio is predominantly rhythmic/percussive with few pitched frames, generate MIDI from the MPC Auto-Chop slices!
+    // Si el audio es puramente percusivo, generamos los eventos MIDI a partir de las rodajas del Rebanador MPC
     if (rawNotes.size() < 3)
     {
         rawNotes.clear();
@@ -1414,7 +1437,7 @@ juce::File ClipSampler10AudioProcessor::generateMidiFileForSlot(int slotIndex)
         for (size_t i = 0; i < slices.size(); ++i)
         {
             rawNotes.push_back({
-                slices[i].midiNote + 24, // C3..G4 range for synths
+                slices[i].midiNote + 24,
                 slices[i].startSample,
                 slices[i].endSample,
                 0.75f
@@ -1468,13 +1491,13 @@ juce::File ClipSampler10AudioProcessor::generateMidiFileForSlot(int slotIndex)
             slot1MidiFile = outMidi;
     }
 
-    setStatusMessage(juce::String::fromUTF8("🎹 MIDI generado para Audio ") + juce::String(targetSlot)
+    setStatusMessage(juce::String::fromUTF8("MIDI generado para Audio ") + juce::String(targetSlot)
                      + " (" + juce::String((int)rawNotes.size()) + juce::String::fromUTF8(" notas a ")
                      + juce::String(bpm, 1) + juce::String::fromUTF8(" BPM). ¡Arrástralo al Piano Roll de tu DAW!"));
     return outMidi;
 }
 
-juce::File ClipSampler10AudioProcessor::getCurrentMidiFile()
+juce::File ClipSamplerAudioProcessor::getCurrentMidiFile()
 {
     const int curSlot = activeSlot.load(std::memory_order_relaxed);
     {
@@ -1487,12 +1510,14 @@ juce::File ClipSampler10AudioProcessor::getCurrentMidiFile()
 }
 
 //==============================================================================
-void ClipSampler10AudioProcessor::startExtractorUpdate()
+// Mantenimiento (Actualización de Motor y Limpieza de Caché)
+//==============================================================================
+void ClipSamplerAudioProcessor::startExtractorUpdate()
 {
     if (updateInProgress.exchange(true))
         return;
 
-    setStatusMessage(juce::String::fromUTF8("Buscando e instalando actualizaciones de yt-dlp (-U)..."));
+    setStatusMessage(juce::String::fromUTF8("Buscando e instalando actualizaciones del motor yt-dlp (-U)..."));
     auto weakAlive = aliveFlag;
 
     AudioExtractorWorker::runYtDlpUpdate([this, weakAlive](bool success, const juce::String& msg) {
@@ -1501,12 +1526,12 @@ void ClipSampler10AudioProcessor::startExtractorUpdate()
 
         updateInProgress.store(false, std::memory_order_relaxed);
         setStatusMessage(success
-            ? (juce::String::fromUTF8("Actualización yt-dlp: ") + msg)
-            : (juce::String::fromUTF8("Aviso yt-dlp: ") + msg));
+            ? (juce::String::fromUTF8("Actualización del motor: ") + msg)
+            : (juce::String::fromUTF8("Aviso del motor: ") + msg));
     });
 }
 
-int ClipSampler10AudioProcessor::cleanAudioCache()
+int ClipSamplerAudioProcessor::cleanAudioCache()
 {
     int deleted = AudioExtractorWorker::clearCacheDirectory(getSlotAudioFile(1), getSlotAudioFile(2));
     setStatusMessage(juce::String::fromUTF8("Caché limpiada: ") + juce::String(deleted)
@@ -1514,30 +1539,30 @@ int ClipSampler10AudioProcessor::cleanAudioCache()
     return deleted;
 }
 
-juce::String ClipSampler10AudioProcessor::getStatusMessage() const
+juce::String ClipSamplerAudioProcessor::getStatusMessage() const
 {
     const juce::ScopedLock sl(statusLock);
     return currentStatusMessage;
 }
 
-void ClipSampler10AudioProcessor::setStatusMessage(const juce::String& msg)
+void ClipSamplerAudioProcessor::setStatusMessage(const juce::String& msg)
 {
     const juce::ScopedLock sl(statusLock);
     currentStatusMessage = msg;
 }
 
-juce::String ClipSampler10AudioProcessor::getCopyrightBadgeText() const
+juce::String ClipSamplerAudioProcessor::getCopyrightBadgeText() const
 {
     const juce::ScopedLock sl(statusLock);
     return currentCopyrightBadge;
 }
 
-juce::File ClipSampler10AudioProcessor::getCurrentAudioFile() const
+juce::File ClipSamplerAudioProcessor::getCurrentAudioFile() const
 {
     return getSlotAudioFile(activeSlot.load(std::memory_order_relaxed));
 }
 
-juce::File ClipSampler10AudioProcessor::getSlotAudioFile(int slotIndex) const
+juce::File ClipSamplerAudioProcessor::getSlotAudioFile(int slotIndex) const
 {
     const juce::ScopedLock sl(bufferLock);
     if (slotIndex == 2)
@@ -1545,7 +1570,7 @@ juce::File ClipSampler10AudioProcessor::getSlotAudioFile(int slotIndex) const
     return originalLoadedFile;
 }
 
-void ClipSampler10AudioProcessor::setActiveSlot(int slotIndex)
+void ClipSamplerAudioProcessor::setActiveSlot(int slotIndex)
 {
     const int targetSlot = (slotIndex == 2) ? 2 : 1;
     auto f = getSlotAudioFile(targetSlot);
@@ -1556,7 +1581,7 @@ void ClipSampler10AudioProcessor::setActiveSlot(int slotIndex)
     }
 }
 
-bool ClipSampler10AudioProcessor::loadAudioFileIntoSlot(const juce::File& file, int slotIndex)
+bool ClipSamplerAudioProcessor::loadAudioFileIntoSlot(const juce::File& file, int slotIndex)
 {
     if (!file.existsAsFile())
         return false;
@@ -1581,13 +1606,12 @@ bool ClipSampler10AudioProcessor::loadAudioFileIntoSlot(const juce::File& file, 
     else
         originalThumbnail.setSource(new juce::FileInputSource(file));
 
-    // Automatically run MPC Auto-Chop transient detection + BPM + Key + pre-build MIDI
     analyzeAutoChopAndMusicData(targetSlot);
 
     return activateSlotBuffer(file, targetSlot);
 }
 
-bool ClipSampler10AudioProcessor::activateSlotBuffer(const juce::File& file, int slotIndex)
+bool ClipSamplerAudioProcessor::activateSlotBuffer(const juce::File& file, int slotIndex)
 {
     if (!file.existsAsFile())
         return false;
@@ -1638,8 +1662,6 @@ bool ClipSampler10AudioProcessor::activateSlotBuffer(const juce::File& file, int
     }
 
     const int finalSampleCount = preparedBuffer.getNumSamples();
-
-    // Recompute slices in preparedBuffer's sample space so C1..G2 sample indices match processBlock
     auto resampledSlices = computeTransientSlices(preparedBuffer, targetRate);
 
     {
@@ -1663,7 +1685,7 @@ bool ClipSampler10AudioProcessor::activateSlotBuffer(const juce::File& file, int
     return true;
 }
 
-void ClipSampler10AudioProcessor::startPlayback()
+void ClipSamplerAudioProcessor::startPlayback()
 {
     if (!licenseManager.isUnlocked())
         return;
@@ -1679,7 +1701,7 @@ void ClipSampler10AudioProcessor::startPlayback()
     }
 }
 
-void ClipSampler10AudioProcessor::stopPlayback()
+void ClipSamplerAudioProcessor::stopPlayback()
 {
     isPlaying.store(false, std::memory_order_relaxed);
     fractionalPlayhead.store(0.0, std::memory_order_relaxed);
@@ -1688,7 +1710,7 @@ void ClipSampler10AudioProcessor::stopPlayback()
     sampler.allNotesOff(0, false);
 }
 
-float ClipSampler10AudioProcessor::getPlaybackProgress() const
+float ClipSamplerAudioProcessor::getPlaybackProgress() const
 {
     int total = totalSampleCount.load(std::memory_order_relaxed);
     if (total <= 0)
@@ -1699,7 +1721,9 @@ float ClipSampler10AudioProcessor::getPlaybackProgress() const
 }
 
 //==============================================================================
+// Punto de Entrada Oficial del Plugin para el Host VST3 / AAX
+//==============================================================================
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()
 {
-    return new ClipSampler10AudioProcessor();
+    return new ClipSamplerAudioProcessor();
 }

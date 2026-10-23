@@ -12,7 +12,7 @@ Esta carpeta está destinada a albergar los binarios auxiliares de extracción y
 
 El motor `AudioExtractorWorker` del plugin busca automáticamente en las siguientes rutas en orden de prioridad:
 1. Directorio de datos de la aplicación:
-   - Windows: `%LOCALAPPDATA%\ClipSampler10\tools\`
-   - macOS: `/Library/Application Support/ClipSampler10/tools/` o `~/Library/Application Support/ClipSampler10/tools/`
+   - Windows: `%PROGRAMDATA%\ClipSampler\tools\` o `%APPDATA%\ClipSampler\tools\`
+   - macOS: `/Library/Application Support/ClipSampler/tools/` o `~/Library/Application Support/ClipSampler/tools/`
 2. Subdirectorio `tools/` contiguo al binario del plugin compilado.
 3. El `PATH` global del sistema (p. ej. instalado mediante `winget install yt-dlp ffmpeg` en Windows o `brew install yt-dlp ffmpeg` en macOS).

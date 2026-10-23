@@ -7,58 +7,70 @@
 #include <atomic>
 
 /**
- * Supported source platforms for multi-platform audio extraction & analysis.
+ * @enum SourcePlatform
+ * @brief Plataformas digitales soportadas por el motor de extracción de ClipSampler.
+ * Permite al algoritmo aplicar cabeceras HTTP, normalización de enlaces y modos de recorte específicos.
  */
 enum class SourcePlatform
 {
-    YouTube = 0,
-    TikTok = 1,
-    Instagram = 2
+    YouTube = 0,   ///< Videos largos, YouTube Shorts y YouTube Music (soporta descarga por secciones DASH).
+    TikTok = 1,    ///< Videos de TikTok y enlaces cortos vm.tiktok.com / vt.tiktok.com.
+    Instagram = 2  ///< Instagram Reels, Posts (/p/) e IGTV (/tv/).
 };
 
 /**
- * AudioExtractorWorker (v2.4 Multi-Platform Engine)
- * 
- * Background worker thread responsible for:
- * 1. Inspecting video duration, creator, & copyright metadata across YouTube, TikTok, and Instagram.
- * 2. Platform-specific URL normalization, anti-block headers (User-Agent / Referer), and stream selection.
- * 3. Downloading a 3-second, 10-second, or 30-second slice of audio from YouTube, TikTok, or Instagram
- *    and converting it to an uncompressed 24-bit PCM .wav file matched to the DAW's sample rate.
+ * @class AudioExtractorWorker
+ * @brief Hilo de trabajo en segundo plano encargado de la extracción, lectura de metadatos
+ *        y normalización de audio multi-plataforma (YouTube, TikTok e Instagram).
+ *
+ * Responsabilidades principales:
+ * 1. Consultar de forma asíncrona la duración total del video, título y metadatos de derechos de autor.
+ * 2. Normalizar enlaces según la plataforma e inyectar cabeceras anti-bloqueo (User-Agent y Referer).
+ * 3. Descargar fragmentos de 3, 10 o 30 segundos y convertirlos a formato WAV PCM de 24 bits
+ *    sincronizado con la frecuencia de muestreo (Sample Rate) del DAW anfitrión.
+ * 4. Aplicar rampas de entrada/salida (anti-click fade-in/out) y normalización a -1.0 dBFS.
  */
 class AudioExtractorWorker : public juce::Thread
 {
 public:
+    /** Callback para reportar el progreso (0.0 a 1.0) y el mensaje de estado a la interfaz gráfica. */
     using ProgressCallback = std::function<void(float progress0to1, const juce::String& statusMessage)>;
+
+    /** Callback invocado al finalizar la extracción con el archivo .wav resultante o mensaje de error. */
     using CompletionCallback = std::function<void(bool success, const juce::File& resultFile, const juce::String& errorMessage)>;
 
+    /**
+     * @struct VideoMetadata
+     * @brief Estructura que almacena los metadatos detectados de un enlace multimedia.
+     */
     struct VideoMetadata
     {
-        bool success = false;
-        SourcePlatform platform = SourcePlatform::YouTube;
-        int durationSeconds = 0;
-        juce::String title;
-        juce::String licenseInfo;
-        juce::String trackInfo;
-        bool hasCopyrightMetadata = false;
-        juce::String errorMessage;
+        bool success = false;                               ///< Indica si la consulta fue exitosa.
+        SourcePlatform platform = SourcePlatform::YouTube;  ///< Plataforma a la que pertenece el video.
+        int durationSeconds = 0;                            ///< Duración total del video en segundos.
+        juce::String title;                                 ///< Título del video o publicación.
+        juce::String licenseInfo;                           ///< Tipo de licencia reportada (ej. Estándar o Creative Commons).
+        juce::String trackInfo;                             ///< Nombre de la pista musical o creador detectado.
+        bool hasCopyrightMetadata = false;                  ///< True si los metadatos indican contenido comercial protegido.
+        juce::String errorMessage;                          ///< Descripción del error en caso de fallo.
     };
 
     AudioExtractorWorker();
     ~AudioExtractorWorker() override;
 
-    /** Detects whether a URL belongs to YouTube, TikTok, or Instagram. */
+    /** Detecta automáticamente si una URL pertenece a YouTube, TikTok o Instagram. */
     static SourcePlatform detectPlatformFromUrl(const juce::String& url);
 
-    /** Returns display name ("YouTube", "TikTok", "Instagram"). */
+    /** Devuelve el nombre legible de la plataforma ("YouTube", "TikTok" o "Instagram"). */
     static juce::String getPlatformName(SourcePlatform platform);
 
-    /** Normalizes platform links (e.g., Instagram /reels/ -> /reel/, strips tracking garbage). */
+    /** Normaliza los enlaces de cada plataforma (ej. convierte /reels/ a /reel/ y limpia parámetros basura). */
     static juce::String normalizeUrlForPlatform(const juce::String& rawUrl, SourcePlatform platform);
 
-    /** Validates whether the URL matches the selected platform (or is a valid supported media URL). */
+    /** Verifica si la URL ingresada es válida y coincide con la plataforma seleccionada. */
     static bool isValidPlatformUrl(const juce::String& url, SourcePlatform platform, juce::String& outReason);
 
-    /** Starts an extraction job on a background thread with platform-specific handling and duration (3s, 10s, 30s). */
+    /** Inicia un trabajo de extracción en un hilo secundario para la duración elegida (3s, 10s o 30s). */
     void startExtraction(const juce::String& mediaUrl,
                          SourcePlatform platform,
                          const juce::String& startTimeString,
@@ -67,45 +79,52 @@ public:
                          ProgressCallback progressCb,
                          CompletionCallback completionCb);
 
-    /** Cancels any running extraction and cleans up child processes. */
+    /** Cancela cualquier extracción activa y termina de forma segura los subprocesos hijos. */
     void cancelExtraction();
 
-    /** Checks if a background job is actively processing. */
+    /** Indica si el hilo de extracción está procesando una descarga actualmente. */
     bool isExtracting() const { return isThreadRunning(); }
 
-    /** Fetches video total duration and copyright metadata asynchronously for YouTube, TikTok, or Instagram. */
+    /** Consulta asíncronamente la duración total y metadatos de derechos para YouTube, TikTok o Instagram. */
     static void fetchVideoMetadata(const juce::String& mediaUrl,
                                    SourcePlatform platform,
                                    std::function<void(const VideoMetadata&)> onComplete);
 
-    /** Helper to parse "MM:SS", "HH:MM:SS" or raw seconds into integer seconds. */
+    /** Convierte una cadena de tiempo ("MM:SS", "HH:MM:SS" o segundos) a segundos enteros. */
     static int parseTimeToSeconds(const juce::String& timeString);
 
-    /** Helper to format seconds back to "HH:MM:SS" */
+    /** Formatea una cantidad de segundos al estándar "HH:MM:SS". */
     static juce::String formatSecondsToTime(int totalSeconds);
 
-    /** Helper to format seconds to compact "MM:SS" (or "HH:MM:SS" if >= 1 hour). */
+    /** Formatea una cantidad de segundos al formato compacto "MM:SS" (o "HH:MM:SS" si supera 1 hora). */
     static juce::String formatSecondsToMMSS(int totalSeconds);
 
-    /** Locates cache folder used by ClipSampler. */
+    /** Obtiene y crea el directorio de caché de audio del plugin (AppData/Roaming/ClipSampler/AudioCache). */
     static juce::File getCacheDirectory();
 
-    /** Deletes cached .wav and temporary files, excluding the currently active files. */
+    /** Limpia los archivos temporales en caché protegiendo los archivos actualmente cargados en el Visor 1 y 2. */
     static int clearCacheDirectory(const juce::File& activeFile1 = {}, const juce::File& activeFile2 = {});
 
-    /** Runs yt-dlp -U asynchronously with real timeout protection. */
+    /** Ejecuta la actualización asíncrona de yt-dlp (-U) con límite de tiempo de seguridad. */
     static void runYtDlpUpdate(std::function<void(bool success, const juce::String& outputMsg)> onComplete);
 
-    /** Locates executable binaries (yt-dlp, ffmpeg) across AppData, plugin tools and PATH. */
+    /** Busca los binarios auxiliares (yt-dlp, ffmpeg) en las carpetas de ClipSampler y en el PATH del sistema. */
     static juce::File findExecutable(const juce::String& executableName);
 
 private:
+    /** Bucle principal del hilo secundario que ejecuta la descarga y conversión a WAV. */
     void run() override;
 
+    /** Valida el archivo WAV descargado, aplica el recorte exacto al sample, micro-fades y normalización. */
     bool validateAndEnforceDuration(const juce::File& audioFile, int targetRate, int startOffsetSec, int maxDurationSec);
+
+    /** Termina el proceso hijo activo si el usuario cancela o cierra el plugin. */
     void killActiveProcessTree();
+
+    /** Añade los argumentos de red y cabeceras HTTP específicos para YouTube, TikTok o Instagram. */
     static void appendPlatformSpecificArgs(juce::StringArray& args, SourcePlatform platform);
 
+    // Parámetros de la tarea de extracción actual
     juce::String currentUrl;
     SourcePlatform currentPlatform = SourcePlatform::YouTube;
     juce::String currentStartTimeStr;

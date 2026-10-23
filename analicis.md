@@ -1,9 +1,9 @@
-# 🔍 Auditoría Exhaustiva de Arquitectura y Calidad de Código — ClipSampler10
+# 🔍 Auditoría Exhaustiva de Arquitectura y Calidad de Código — ClipSampler v2.4
 
-**Fecha de Auditoría:** 21 de Octubre de 2026  
+**Fecha de Auditoría:** 22 de Octubre de 2026  
 **Rol:** Principal Software Architect (Staff Software Engineer) & Code Quality Auditor  
-**Proyecto:** `ClipSampler10` (VST3 / AAX Virtual Instrument Audio Plugin — JUCE 8 + CMake)  
-**Objetivo:** Diagnóstico pre-producción para empaquetado multiplataforma (`.exe` Windows / `.pkg` macOS) y preparación de la base arquitectónica para futuras expansiones de funcionalidades.
+**Proyecto:** `ClipSampler` (VST3 / AAX Virtual Instrument Audio Plugin — JUCE 8 + CMake)  
+**Objetivo:** Diagnóstico pre-producción para empaquetado multiplataforma (`.exe` Windows / `.pkg` macOS), seguridad anti-piratería, diseño responsive Royal Sapphire y documentación integral.
 
 ---
 
@@ -467,3 +467,22 @@ Se realizó una auditoría defensiva sobre [`Source/Security/LicenseManager.h`](
 
 
 
+
+---
+
+## 11. ✨ Revisión Integral `v2.4.0`: Carpetas `ClipSampler`, Diseño Responsive *Royal Sapphire*, Manual de Usuario y Código Comentado en Español
+
+1. **Unificación Total de Nombres de Carpetas y Objetivos (`ClipSampler` sin el `10`):**
+   * Se actualizó el objetivo en [`CMakeLists.txt`](file:///c:/Users/joncl/Downloads/Plugin/CMakeLists.txt) de `ClipSampler10` a `ClipSampler`, generando `build/ClipSampler_artefacts/Release/VST3/ClipSampler.vst3`.
+   * [`build_windows.ps1`](file:///c:/Users/joncl/Downloads/Plugin/build_windows.ps1) limpia automáticamente cualquier carpeta residual `build/ClipSampler10*`.
+   * [`AudioExtractorWorker.cpp`](file:///c:/Users/joncl/Downloads/Plugin/Source/Services/AudioExtractorWorker.cpp) y [`LicenseManager.cpp`](file:///c:/Users/joncl/Downloads/Plugin/Source/Security/LicenseManager.cpp) utilizan ahora `%APPDATA%\ClipSampler` y `%PROGRAMDATA%\ClipSampler`, migrando automáticamente licencias previas con `migrateLegacyFolderIfNeeded()`.
+   * Se renombraron las clases principales a `ClipSamplerAudioProcessor` y `ClipSamplerAudioProcessorEditor`.
+2. **Corrección de Textos Superpuestos, Codificación UTF-8 Limpia y Layout 100% Responsive:**
+   * Se corrigió la superposición del subtítulo superior con el botón `⏳ PRUEBA (3 DÍAS)` delimitando dinámicamente el área de texto (`availHeaderTextW = licenseBadgeButton.getX() - 26`) y usando `drawFittedText`.
+   * Se eliminaron caracteres corruptos (`â€¢`) usando `juce::String::fromUTF8` y textos 100% en español.
+   * Se implementó `ScalablePluginLookAndFeel::drawButtonText` con ajuste dinámico de fuente y proporciones porcentuales en las 5 filas de `resized()` para que el plugin se adapte perfectamente desde `680x540` hasta `1800x1300`.
+3. **Diseño Elegante de Estudio *Royal Sapphire & Satin Titanium* (Sin Fondo Negro):**
+   * Se reemplazó el fondo negro por un acabado arquitectónico de estudio en tonos **Azul Zafiro Real (`#1e2b48` -> `#253659` -> `#152036`)** y **Titanio Satinado**, con iluminación ambiental radial y tarjetas esmeriladas con bordes de luz especular.
+4. **Manual de Usuario y Comentarios en Español para Desarrolladores:**
+   * Se creó [`MANUAL_DE_USUARIO.md`](file:///c:/Users/joncl/Downloads/Plugin/MANUAL_DE_USUARIO.md) con instrucciones paso a paso de todas las funciones del plugin.
+   * Se documentaron en español todos los archivos fuente C++ (`PluginProcessor`, `PluginEditor`, `WaveformComponent`, `AudioExtractorWorker`, `LicenseManager`, `LicenseOverlayComponent`), `CMakeLists.txt`, `build_windows.ps1` e `installer/windows_installer.iss`.

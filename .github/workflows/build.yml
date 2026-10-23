@@ -1,4 +1,4 @@
-name: Build ClipSampler10 Installers (Windows .exe & macOS .pkg)
+name: Build ClipSampler Installers (Windows .exe & macOS .pkg)
 
 on:
   push:
@@ -44,7 +44,7 @@ jobs:
       - name: Subir Instalador Windows (.exe) como Artefacto
         uses: actions/upload-artifact@v4
         with:
-          name: ClipSampler10_Windows_Installer_EXE
+          name: ClipSampler_Windows_Installer_EXE
           path: dist_windows/*.exe
           if-no-files-found: error
 
@@ -79,6 +79,6 @@ jobs:
       - name: Subir Instalador macOS (.pkg) como Artefacto
         uses: actions/upload-artifact@v4
         with:
-          name: ClipSampler10_macOS_Installer_PKG
+          name: ClipSampler_macOS_Installer_PKG
           path: dist_macos/*.pkg
           if-no-files-found: error

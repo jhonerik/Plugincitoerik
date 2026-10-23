@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-ClipSampler10 - Generador de Licencias, Base de Datos SQLite y Servidor de Activación API
-=========================================================================================
+ClipSampler v2.4 - Generador de Licencias, Base de Datos SQLite y Servidor de Activación API
+============================================================================================
 Características:
 1. Base de Datos SQLite persistente (`licenses.db`) que almacena todas las licencias emitidas,
    datos del cliente, ID de Máquina (Hardware ID), estado (ACTIVA / REVOCADA) y fecha de activación.
@@ -109,7 +109,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ClipSampler10 — Generador y Base de Datos de Licencias</title>
+<title>ClipSampler v2.4 — Generador y Base de Datos de Licencias</title>
 <style>
   :root {
     --bg: #0f1218;
@@ -189,7 +189,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
 <div class="container">
   <header>
     <div>
-      <h1>🔐 CLIPSAMPLER 10 — PANEL DE LICENCIAS Y BASE DE DATOS</h1>
+      <h1>🔐 CLIPSAMPLER v2.4 — PANEL DE LICENCIAS Y BASE DE DATOS</h1>
       <div class="subtitle">Generador Criptográfico + Servidor de Activación Online & Webhook para Página Web (Base de datos SQLite activa)</div>
     </div>
     <div class="stats">
@@ -427,7 +427,7 @@ class LicenseRequestHandler(BaseHTTPRequestHandler):
             csv_bytes = "\n".join(lines).encode("utf-8")
             self.send_response(200)
             self.send_header("Content-Type", "text/csv; charset=utf-8")
-            self.send_header("Content-Disposition", 'attachment; filename="ClipSampler10_Licenses.csv"')
+            self.send_header("Content-Disposition", 'attachment; filename="ClipSampler_Licenses.csv"')
             self.send_header("Content-Length", str(len(csv_bytes)))
             self.end_headers()
             self.wfile.write(csv_bytes)
@@ -605,7 +605,7 @@ def main():
     server = HTTPServer(("127.0.0.1", PORT), LicenseRequestHandler)
     url = f"http://127.0.0.1:{PORT}"
     print("=" * 68)
-    print("  ClipSampler10 - Generador de Licencias y Base de Datos Activo")
+    print("  ClipSampler v2.4 - Generador de Licencias y Base de Datos Activo")
     print(f"  Base de datos SQLite : {DB_PATH}")
     print(f"  Panel de Control Web : {url}")
     print(f"  API de Activacion    : {url}/api/activate")

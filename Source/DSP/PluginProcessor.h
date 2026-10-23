@@ -9,44 +9,57 @@
 #include "../Security/LicenseManager.h"
 
 /**
- * Represents a single rhythmic transient slice in MPC "Auto-Chop" mode,
- * mapped chromatically from C1 (MIDI 36) to G2 (MIDI 55).
+ * @struct ChopSlice
+ * @brief Representa una rodaja rítmica individual (transiente) dentro del modo Rebanador MPC (Auto-Chop),
+ *        asignada cromáticamente al teclado MIDI desde C1 (nota 36) hasta G2 (nota 55).
  */
 struct ChopSlice
 {
-    int midiNote = 36;
-    juce::String noteName;
-    int startSample = 0;
-    int endSample = 0;
-    float startNorm = 0.0f;
-    float endNorm = 1.0f;
+    int midiNote = 36;      ///< Número de nota MIDI asignada (36 = C1 .. 55 = G2).
+    juce::String noteName;  ///< Nombre legible de la nota (ej. "C1", "C#1", "D1").
+    int startSample = 0;    ///< Índice del sample donde inicia la rodaja.
+    int endSample = 0;      ///< Índice del sample donde termina la rodaja.
+    float startNorm = 0.0f; ///< Posición normalizada de inicio (0.0 a 1.0) para dibujo en el visor.
+    float endNorm = 1.0f;   ///< Posición normalizada de fin (0.0 a 1.0) para dibujo en el visor.
 };
 
 /**
- * ClipSampler10AudioProcessor (ClipSampler v2.3)
- * 
- * VSTi / AAX Virtual Instrument DSP Engine, MPC Auto-Chop Slicer,
- * BPM & Musical Key Detector, FX Macro Processor, Audio-to-MIDI Converter,
- * and Dual-Slot AI Copyright Evasion Coordinator.
+ * @class ClipSamplerAudioProcessor
+ * @brief Motor principal DSP e Instrumento Virtual (VST3 / AAX) de ClipSampler v2.4.
+ *
+ * Coordina los subsistemas del plugin:
+ * - Extracción asíncrona multi-plataforma (YouTube, TikTok, Instagram) en 3s, 10s o 30s.
+ * - Doble ranura de audio (Audio 1 Original y Audio 2 Transformado por Derechos IA).
+ * - Modo Rebanador MPC (Auto-Chop) por detección de transientes asignadas a las teclas C1..G2.
+ * - Procesador de Efectos Macro en tiempo real y renderizable (Lo-Fi 12-Bit, Tono/Pitch, Filtro y Sincronización BPM).
+ * - Detector automático de Tempo (BPM) y Tonalidad Musical (Key) mediante resonadores de Goertzel.
+ * - Conversor de Audio a MIDI (.mid) para arrastrar y soltar directamente al Piano Roll del DAW.
  */
-class ClipSampler10AudioProcessor : public juce::AudioProcessor
+class ClipSamplerAudioProcessor : public juce::AudioProcessor
 {
 public:
-    ClipSampler10AudioProcessor();
-    ~ClipSampler10AudioProcessor() override;
+    ClipSamplerAudioProcessor();
+    ~ClipSamplerAudioProcessor() override;
 
+    //==============================================================================
+    // Ciclo de Vida de Audio de JUCE (Tiempo Real)
     //==============================================================================
     void prepareToPlay(double sampleRate, int samplesPerBlock) override;
     void releaseResources() override;
 
     bool isBusesLayoutSupported(const BusesLayout& layouts) const override;
 
+    /** Procesa en tiempo real los bloques de audio y eventos MIDI entrantes desde el DAW. */
     void processBlock(juce::AudioBuffer<float>&, juce::MidiBuffer&) override;
 
+    //==============================================================================
+    // Creación de la Interfaz Gráfica (Editor)
     //==============================================================================
     juce::AudioProcessorEditor* createEditor() override;
     bool hasEditor() const override;
 
+    //==============================================================================
+    // Metadatos del Plugin y Programas
     //==============================================================================
     const juce::String getName() const override;
 
@@ -55,7 +68,6 @@ public:
     bool isMidiEffect() const override;
     double getTailLengthSeconds() const override;
 
-    //==============================================================================
     int getNumPrograms() override;
     int getCurrentProgram() override;
     void setCurrentProgram(int index) override;
@@ -63,7 +75,7 @@ public:
     void changeProgramName(int index, const juce::String& newName) override;
 
     //==============================================================================
-    // DAW State Persistence (APVTS + Session Metadata)
+    // Persistencia de Estado en la Sesión del DAW (APVTS + Propiedades XML/Binarias)
     //==============================================================================
     void getStateInformation(juce::MemoryBlock& destData) override;
     void setStateInformation(const void* data, int sizeInBytes) override;
@@ -72,69 +84,65 @@ public:
     static juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
 
     //==============================================================================
-    // ClipSampler v2.4 Multi-Platform (YouTube / TikTok / Instagram), Multi-Duration & Derechos AI API
+    // API Multi-Plataforma (YouTube / TikTok / Instagram), Duración y Derechos IA
     //==============================================================================
     void setSelectedPlatform(SourcePlatform platform) { selectedPlatform.store(static_cast<int>(platform), std::memory_order_relaxed); }
     SourcePlatform getSelectedPlatform() const { return static_cast<SourcePlatform>(selectedPlatform.load(std::memory_order_relaxed)); }
 
-    /** Starts a background multi-platform extraction for the specified duration (3s, 10s, or 30s). */
+    /** Inicia la extracción en segundo plano desde la plataforma seleccionada (3s, 10s o 30s). */
     void startSampleExtraction(const juce::String& url, const juce::String& startTime, int durationSeconds = 10);
 
-    /** Queries the URL asynchronously (YouTube, TikTok, or Instagram) to detect total video duration and metadata. */
+    /** Consulta asíncronamente la duración total del video y sus metadatos de derechos. */
     void detectVideoDuration(const juce::String& url);
 
-    /** Analyzes Slot 1 (Original Audio) for copyright / Content ID fingerprint risk. */
+    /** Analiza el Audio 1 (Original) para detectar riesgo de huella acústica / Content ID. */
     bool analyzeOriginalCopyright(juce::String& outReport);
 
     /**
-     * Generates Slot 2 ("Derechos IA") from Slot 1 by shifting ±3 semitones and applying
-     * all-pass phase dispersion + stereo micro-modulation to evade acoustic fingerprinting.
+     * Genera el Audio 2 ("Derechos IA") a partir del Audio 1 desplazando ±3 semitonos
+     * y aplicando dispersión de fase all-pass + micro-modulación estéreo para evadir Content ID.
      */
     bool applyDerechosTransformation(int semitoneShift, juce::String& outReport);
 
-    /** Verifies whether Slot 2 (Transformed Audio) is sufficiently decorrelated from Slot 1's copyright fingerprint. */
+    /** Verifica matemáticamente la divergencia espectral entre el Audio 1 y el Audio 2. */
     bool verifyTransformedAudioCopyrightFree(juce::String& outReport);
 
-    /** Returns true if the given slot (1 or 2) currently has a valid audio file loaded. */
+    /** Devuelve true si la ranura indicada (1 o 2) tiene un archivo de audio cargado. */
     bool hasSlotAudio(int slotIndex) const;
 
     /**
-     * Condition requested for v2.3:
-     * Returns true ONLY when BOTH Audio 1 (Original) and Audio 2 (Transformed/Extraído 2) are loaded,
-     * enabling the "🔄 Nueva Extracción" button to wipe and reset the entire plugin state.
+     * Devuelve true únicamente cuando TANTO el Audio 1 como el Audio 2 están listos,
+     * habilitando el botón "Nueva Extracción" para limpiar el plugin por completo.
      */
     bool hasBothAudiosReady() const;
 
-    /**
-     * Clears both waveform slots, slices, BPM/Key metadata, FX state, and URL/time fields
-     * so the plugin is completely clean for a brand-new extraction.
-     */
+    /** Limpia ambos visores, tajadas MPC, BPM/Tono, efectos y enlaces para iniciar una nueva extracción. */
     void resetForNewExtraction();
 
-    /** Switches active playback/MIDI/drag slot (1 = Original, 2 = Transformado Derechos). */
+    /** Cambia la ranura activa para reproducción, MIDI y exportación (1 = Original, 2 = Modificado Derechos IA). */
     void setActiveSlot(int slotIndex);
     int getActiveSlot() const { return activeSlot.load(std::memory_order_relaxed); }
 
     //==============================================================================
-    // v2.3: MPC Auto-Chop Mode (Transient Detection C1 -> G2)
+    // Modo Rebanador MPC (Auto-Chop de Transientes C1 -> G2)
     //==============================================================================
     void setAutoChopEnabled(bool enabled);
     bool isAutoChopEnabled() const { return autoChopEnabled.load(std::memory_order_relaxed); }
 
-    /** Re-runs transient detection on the specified slot and populates C1..G2 slices. */
+    /** Ejecuta el detector de transientes, BPM y Tonalidad sobre la ranura indicada (1 o 2). */
     void analyzeAutoChopAndMusicData(int slotIndex);
 
-    /** Returns the list of detected MPC transient slices for the requested slot (1 or 2). */
+    /** Devuelve el vector de rodajas MPC detectadas para la ranura solicitada. */
     std::vector<ChopSlice> getChopSlices(int slotIndex) const;
 
-    /** Triggers playback of a specific MPC slice index (0 = C1, 1 = C#1, etc.) on the active slot. */
+    /** Dispara la reproducción inmediata de una rodaja específica (0 = C1, 1 = C#1, etc.). */
     void triggerChopSlice(int sliceIndex);
 
-    /** Returns the currently playing slice index, or -1 if playing full sample / stopped. */
+    /** Devuelve el índice de la rodaja que está sonando actualmente, o -1 si ninguna. */
     int getActivePlayingSlice() const { return activePlayingSlice.load(std::memory_order_relaxed); }
 
     //==============================================================================
-    // v2.3: FX Macro (Lo-Fi 12-Bit, Pitch Semitones, Filter, Auto-Sync) per Slot
+    // Macro de Efectos (Lo-Fi 12-Bit, Tono en Semitonos, Filtro y Sincronización BPM)
     //==============================================================================
     void setFxTargetSlot(int slotIndex);
     int getFxTargetSlot() const { return fxTargetSlot.load(std::memory_order_relaxed); }
@@ -151,55 +159,44 @@ public:
     void setAutoSyncEnabled(bool enabled);
     bool isAutoSyncEnabled() const { return autoSyncEnabled.load(std::memory_order_relaxed); }
 
-    /** Bakes the current FX Macro (Lo-Fi 12-Bit, Pitch, Tone, Auto-Sync) into the target slot (1 or 2). */
+    /** Imprime de forma permanente los efectos actuales en el archivo WAV de la ranura seleccionada (1 o 2). */
     bool applyFxMacroToTargetSlot(juce::String& outReport);
 
     //==============================================================================
-    // v2.3: Automatic BPM + Musical Key (Tonalidad) Detection
+    // Detector Automático de Tempo (BPM) y Tonalidad Musical (Tono)
     //==============================================================================
     double getDetectedBpm(int slotIndex) const;
     juce::String getDetectedKey(int slotIndex) const;
     double getHostBpm() const { return currentHostBpm.load(std::memory_order_relaxed); }
 
     //==============================================================================
-    // v2.3: Audio-to-MIDI Converter (Drag & Drop .MIDI for Piano Roll)
+    // Conversor de Audio a MIDI (Arrastrar .MIDI al Piano Roll)
     //==============================================================================
-    /** Analyses pitched notes & rhythmic onsets in the given slot and writes a .mid file. */
+    /** Detecta las notas fundamentales del audio y genera un archivo estándar .mid listo para arrastrar. */
     juce::File generateMidiFileForSlot(int slotIndex);
     juce::File getCurrentMidiFile();
 
-    /** Triggers an asynchronous yt-dlp -U update managed safely by the Processor. */
+    /** Actualiza el motor yt-dlp de forma asíncrona. */
     void startExtractorUpdate();
 
-    /** Cleans cached .wav files while preserving both Slot 1 and Slot 2 active samples. */
+    /** Limpia la carpeta de caché preservando los audios activos en el Visor 1 y Visor 2. */
     int cleanAudioCache();
 
-    /** Loads a .wav file into Slot 1 (Original) or Slot 2 (Transformed) and makes it active. */
+    /** Carga un archivo .wav en la ranura 1 o 2 y lo activa para reproducción. */
     bool loadAudioFileIntoSlot(const juce::File& file, int slotIndex);
-
-    /** Legacy helper: loads into Slot 1. */
     bool loadAudioFile(const juce::File& file) { return loadAudioFileIntoSlot(file, 1); }
 
-    /** Triggers playback of the active slot sample from the start. */
+    /** Inicia o detiene la reproducción del audio activo. */
     void startPlayback();
-
-    /** Immediately stops sample playback. */
     void stopPlayback();
-
-    /** Checks if audio is currently rendering in processBlock. */
     bool isAudioPlaying() const { return isPlaying.load(std::memory_order_relaxed); }
-
-    /** Returns normalized playback progress (0.0 to 1.0). */
     float getPlaybackProgress() const;
 
-    /** Returns the currently active audio file (or specific slot 1 / 2). */
+    /** Accesores de archivos y estado para la interfaz gráfica. */
     juce::File getCurrentAudioFile() const;
     juce::File getSlotAudioFile(int slotIndex) const;
-
-    /** Returns the sample rate of the currently loaded audio file. */
     double getLoadedFileSampleRate() const { return loadedFileSampleRate.load(std::memory_order_relaxed); }
 
-    /** Extraction, Metadata & Update status accessors for the UI */
     bool isExtractionRunning() const { return extractionInProgress.load(std::memory_order_relaxed); }
     bool isUpdateRunning() const { return updateInProgress.load(std::memory_order_relaxed); }
     bool isMetadataFetchRunning() const { return metadataInProgress.load(std::memory_order_relaxed); }
@@ -214,22 +211,19 @@ public:
     juce::String getCopyrightBadgeText() const;
     int getCopyrightVerifyState() const { return copyrightVerifyState.load(std::memory_order_relaxed); }
 
-    /** Dual Waveform thumbnails access for the GUI (Slot 1 = Original, Slot 2 = Derechos Transformed). */
     juce::AudioThumbnail& getThumbnail(int slotIndex = 1) { return (slotIndex == 2) ? transformedThumbnail : originalThumbnail; }
-
     juce::AudioFormatManager& getFormatManager() { return formatManager; }
 
-    /** Security & 3-Day Trial License Manager access */
     LicenseManager& getLicenseManager() { return licenseManager; }
     const LicenseManager& getLicenseManager() const { return licenseManager; }
 
-    // Session state accessors
     juce::String getLastUrl() const { return lastUrl; }
     void setLastUrl(const juce::String& url) { lastUrl = url; }
 
     juce::String getLastStartTime() const { return lastStartTime; }
     void setLastStartTime(const juce::String& time) { lastStartTime = time; }
 
+    /** Convierte un número de nota MIDI (0-127) a su notación musical estándar (ej. 36 -> "C1"). */
     static juce::String midiNoteToName(int midiNote);
 
 private:
@@ -260,7 +254,7 @@ private:
     std::atomic<int> activeSlot { 1 };
     std::atomic<double> loadedFileSampleRate { 44100.0 };
 
-    // Auto-Chop MPC & BPM/Key state per slot
+    // Estado del Rebanador MPC, BPM y Tonalidad por cada ranura
     std::atomic<bool> autoChopEnabled { true };
     std::vector<ChopSlice> slot1Slices;
     std::vector<ChopSlice> slot2Slices;
@@ -270,16 +264,16 @@ private:
     juce::String slot2Key { "--" };
     std::atomic<double> currentHostBpm { 120.0 };
 
-    // FX Macro state
+    // Estado de las Perillas de Efectos Macro
     std::atomic<int> fxTargetSlot { 1 };
-    std::atomic<float> fxLofiAmount { 0.0f };       // 0.0 .. 1.0 (Lo-Fi 12-Bit & sample hold)
-    std::atomic<float> fxPitchSemitones { 0.0f };   // -12.0 .. +12.0 semitones
-    std::atomic<float> fxToneFilter { 1.0f };       // 0.1 .. 1.0 low-pass warmth
+    std::atomic<float> fxLofiAmount { 0.0f };       // 0.0 a 1.0 (Reducción de bits Lo-Fi 12-Bit)
+    std::atomic<float> fxPitchSemitones { 0.0f };   // -12.0 a +12.0 semitonos
+    std::atomic<float> fxToneFilter { 1.0f };       // 0.1 a 1.0 (Filtro paso-bajo cálido)
     std::atomic<bool> autoSyncEnabled { false };
     float lofiFilterStateL = 0.0f;
     float lofiFilterStateR = 0.0f;
 
-    // Stored session parameters
+    // Parámetros de sesión almacenados
     std::atomic<int> selectedPlatform { 0 }; // 0 = YouTube, 1 = TikTok, 2 = Instagram
     juce::String lastUrl;
     juce::String lastStartTime = "00:00";
@@ -290,10 +284,9 @@ private:
     std::atomic<int> lastSelectedDurationSec { 10 };
     std::atomic<int> lastAppliedSemitones { 3 };
     std::atomic<double> lastDivergencePercent { 0.0 };
-    // 0 = Not checked, 1 = Original has Copyright Risk, 2 = Transformed Verified Copyright-Free
     std::atomic<int> copyrightVerifyState { 0 };
 
-    // Thread-safe status state for Editor synchronization
+    // Estado sincronizado entre hilos para los mensajes de la UI
     mutable juce::CriticalSection statusLock;
     juce::String currentStatusMessage;
     juce::String currentCopyrightBadge;
@@ -302,7 +295,7 @@ private:
     std::atomic<bool> metadataInProgress { false };
     std::atomic<float> extractionProgress { 0.0f };
 
-    // Real-time playback state (supports fractional resampling for Pitch + Auto-Sync + Auto-Chop slice bounds)
+    // Punteros de reproducción en tiempo real con interpolación fraccionaria
     std::atomic<bool> isPlaying { false };
     std::atomic<double> fractionalPlayhead { 0.0 };
     std::atomic<int> playheadPosition { 0 };
@@ -312,5 +305,8 @@ private:
 
     std::shared_ptr<std::atomic<bool>> aliveFlag = std::make_shared<std::atomic<bool>>(true);
 
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ClipSampler10AudioProcessor)
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ClipSamplerAudioProcessor)
 };
+
+// Alias de compatibilidad hacia atrás
+using ClipSampler10AudioProcessor = ClipSamplerAudioProcessor;

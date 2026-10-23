@@ -8,34 +8,50 @@
  #include <windows.h>
 #endif
 
+// ==============================================================================
+// Variables anónimas de módulo para cachear las rutas de ejecutables (yt-dlp y ffmpeg)
+// evitando búsquedas repetitivas en el disco duro durante la sesión.
+// ==============================================================================
 namespace
 {
     std::mutex gExecutableCacheMutex;
     std::map<juce::String, juce::File> gExecutableCache;
 
+    // User-Agent de navegador moderno para evitar bloqueos en los CDN de TikTok e Instagram
     constexpr const char* kModernDesktopUserAgent =
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
 }
 
+// ==============================================================================
+// Constructor y Destructor
+// ==============================================================================
 AudioExtractorWorker::AudioExtractorWorker()
-    : juce::Thread("AudioExtractorWorkerThread")
+    : juce::Thread("ClipSamplerExtractorThread")
 {
 }
 
 AudioExtractorWorker::~AudioExtractorWorker()
 {
+    // Nos aseguramos de detener cualquier descarga pendiente antes de destruir la instancia
     cancelExtraction();
 }
 
+// ==============================================================================
+// Detección, Normalización y Validación Multi-Plataforma (YouTube / TikTok / Instagram)
+// ==============================================================================
 SourcePlatform AudioExtractorWorker::detectPlatformFromUrl(const juce::String& url)
 {
     juce::String lower = url.trim().toLowerCase();
+
+    // Reconoce enlaces completos y acortados de TikTok
     if (lower.contains("tiktok.com") || lower.contains("vm.tiktok.com") || lower.contains("vt.tiktok.com"))
         return SourcePlatform::TikTok;
 
+    // Reconoce enlaces de Instagram Reels, Posts e IGTV
     if (lower.contains("instagram.com") || lower.contains("instagr.am"))
         return SourcePlatform::Instagram;
 
+    // Por defecto asume YouTube (youtube.com, youtu.be, shorts, music.youtube.com)
     return SourcePlatform::YouTube;
 }
 
@@ -58,7 +74,7 @@ juce::String AudioExtractorWorker::normalizeUrlForPlatform(const juce::String& r
 
     if (platform == SourcePlatform::Instagram)
     {
-        // Normalize /reels/ to /reel/ so yt-dlp's Instagram extractor matches reliably
+        // Convierte /reels/ a /reel/ y elimina parámetros de rastreo (?igsh=...) para máxima compatibilidad
         clean = clean.replace("instagram.com/reels/", "instagram.com/reel/", true);
         int qIdx = clean.indexOfChar('?');
         if (qIdx > 0 && (clean.containsIgnoreCase("/reel/") || clean.containsIgnoreCase("/p/") || clean.containsIgnoreCase("/tv/")))
@@ -66,7 +82,7 @@ juce::String AudioExtractorWorker::normalizeUrlForPlatform(const juce::String& r
     }
     else if (platform == SourcePlatform::TikTok)
     {
-        // Strip tracking query strings from full tiktok.com/@user/video/12345 URLs
+        // Limpia parámetros de consulta innecesarios en URLs largas de TikTok (/video/...)
         if (clean.containsIgnoreCase("/video/") || clean.containsIgnoreCase("/photo/"))
         {
             int qIdx = clean.indexOfChar('?');
@@ -92,7 +108,7 @@ bool AudioExtractorWorker::isValidPlatformUrl(const juce::String& url, SourcePla
     {
         if (!lower.contains("tiktok.com"))
         {
-            outReason = juce::String::fromUTF8("Seleccionaste modo TikTok, pero el enlace no parece ser de TikTok (tiktok.com).");
+            outReason = juce::String::fromUTF8("Seleccionaste TikTok, pero el enlace no pertenece a TikTok (tiktok.com).");
             return false;
         }
     }
@@ -100,7 +116,7 @@ bool AudioExtractorWorker::isValidPlatformUrl(const juce::String& url, SourcePla
     {
         if (!lower.contains("instagram.com") && !lower.contains("instagr.am"))
         {
-            outReason = juce::String::fromUTF8("Seleccionaste modo Instagram, pero el enlace no parece ser de Instagram (instagram.com).");
+            outReason = juce::String::fromUTF8("Seleccionaste Instagram, pero el enlace no pertenece a Instagram (instagram.com).");
             return false;
         }
     }
@@ -108,7 +124,7 @@ bool AudioExtractorWorker::isValidPlatformUrl(const juce::String& url, SourcePla
     {
         if (!lower.contains("youtube.com") && !lower.contains("youtu.be"))
         {
-            outReason = juce::String::fromUTF8("Seleccionaste modo YouTube, pero el enlace pertenece a otra plataforma. Cambia el selector arriba a TikTok o Instagram.");
+            outReason = juce::String::fromUTF8("Seleccionaste YouTube, pero el enlace es de otra plataforma. Cambia el selector a TikTok o Instagram.");
             return false;
         }
     }
@@ -118,10 +134,12 @@ bool AudioExtractorWorker::isValidPlatformUrl(const juce::String& url, SourcePla
 
 void AudioExtractorWorker::appendPlatformSpecificArgs(juce::StringArray& args, SourcePlatform platform)
 {
+    // Evita descargar listas de reproducción enteras y salta restricciones regionales o de certificados
     args.add("--no-playlist");
     args.add("--geo-bypass");
     args.add("--no-check-certificates");
 
+    // Inyecta cabeceras HTTP específicas para evitar bloqueos 403 en TikTok e Instagram
     if (platform == SourcePlatform::TikTok)
     {
         args.add("--user-agent");
@@ -138,6 +156,9 @@ void AudioExtractorWorker::appendPlatformSpecificArgs(juce::StringArray& args, S
     }
 }
 
+// ==============================================================================
+// Control de Ejecución y Cancelación del Hilo de Extracción
+// ==============================================================================
 void AudioExtractorWorker::startExtraction(const juce::String& mediaUrl,
                                            SourcePlatform platform,
                                            const juce::String& startTimeString,
@@ -146,6 +167,7 @@ void AudioExtractorWorker::startExtraction(const juce::String& mediaUrl,
                                            ProgressCallback progressCb,
                                            CompletionCallback completionCb)
 {
+    // Si había una extracción previa corriendo, la cancelamos limpiamente
     if (isThreadRunning())
         cancelExtraction();
 
@@ -158,6 +180,7 @@ void AudioExtractorWorker::startExtraction(const juce::String& mediaUrl,
     completionCallback = std::move(completionCb);
     isCancelled.store(false);
 
+    // Inicia el hilo secundario (invoca automáticamente a AudioExtractorWorker::run)
     startThread(juce::Thread::Priority::normal);
 }
 
@@ -177,6 +200,9 @@ void AudioExtractorWorker::cancelExtraction()
     stopThread(2500);
 }
 
+// ==============================================================================
+// Utilidades de Conversión de Tiempo (MM:SS <-> Segundos)
+// ==============================================================================
 int AudioExtractorWorker::parseTimeToSeconds(const juce::String& timeString)
 {
     juce::String clean = timeString.trim();
@@ -227,13 +253,17 @@ juce::String AudioExtractorWorker::formatSecondsToMMSS(int totalSeconds)
     return juce::String::formatted("%02d:%02d", minutes, seconds);
 }
 
+// ==============================================================================
+// Gestión del Directorio de Caché de Audio (AppData/Roaming/ClipSampler/AudioCache)
+// ==============================================================================
 juce::File AudioExtractorWorker::getCacheDirectory()
 {
     auto baseDir = juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory);
 #if JUCE_MAC
     baseDir = baseDir.getChildFile("Application Support");
 #endif
-    auto cacheDir = baseDir.getChildFile("ClipSampler10")
+    // Carpeta oficial unificada sin el "10": ClipSampler/AudioCache
+    auto cacheDir = baseDir.getChildFile("ClipSampler")
                            .getChildFile("AudioCache");
     cacheDir.createDirectory();
     return cacheDir;
@@ -247,6 +277,7 @@ int AudioExtractorWorker::clearCacheDirectory(const juce::File& activeFile1, con
 
     for (auto& f : files)
     {
+        // Protegemos las muestras que están actualmente cargadas en el Visor 1 y Visor 2
         if (activeFile1 != juce::File() && f == activeFile1)
             continue;
         if (activeFile2 != juce::File() && f == activeFile2)
@@ -262,6 +293,9 @@ int AudioExtractorWorker::clearCacheDirectory(const juce::File& activeFile1, con
     return count;
 }
 
+// ==============================================================================
+// Lectura Asíncrona de Metadatos y Duración del Video (YouTube, TikTok, Instagram)
+// ==============================================================================
 void AudioExtractorWorker::fetchVideoMetadata(const juce::String& mediaUrl,
                                               SourcePlatform platform,
                                               std::function<void(const VideoMetadata&)> onComplete)
@@ -284,12 +318,13 @@ void AudioExtractorWorker::fetchVideoMetadata(const juce::String& mediaUrl,
         auto ytDlpBin = findExecutable("yt-dlp");
         if (!ytDlpBin.existsAsFile())
         {
-            meta.errorMessage = juce::String::fromUTF8("No se encontró yt-dlp.");
+            meta.errorMessage = juce::String::fromUTF8("No se encontró la herramienta yt-dlp.");
             if (onComplete)
                 juce::MessageManager::callAsync([onComplete, meta] { onComplete(meta); });
             return;
         }
 
+        // Consultamos duración, título, licencia, canción, artista y creador sin descargar el video
         juce::StringArray args;
         args.add(ytDlpBin.getFullPathName());
         appendPlatformSpecificArgs(args, platform);
@@ -301,12 +336,13 @@ void AudioExtractorWorker::fetchVideoMetadata(const juce::String& mediaUrl,
         juce::ChildProcess process;
         if (!process.start(args, juce::ChildProcess::wantStdOut | juce::ChildProcess::wantStdErr))
         {
-            meta.errorMessage = juce::String::fromUTF8("No se pudo consultar metadatos de ") + platformName + ".";
+            meta.errorMessage = juce::String::fromUTF8("No se pudo consultar los metadatos de ") + platformName + ".";
             if (onComplete)
                 juce::MessageManager::callAsync([onComplete, meta] { onComplete(meta); });
             return;
         }
 
+        // Lectura incremental con límite de tiempo (16 segundos) para no bloquear jamás
         juce::String output;
         char buffer[512];
         const auto startMs = juce::Time::getMillisecondCounterHiRes();
@@ -335,6 +371,7 @@ void AudioExtractorWorker::fetchVideoMetadata(const juce::String& mediaUrl,
             output += juce::String::fromUTF8(buffer, n);
         }
 
+        // Parseamos los campos separados por "|||"
         auto lines = juce::StringArray::fromLines(output.trim());
         for (const auto& line : lines)
         {
@@ -380,7 +417,7 @@ void AudioExtractorWorker::fetchVideoMetadata(const juce::String& mediaUrl,
                         ? juce::String::fromUTF8("Licencia Creative Commons")
                         : (juce::String::fromUTF8("Audio Comercial Protegido (") + platformName + ")");
 
-                    // TikTok and Instagram Reels sometimes omit duration in metadata print; default to 60s range if 0
+                    // Si TikTok o Instagram no devuelven duración antes de descargar, asignamos 60s provisionales
                     if (meta.durationSeconds <= 0 && (platform == SourcePlatform::TikTok || platform == SourcePlatform::Instagram))
                         meta.durationSeconds = 60;
 
@@ -391,13 +428,16 @@ void AudioExtractorWorker::fetchVideoMetadata(const juce::String& mediaUrl,
         }
 
         if (!meta.success && meta.errorMessage.isEmpty())
-            meta.errorMessage = juce::String::fromUTF8("No se pudo leer la duración de ") + platformName + juce::String::fromUTF8(" (puedes extraer directamente).");
+            meta.errorMessage = juce::String::fromUTF8("No se pudo leer la duración previa en ") + platformName + juce::String::fromUTF8(" (puedes extraer directamente).");
 
         if (onComplete)
             juce::MessageManager::callAsync([onComplete, meta] { onComplete(meta); });
     });
 }
 
+// ==============================================================================
+// Actualización Asíncrona del Motor de Extracción (yt-dlp -U)
+// ==============================================================================
 void AudioExtractorWorker::runYtDlpUpdate(std::function<void(bool success, const juce::String& outputMsg)> onComplete)
 {
     juce::Thread::launch([onComplete = std::move(onComplete)] {
@@ -407,7 +447,7 @@ void AudioExtractorWorker::runYtDlpUpdate(std::function<void(bool success, const
             if (onComplete)
             {
                 juce::MessageManager::callAsync([onComplete] {
-                    onComplete(false, juce::String::fromUTF8("No se encontró el ejecutable 'yt-dlp'. Verifica que esté instalado o en la carpeta tools."));
+                    onComplete(false, juce::String::fromUTF8("No se encontró el ejecutable 'yt-dlp'. Verifica que esté instalado."));
                 });
             }
             return;
@@ -423,7 +463,7 @@ void AudioExtractorWorker::runYtDlpUpdate(std::function<void(bool success, const
             if (onComplete)
             {
                 juce::MessageManager::callAsync([onComplete] {
-                    onComplete(false, juce::String::fromUTF8("No se pudo iniciar el proceso de actualización 'yt-dlp -U'."));
+                    onComplete(false, juce::String::fromUTF8("No se pudo iniciar la actualización del motor 'yt-dlp -U'."));
                 });
             }
             return;
@@ -468,7 +508,7 @@ void AudioExtractorWorker::runYtDlpUpdate(std::function<void(bool success, const
             if (onComplete)
             {
                 juce::MessageManager::callAsync([onComplete] {
-                    onComplete(false, juce::String::fromUTF8("Tiempo de espera agotado al actualizar yt-dlp."));
+                    onComplete(false, juce::String::fromUTF8("Tiempo de espera agotado al actualizar el motor."));
                 });
             }
             return;
@@ -491,6 +531,9 @@ void AudioExtractorWorker::runYtDlpUpdate(std::function<void(bool success, const
     });
 }
 
+// ==============================================================================
+// Localizador Multiplataforma de Ejecutables (yt-dlp / ffmpeg) con Caché en RAM
+// ==============================================================================
 juce::File AudioExtractorWorker::findExecutable(const juce::String& executableName)
 {
     const juce::String cacheKey = executableName.toLowerCase();
@@ -513,23 +556,35 @@ juce::File AudioExtractorWorker::findExecutable(const juce::String& executableNa
 #if JUCE_WINDOWS
     juce::String binaryName = executableName.endsWithIgnoreCase(".exe") ? executableName : (executableName + ".exe");
 
+    // 1. Buscar en ProgramData/ClipSampler/tools (y fallback a carpeta anterior si existiera)
     auto commonAppData = juce::File::getSpecialLocation(juce::File::commonApplicationDataDirectory);
-    auto commonToolsBin = commonAppData.getChildFile("ClipSampler10").getChildFile("tools").getChildFile(binaryName);
-    if (commonToolsBin.existsAsFile())
-        return cacheAndReturn(commonToolsBin);
+    for (const char* folderName : { "ClipSampler", "ClipSampler10" })
+    {
+        auto commonToolsBin = commonAppData.getChildFile(folderName).getChildFile("tools").getChildFile(binaryName);
+        if (commonToolsBin.existsAsFile())
+            return cacheAndReturn(commonToolsBin);
+    }
 
+    // 2. Buscar en AppData/Roaming/ClipSampler/tools
     auto roamingAppData = juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory);
-    auto roamingBin = roamingAppData.getChildFile("ClipSampler10").getChildFile("tools").getChildFile(binaryName);
-    if (roamingBin.existsAsFile())
-        return cacheAndReturn(roamingBin);
+    for (const char* folderName : { "ClipSampler", "ClipSampler10" })
+    {
+        auto roamingBin = roamingAppData.getChildFile(folderName).getChildFile("tools").getChildFile(binaryName);
+        if (roamingBin.existsAsFile())
+            return cacheAndReturn(roamingBin);
+    }
 
+    // 3. Buscar en AppData/Local/ClipSampler/tools y en paquetes de WinGet
     juce::String localAppDataEnv = juce::SystemStats::getEnvironmentVariable("LOCALAPPDATA", {});
     if (localAppDataEnv.isNotEmpty())
     {
         juce::File localAppData(localAppDataEnv);
-        auto localTools = localAppData.getChildFile("ClipSampler10").getChildFile("tools").getChildFile(binaryName);
-        if (localTools.existsAsFile())
-            return cacheAndReturn(localTools);
+        for (const char* folderName : { "ClipSampler", "ClipSampler10" })
+        {
+            auto localTools = localAppData.getChildFile(folderName).getChildFile("tools").getChildFile(binaryName);
+            if (localTools.existsAsFile())
+                return cacheAndReturn(localTools);
+        }
 
         auto wingetLink = localAppData.getChildFile("Microsoft").getChildFile("WinGet").getChildFile("Links").getChildFile(binaryName);
         if (wingetLink.existsAsFile())
@@ -544,6 +599,7 @@ juce::File AudioExtractorWorker::findExecutable(const juce::String& executableNa
         }
     }
 
+    // 4. Buscar junto al binario del plugin VST3 o en Program Files/ClipSampler/tools
     auto pluginFile = juce::File::getSpecialLocation(juce::File::currentExecutableFile);
     auto pluginDir = pluginFile.getParentDirectory();
     auto pluginTools = pluginDir.getChildFile("tools").getChildFile(binaryName);
@@ -556,10 +612,11 @@ juce::File AudioExtractorWorker::findExecutable(const juce::String& executableNa
         return cacheAndReturn(bundleTools);
 
     auto globalAppsDir = juce::File::getSpecialLocation(juce::File::globalApplicationsDirectory);
-    auto pfTools = globalAppsDir.getChildFile("ClipSampler10").getChildFile("tools").getChildFile(binaryName);
+    auto pfTools = globalAppsDir.getChildFile("ClipSampler").getChildFile("tools").getChildFile(binaryName);
     if (pfTools.existsAsFile())
         return cacheAndReturn(pfTools);
 
+    // 5. Buscar en Scoop, Chocolatey y el PATH del sistema Windows
     juce::String userProfile = juce::SystemStats::getEnvironmentVariable("USERPROFILE", {});
     if (userProfile.isNotEmpty())
     {
@@ -600,13 +657,13 @@ juce::File AudioExtractorWorker::findExecutable(const juce::String& executableNa
     return juce::File();
 
 #elif JUCE_MAC
-    auto appSupport = juce::File("/Library/Application Support/ClipSampler10/tools").getChildFile(executableName);
+    auto appSupport = juce::File("/Library/Application Support/ClipSampler/tools").getChildFile(executableName);
     if (appSupport.existsAsFile())
         return cacheAndReturn(appSupport);
 
     auto userAppSupport = juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory)
                                .getChildFile("Application Support")
-                               .getChildFile("ClipSampler10")
+                               .getChildFile("ClipSampler")
                                .getChildFile("tools")
                                .getChildFile(executableName);
     if (userAppSupport.existsAsFile())
@@ -626,6 +683,9 @@ juce::File AudioExtractorWorker::findExecutable(const juce::String& executableNa
 #endif
 }
 
+// ==============================================================================
+// Hilo Principal de Extracción y Conversión a WAV PCM de 24-bit
+// ==============================================================================
 void AudioExtractorWorker::run()
 {
     const int durationToExtract = juce::jlimit(1, 60, currentDurationSec);
@@ -684,10 +744,10 @@ void AudioExtractorWorker::run()
     args.add(ytDlpBin.getFullPathName());
     appendPlatformSpecificArgs(args, currentPlatform);
 
-    // Platform-specific slicing strategy:
-    // - YouTube supports DASH byte-range "--download-sections" natively.
-    // - TikTok & Instagram serve short progressive MP4/AAC streams where "--download-sections" can fail on CDN;
-    //   we download the short stream and slice sample-accurately via ffmpeg + validateAndEnforceDuration().
+    // Estrategia de recorte según plataforma:
+    // - YouTube soporta descarga parcial por rangos DASH (--download-sections).
+    // - TikTok e Instagram sirven streams progresivos cortos donde --download-sections puede fallar;
+    //   descargamos el stream y recortamos exactamente con ffmpeg (-ss / -t) + validateAndEnforceDuration().
     const bool useDownloadSections = (currentPlatform == SourcePlatform::YouTube);
     if (useDownloadSections)
     {
@@ -745,6 +805,7 @@ void AudioExtractorWorker::run()
     juce::String accumulatedOutput;
     juce::String parsedWavPath;
 
+    // Monitoreamos el progreso en tiempo real leyendo la salida estándar del subproceso
     while (activeProcess.isRunning())
     {
         if (threadShouldExit() || isCancelled.load())
@@ -797,7 +858,7 @@ void AudioExtractorWorker::run()
                 if (progressCallback)
                 {
                     juce::MessageManager::callAsync([cb = progressCallback, sampleRateToUse] {
-                        cb(0.85f, juce::String::fromUTF8("Convirtiendo y aplicando Anti-Click DSP (") + juce::String(sampleRateToUse) + "Hz)...");
+                        cb(0.85f, juce::String::fromUTF8("Convirtiendo a WAV 24-bit y aplicando Anti-Click DSP (") + juce::String(sampleRateToUse) + " Hz)...");
                     });
                 }
             }
@@ -811,6 +872,7 @@ void AudioExtractorWorker::run()
     if (threadShouldExit() || isCancelled.load())
         return;
 
+    // Localizamos el archivo .wav generado
     juce::File finalResultFile;
     if (parsedWavPath.isNotEmpty())
     {
@@ -847,7 +909,7 @@ void AudioExtractorWorker::run()
 
     if (!finalResultFile.existsAsFile() || finalResultFile.getSize() == 0)
     {
-        juce::String errorMsg = juce::String::fromUTF8("Extracción de ") + platformName + juce::String::fromUTF8(" falló (Código: ") + juce::String(exitCode) + ").";
+        juce::String errorMsg = juce::String::fromUTF8("La extracción desde ") + platformName + juce::String::fromUTF8(" falló (Código: ") + juce::String(exitCode) + ").";
         if (accumulatedOutput.isNotEmpty())
         {
             auto lines = juce::StringArray::fromLines(accumulatedOutput);
@@ -870,13 +932,13 @@ void AudioExtractorWorker::run()
         return;
     }
 
-    const int dspOffsetSec = useDownloadSections ? 0 : 0; // ffmpeg postprocessor already applied -ss startTimestamp
-    if (!validateAndEnforceDuration(finalResultFile, sampleRateToUse, dspOffsetSec, durationToExtract))
+    // Validamos duración exacta al sample, aplicamos micro-fades y normalizamos a -1.0 dBFS
+    if (!validateAndEnforceDuration(finalResultFile, sampleRateToUse, 0, durationToExtract))
     {
         if (completionCallback)
         {
             juce::MessageManager::callAsync([cb = completionCallback] {
-                cb(false, juce::File(), juce::String::fromUTF8("Error al validar la duración o formato del archivo de audio."));
+                cb(false, juce::File(), juce::String::fromUTF8("Error al validar la duración o el formato del archivo de audio."));
             });
         }
         return;
@@ -897,6 +959,9 @@ void AudioExtractorWorker::run()
     }
 }
 
+// ==============================================================================
+// Validación Sample-Accurate de Duración, Fades Anti-Click y Normalización (-1 dB)
+// ==============================================================================
 bool AudioExtractorWorker::validateAndEnforceDuration(const juce::File& audioFile, int targetRate, int startOffsetSec, int maxDurationSec)
 {
     juce::AudioFormatManager formatManager;
@@ -923,6 +988,7 @@ bool AudioExtractorWorker::validateAndEnforceDuration(const juce::File& audioFil
     reader->read(&buffer, 0, (int)samplesToRead, offsetSamples, true, true);
     reader.reset();
 
+    // 1. Aplicamos micro-rampa de 10 ms al inicio y al final para evitar clics digitales al disparar el sample
     int fadeSamples = juce::jmin((int)(sampleRate * 0.01), (int)(samplesToRead / 2));
     if (fadeSamples > 0)
     {
@@ -933,15 +999,17 @@ bool AudioExtractorWorker::validateAndEnforceDuration(const juce::File& audioFil
         }
     }
 
+    // 2. Normalizamos el pico máximo a -1.0 dBFS (0.89125f) para nivel profesional en el DAW
     float currentPeak = buffer.getMagnitude(0, buffer.getNumSamples());
     if (currentPeak > 0.001f)
     {
-        constexpr float targetPeak = 0.89125f; // -1 dB
+        constexpr float targetPeak = 0.89125f;
         float gainFactor = targetPeak / currentPeak;
         if (gainFactor > 0.1f && gainFactor < 5.0f)
             buffer.applyGain(gainFactor);
     }
 
+    // 3. Re-escribimos el archivo WAV en formato PCM de 24 bits sin pérdida
     juce::File tempTrimmed = audioFile.getSiblingFile(audioFile.getFileNameWithoutExtension() + "_safe.wav");
     {
         std::unique_ptr<juce::FileOutputStream> outStream(tempTrimmed.createOutputStream());

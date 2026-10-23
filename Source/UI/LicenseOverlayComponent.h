@@ -5,13 +5,14 @@
 #include <functional>
 
 /**
- * LicenseOverlayComponent
- * 
- * Modal activation and trial-lock screen for ClipSampler10.
- * - Displays remaining 3-day trial time (or lock screen when the 3-day trial expires).
- * - Shows the user's unique Hardware Machine ID ("MCH-XXXX-XXXX-XXXX") with a 1-click Copy button.
- * - Allows pasting and activating a license key ("CS10-XXXX-XXXX-XXXX-XXXX").
- * - Blocks all underlying plugin controls when the 3-day trial has expired.
+ * @class LicenseOverlayComponent
+ * @brief Ventana modal adaptable de activación de licencia y control de los 3 días de prueba para ClipSampler.
+ *
+ * Funcionalidades:
+ * - Muestra el tiempo restante del periodo de prueba gratuito de 3 días.
+ * - Muestra el ID de Máquina único del usuario ("MCH-XXXX-XXXX-XXXX") con botón para copiar en 1 clic.
+ * - Permite pegar y activar la clave de licencia ("CS10-XXXX-XXXX-XXXX-XXXX").
+ * - Bloquea el uso del plugin cuando los 3 días de prueba han concluido hasta que se ingrese una licencia válida.
  */
 class LicenseOverlayComponent : public juce::Component
 {
@@ -22,7 +23,7 @@ public:
     void paint(juce::Graphics& g) override;
     void resized() override;
 
-    /** Refreshes buttons and labels based on current license/trial state. */
+    /** Sincroniza los textos y botones según el estado actual de la licencia o prueba de 3 días. */
     void refreshState();
 
 private:
@@ -45,7 +46,7 @@ private:
     juce::TextEditor licenseKeyEditor;
     juce::TextButton pasteLicenseButton { juce::String::fromUTF8("Pegar") };
 
-    juce::TextButton activateButton { juce::String::fromUTF8("🔐 ACTIVAR LICENCIA AHORA") };
+    juce::TextButton activateButton { juce::String::fromUTF8("ACTIVAR LICENCIA AHORA") };
     juce::TextButton continueTrialButton { juce::String::fromUTF8("Continuar con los 3 días de prueba") };
 
     juce::Label feedbackLabel;

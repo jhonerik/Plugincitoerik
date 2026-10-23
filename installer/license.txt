@@ -1,24 +1,24 @@
 ================================================================================
 ACUERDO DE LICENCIA DE USUARIO FINAL Y POLÍTICAS DE USO (EULA)
-ClipSampler10 - Virtual Instrument Audio Plugin
+ClipSampler v2.4 - Virtual Instrument Audio Plugin
 ================================================================================
 
 POR FAVOR, LEA DETENIDAMENTE ESTE DOCUMENTO ANTES DE INSTALAR Y UTILIZAR EL 
-SOFTWARE. AL INSTALAR, COPIAR O UTILIZAR CLIPSAMPLER10, USTED ACEPTA QUEDAR 
+SOFTWARE. AL INSTALAR, COPIAR O UTILIZAR CLIPSAMPLER, USTED ACEPTA QUEDAR 
 VINCULADO POR LOS TÉRMINOS Y CONDICIONES DE ESTE ACUERDO. SI NO ESTÁ DE ACUERDO, 
 CANCELE LA INSTALACIÓN Y NO UTILICE EL SOFTWARE.
 
 1. CONCESIÓN DE LICENCIA
 AudioInnovations le otorga una licencia no exclusiva, intransferible y revocable 
-para instalar y utilizar ClipSampler10 en estaciones de trabajo de audio digital 
+para instalar y utilizar ClipSampler en estaciones de trabajo de audio digital 
 (DAWs) compatibles, de acuerdo con los términos estipulados en este contrato.
 
 2. NATURALEZA Y PROPÓSITO DEL SOFTWARE
-ClipSampler10 es una herramienta de asistencia para producción musical diseñada 
+ClipSampler es una herramienta de asistencia para producción musical diseñada 
 como instrumento virtual (VSTi / AAX Instrument). Su funcionalidad técnica 
-permite capturar fragmentos de audio de corta duración (estrictamente limitados 
-a un máximo de 10 segundos) y transferirlos a pistas de audio para su edición, 
-estudio, análisis y procesamiento sonoro en entornos DAW.
+permite capturar fragmentos de audio (3s, 10s o 30s) desde plataformas como 
+YouTube, TikTok e Instagram, procesarlos con efectos, modo MPC Auto-Chop o 
+conversión de Audio a MIDI, y transferirlos a pistas de audio o MIDI en el DAW.
 
 3. POLÍTICA DE DERECHOS DE AUTOR Y DESCARGO DE RESPONSABILIDAD (FAIR USE)
 (a) El usuario final reconoce y acepta que es el único y exclusivo responsable 
@@ -30,7 +30,7 @@ estudio, análisis y procesamiento sonoro en entornos DAW.
     aplicables en su jurisdicción.
 (c) AudioInnovations y sus desarrolladores NO alojan, distribuyen, poseen ni 
     controlan ningún contenido de terceros transmitido a través de plataformas 
-    externas como YouTube. 
+    externas como YouTube, TikTok o Instagram. 
 (d) Es obligación exclusiva del usuario final obtener las licencias, permisos 
     o autorizaciones requeridas por parte de los titulares de derechos de autor 
     en caso de que los fragmentos muestreados se utilicen en obras de explotación 

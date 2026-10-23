@@ -1,27 +1,30 @@
 cmake_minimum_required(VERSION 3.22)
 
 # ==============================================================================
-# ClipSampler10 - Professional 10-Second YouTube Sample Grabber VSTi / AAX
+# ClipSampler v2.4 - Instrumento Virtual (VST3 / AAX)
+# Extractor Multi-Plataforma (YouTube, TikTok, Instagram), Rebanador MPC,
+# Procesador de Efectos Macro, Detector de BPM/Tonalidad y Conversor Audio a MIDI.
 # ==============================================================================
 project(ClipSampler VERSION 2.4.0 LANGUAGES C CXX)
 
+# Estándar C++17 requerido por JUCE 8 y las utilidades modernas de concurrencia
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# macOS Universal Binary support (Intel x86_64 + Apple Silicon arm64)
+# Soporte de Binario Universal para macOS (Intel x86_64 + Apple Silicon arm64)
 if(APPLE)
-    set(CMAKE_OSX_ARCHITECTURES "arm64;x86_64" CACHE STRING "macOS architectures to build" FORCE)
-    set(CMAKE_OSX_DEPLOYMENT_TARGET "10.13" CACHE STRING "Minimum macOS deployment target")
+    set(CMAKE_OSX_ARCHITECTURES "arm64;x86_64" CACHE STRING "Arquitecturas de macOS a compilar" FORCE)
+    set(CMAKE_OSX_DEPLOYMENT_TARGET "10.13" CACHE STRING "Versión mínima de macOS soportada")
 endif()
 
 # ------------------------------------------------------------------------------
-# JUCE Dependency Integration
+# Integración Automática del Framework JUCE
 # ------------------------------------------------------------------------------
-# Try finding a local JUCE installation first, otherwise fetch JUCE automatically
+# Busca primero una instalación local de JUCE; si no existe, la descarga con FetchContent
 find_package(JUCE CONFIG QUIET)
 
 if(NOT TARGET juce::juce_audio_utils)
-    message(STATUS "Local JUCE not found. Fetching JUCE via FetchContent...")
+    message(STATUS "JUCE local no encontrado. Descargando JUCE 8.0.4 mediante FetchContent...")
     include(FetchContent)
     FetchContent_Declare(
         JUCE
@@ -33,33 +36,32 @@ if(NOT TARGET juce::juce_audio_utils)
 endif()
 
 # ------------------------------------------------------------------------------
-# AAX SDK Setup
+# Configuración opcional del SDK de AAX (Avid Pro Tools)
 # ------------------------------------------------------------------------------
-# AAX requires the Avid AAX Library SDK. Pass -DAAX_SDK_PATH="/path/to/aax-sdk"
 if(DEFINED AAX_SDK_PATH)
-    message(STATUS "Configuring AAX SDK path: ${AAX_SDK_PATH}")
+    message(STATUS "Configurando ruta del SDK de AAX: ${AAX_SDK_PATH}")
     juce_set_aax_sdk_path("${AAX_SDK_PATH}")
 endif()
 
 # ------------------------------------------------------------------------------
-# Formats Configuration: STRICTLY VST3 and AAX ONLY
+# Formatos del Plugin: VST3 y AAX
 # ------------------------------------------------------------------------------
 set(PLUGIN_FORMATS VST3)
 
 if(DEFINED AAX_SDK_PATH AND EXISTS "${AAX_SDK_PATH}")
     list(APPEND PLUGIN_FORMATS AAX)
 else()
-    message(WARNING "AAX_SDK_PATH is not defined or does not exist. AAX format target will be created if AAX_SDK_PATH is provided at build time.")
-    # Always include AAX in the format list if AAX_SDK_PATH is set, or if requested by user
+    message(WARNING "AAX_SDK_PATH no está definido. Se compilará el formato VST3 por defecto.")
     if(DEFINED FORCE_AAX_BUILD AND FORCE_AAX_BUILD)
         list(APPEND PLUGIN_FORMATS AAX)
     endif()
 endif()
 
 # ------------------------------------------------------------------------------
-# Plugin Declaration
+# Declaración Principal del Plugin (Objetivo: ClipSampler)
+# Genera la carpeta de artefactos: build/ClipSampler_artefacts/
 # ------------------------------------------------------------------------------
-juce_add_plugin(ClipSampler10
+juce_add_plugin(ClipSampler
     COMPANY_NAME                "AudioInnovations"
     IS_SYNTH                    TRUE
     NEEDS_MIDI_INPUT            TRUE
@@ -76,9 +78,9 @@ juce_add_plugin(ClipSampler10
 )
 
 # ------------------------------------------------------------------------------
-# Modular Source Files (DSP / Security / Services / UI)
+# Archivos Fuente Modulares (DSP / Seguridad / Servicios / Interfaz Gráfica)
 # ------------------------------------------------------------------------------
-target_sources(ClipSampler10
+target_sources(ClipSampler
     PRIVATE
         Source/DSP/PluginProcessor.h
         Source/DSP/PluginProcessor.cpp
@@ -94,7 +96,8 @@ target_sources(ClipSampler10
         Source/UI/WaveformComponent.cpp
 )
 
-target_include_directories(ClipSampler10
+# Directorios de inclusión para organizar los encabezados por capas
+target_include_directories(ClipSampler
     PRIVATE
         Source
         Source/DSP
@@ -104,9 +107,9 @@ target_include_directories(ClipSampler10
 )
 
 # ------------------------------------------------------------------------------
-# Linked JUCE Modules (Trimmed for VST3 / AAX)
+# Módulos de JUCE Vinculados
 # ------------------------------------------------------------------------------
-target_link_libraries(ClipSampler10
+target_link_libraries(ClipSampler
     PRIVATE
         juce::juce_audio_basics
         juce::juce_audio_formats
@@ -123,9 +126,9 @@ target_link_libraries(ClipSampler10
 )
 
 # ------------------------------------------------------------------------------
-# Compile Definitions & Size/Performance Optimizations
+# Definiciones de Preprocesador y Optimización de Tamaño/Rendimiento
 # ------------------------------------------------------------------------------
-target_compile_definitions(ClipSampler10
+target_compile_definitions(ClipSampler
     PUBLIC
         JUCE_WEB_BROWSER=0
         JUCE_USE_CURL=0
@@ -138,19 +141,19 @@ target_compile_definitions(ClipSampler10
         JUCE_USE_WINDOWS_MEDIA_FORMAT=0
 )
 
+# Opciones de seguridad de memoria y codificación UTF-8 en compilador MSVC (Windows)
 if(MSVC)
-    target_compile_options(ClipSampler10 PRIVATE /utf-8 /GS)
-    target_link_options(ClipSampler10 PRIVATE /DYNAMICBASE /NXCOMPAT)
+    target_compile_options(ClipSampler PRIVATE /utf-8 /GS)
+    target_link_options(ClipSampler PRIVATE /DYNAMICBASE /NXCOMPAT)
 endif()
 
-# Enable Link-Time Optimization (LTO) in Release builds
-set_target_properties(ClipSampler10 PROPERTIES
+# Optimización de tiempo de enlace (LTO) en compilaciones Release
+set_target_properties(ClipSampler PROPERTIES
     INTERPROCEDURAL_OPTIMIZATION_RELEASE TRUE
 )
 
-# Output build artifacts message
 message(STATUS "==========================================================")
-message(STATUS " ClipSampler10 configured successfully!")
-message(STATUS " Target Formats: ${PLUGIN_FORMATS}")
-message(STATUS " Virtual Instrument (IS_SYNTH): TRUE")
+message(STATUS " ClipSampler v2.4.0 configurado correctamente!")
+message(STATUS " Formatos de destino: ${PLUGIN_FORMATS}")
+message(STATUS " Instrumento Virtual (IS_SYNTH): TRUE")
 message(STATUS "==========================================================")

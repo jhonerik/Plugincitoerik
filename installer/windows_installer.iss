@@ -1,5 +1,5 @@
 ; ==============================================================================
-; ClipSampler v2.4 - Inno Setup 64-bit Windows Installer Script
+; ClipSampler v2.4 - Script de Instalador de Windows de 64 bits (Inno Setup)
 ; Formatos Exclusivos: VST3 y AAX (Pro Tools)
 ; ==============================================================================
 
@@ -42,27 +42,27 @@ Name: "vst3"; Description: "VST3 Plugin (64-bit)"; Types: full custom
 Name: "aax"; Description: "AAX Plugin (64-bit Pro Tools)"; Types: full custom
 
 [InstallDelete]
-; Limpia automáticamente la versión anterior ClipSampler10.vst3 si estaba instalada para evitar duplicados en el DAW
+; Limpia automáticamente cualquier versión anterior con el nombre antiguo ClipSampler10.vst3
 Type: filesandordirs; Name: "{commoncf64}\VST3\ClipSampler10.vst3"
 
 [Files]
 ; --- 1. VST3 Plugin ---
 ; Destino oficial de 64 bits: C:\Program Files\Common Files\VST3\ClipSampler.vst3
-Source: "..\build\ClipSampler10_artefacts\Release\VST3\ClipSampler.vst3\*"; \
+Source: "..\build\ClipSampler_artefacts\Release\VST3\ClipSampler.vst3\*"; \
     DestDir: "{commoncf64}\VST3\ClipSampler.vst3"; \
     Flags: ignoreversion recursesubdirs createallsubdirs; \
     Components: vst3
 
 ; --- 2. AAX Plugin (Pro Tools) ---
 ; Destino oficial de 64 bits: C:\Program Files\Common Files\Avid\Audio\Plug-Ins\ClipSampler.aaxplugin
-Source: "..\build\ClipSampler10_artefacts\Release\AAX\ClipSampler.aaxplugin\*"; \
+Source: "..\build\ClipSampler_artefacts\Release\AAX\ClipSampler.aaxplugin\*"; \
     DestDir: "{commoncf64}\Avid\Audio\Plug-Ins\ClipSampler.aaxplugin"; \
     Flags: ignoreversion recursesubdirs createallsubdirs skipifsourcedoesntexist; \
     Components: aax
 
 ; --- 3. Herramientas auxiliares opcionales de Windows (yt-dlp.exe / ffmpeg.exe si están presentes) ---
 Source: "..\resources\tools\*.exe"; \
-    DestDir: "{commonappdata}\ClipSampler10\tools"; \
+    DestDir: "{commonappdata}\ClipSampler\tools"; \
     Flags: ignoreversion skipifsourcedoesntexist
 
 [Messages]

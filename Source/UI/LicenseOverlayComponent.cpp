@@ -1,79 +1,88 @@
 #include "LicenseOverlayComponent.h"
 
+// ==============================================================================
+// Constructor e Inicialización de Controles del Modal de Licencia
+// ==============================================================================
 LicenseOverlayComponent::LicenseOverlayComponent(LicenseManager& manager, std::function<void()> onStateChangedCallback)
     : licenseManager(manager),
       onStateChanged(std::move(onStateChangedCallback))
 {
     setInterceptsMouseClicks(true, true);
 
-    titleLabel.setFont(juce::Font(21.0f, juce::Font::bold));
+    titleLabel.setFont(juce::Font(20.0f, juce::Font::bold));
     titleLabel.setJustificationType(juce::Justification::centred);
+    titleLabel.setMinimumHorizontalScale(0.70f);
     addAndMakeVisible(titleLabel);
 
     subtitleLabel.setFont(juce::Font(13.0f, juce::Font::plain));
     subtitleLabel.setJustificationType(juce::Justification::centred);
-    subtitleLabel.setColour(juce::Label::textColourId, juce::Colour(0xffb0bac9));
+    subtitleLabel.setColour(juce::Label::textColourId, juce::Colour(0xffcbd5e1));
+    subtitleLabel.setMinimumHorizontalScale(0.75f);
     addAndMakeVisible(subtitleLabel);
 
-    // Hardware Machine ID section
+    // 1. Sección de ID de Máquina (Hardware ID)
     machineIdTitleLabel.setText(juce::String::fromUTF8("1. Tu ID de Máquina Único (Hardware ID):"), juce::dontSendNotification);
     machineIdTitleLabel.setFont(juce::Font(12.5f, juce::Font::bold));
-    machineIdTitleLabel.setColour(juce::Label::textColourId, juce::Colour(0xff8c9ba5));
+    machineIdTitleLabel.setColour(juce::Label::textColourId, juce::Colour(0xff93c5fd));
     addAndMakeVisible(machineIdTitleLabel);
 
     machineIdBox.setReadOnly(true);
     machineIdBox.setText(licenseManager.getMachineId(), false);
     machineIdBox.setJustification(juce::Justification::centred);
     machineIdBox.setFont(juce::Font(15.0f, juce::Font::bold));
-    machineIdBox.setColour(juce::TextEditor::backgroundColourId, juce::Colour(0xff141821));
-    machineIdBox.setColour(juce::TextEditor::textColourId, juce::Colour(0xff00e5ff));
-    machineIdBox.setColour(juce::TextEditor::outlineColourId, juce::Colour(0xff2d3444));
+    machineIdBox.setColour(juce::TextEditor::backgroundColourId, juce::Colour(0xff152036));
+    machineIdBox.setColour(juce::TextEditor::textColourId, juce::Colour(0xff38bdf8));
+    machineIdBox.setColour(juce::TextEditor::outlineColourId, juce::Colour(0xff3b527d));
     addAndMakeVisible(machineIdBox);
 
-    copyMachineIdButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff2d3444));
+    copyMachineIdButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff2c3e63));
     copyMachineIdButton.setColour(juce::TextButton::textColourOffId, juce::Colours::white);
     copyMachineIdButton.onClick = [this] { onCopyMachineIdClicked(); };
     addAndMakeVisible(copyMachineIdButton);
 
-    // License Key Input section
+    // 2. Sección de Clave de Licencia
     licenseKeyTitleLabel.setText(juce::String::fromUTF8("2. Ingresa tu Código de Activación de Licencia:"), juce::dontSendNotification);
     licenseKeyTitleLabel.setFont(juce::Font(12.5f, juce::Font::bold));
-    licenseKeyTitleLabel.setColour(juce::Label::textColourId, juce::Colour(0xff8c9ba5));
+    licenseKeyTitleLabel.setColour(juce::Label::textColourId, juce::Colour(0xff93c5fd));
     addAndMakeVisible(licenseKeyTitleLabel);
 
-    licenseKeyEditor.setTextToShowWhenEmpty("CS10-XXXX-XXXX-XXXX-XXXX", juce::Colour(0xff5a6372));
+    licenseKeyEditor.setTextToShowWhenEmpty("CS10-XXXX-XXXX-XXXX-XXXX", juce::Colour(0xff64748b));
     licenseKeyEditor.setJustification(juce::Justification::centred);
     licenseKeyEditor.setFont(juce::Font(15.0f, juce::Font::bold));
-    licenseKeyEditor.setColour(juce::TextEditor::backgroundColourId, juce::Colour(0xff141821));
+    licenseKeyEditor.setColour(juce::TextEditor::backgroundColourId, juce::Colour(0xff152036));
     licenseKeyEditor.setColour(juce::TextEditor::textColourId, juce::Colours::white);
-    licenseKeyEditor.setColour(juce::TextEditor::outlineColourId, juce::Colour(0xff00e5ff));
+    licenseKeyEditor.setColour(juce::TextEditor::outlineColourId, juce::Colour(0xff38bdf8));
     addAndMakeVisible(licenseKeyEditor);
 
-    pasteLicenseButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff2d3444));
+    pasteLicenseButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff2c3e63));
     pasteLicenseButton.setColour(juce::TextButton::textColourOffId, juce::Colours::white);
     pasteLicenseButton.onClick = [this] { onPasteLicenseClicked(); };
     addAndMakeVisible(pasteLicenseButton);
 
-    // Primary Activate button
+    // Botón principal de activación
     activateButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff00c853));
     activateButton.setColour(juce::TextButton::textColourOffId, juce::Colours::white);
     activateButton.onClick = [this] { onActivateClicked(); };
     addAndMakeVisible(activateButton);
 
-    // Continue Trial / Close button (only enabled if trial is still active or already licensed)
-    continueTrialButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff222733));
-    continueTrialButton.setColour(juce::TextButton::textColourOffId, juce::Colour(0xffb0bac9));
+    // Botón para continuar la prueba gratuita (visible solo si los 3 días siguen activos)
+    continueTrialButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff283859));
+    continueTrialButton.setColour(juce::TextButton::textColourOffId, juce::Colour(0xffe2e8f0));
     continueTrialButton.onClick = [this] { onContinueTrialClicked(); };
     addAndMakeVisible(continueTrialButton);
 
     feedbackLabel.setFont(juce::Font(12.5f, juce::Font::bold));
     feedbackLabel.setJustificationType(juce::Justification::centred);
-    feedbackLabel.setColour(juce::Label::textColourId, juce::Colour(0xffffb74d));
+    feedbackLabel.setColour(juce::Label::textColourId, juce::Colour(0xffffca28));
+    feedbackLabel.setMinimumHorizontalScale(0.70f);
     addAndMakeVisible(feedbackLabel);
 
     refreshState();
 }
 
+// ==============================================================================
+// Actualización Dinámica de Estado (Licencia Activa / Prueba 3 Días / Expirada)
+// ==============================================================================
 void LicenseOverlayComponent::refreshState()
 {
     licenseManager.verifyAndSyncState();
@@ -81,7 +90,7 @@ void LicenseOverlayComponent::refreshState()
 
     if (licenseManager.isLicensed())
     {
-        titleLabel.setText(juce::String::fromUTF8("✓ CLIPSAMPLER v2.4 — ACTIVADO CON LICENCIA OFICIAL"), juce::dontSendNotification);
+        titleLabel.setText(juce::String::fromUTF8("CLIPSAMPLER v2.4 — ACTIVADO CON LICENCIA OFICIAL"), juce::dontSendNotification);
         titleLabel.setColour(juce::Label::textColourId, juce::Colour(0xff00e676));
         subtitleLabel.setText(juce::String::fromUTF8("Tu copia de ClipSampler está vinculada y autorizada en este equipo.\nClave activa: ")
                               + licenseManager.getActivatedLicenseKey(), juce::dontSendNotification);
@@ -95,8 +104,8 @@ void LicenseOverlayComponent::refreshState()
         const juce::int64 hours = (rem % 86400) / 3600;
         const juce::int64 mins = (rem % 3600) / 60;
 
-        titleLabel.setText(juce::String::fromUTF8("⏳ PERIODO DE PRUEBA GRATUITO (3 DÍAS)"), juce::dontSendNotification);
-        titleLabel.setColour(juce::Label::textColourId, juce::Colour(0xff00e5ff));
+        titleLabel.setText(juce::String::fromUTF8("PERIODO DE PRUEBA GRATUITO (3 DÍAS)"), juce::dontSendNotification);
+        titleLabel.setColour(juce::Label::textColourId, juce::Colour(0xff38bdf8));
         subtitleLabel.setText(juce::String::fromUTF8("Tiempo restante de prueba: ")
                               + juce::String(days) + juce::String::fromUTF8(" día(s), ")
                               + juce::String(hours) + "h " + juce::String(mins)
@@ -107,8 +116,8 @@ void LicenseOverlayComponent::refreshState()
     }
     else
     {
-        titleLabel.setText(juce::String::fromUTF8("🔒 PRUEBA DE 3 DÍAS FINALIZADA — ACTIVACIÓN REQUERIDA"), juce::dontSendNotification);
-        titleLabel.setColour(juce::Label::textColourId, juce::Colour(0xffff1744));
+        titleLabel.setText(juce::String::fromUTF8("PRUEBA DE 3 DÍAS FINALIZADA — ACTIVACIÓN REQUERIDA"), juce::dontSendNotification);
+        titleLabel.setColour(juce::Label::textColourId, juce::Colour(0xffff5252));
 
         if (licenseManager.isClockTampered())
         {
@@ -121,7 +130,6 @@ void LicenseOverlayComponent::refreshState()
                                   juce::dontSendNotification);
         }
 
-        // Strictly hide the "Continue Trial" button once the 3 days are over
         continueTrialButton.setVisible(false);
     }
 
@@ -131,8 +139,8 @@ void LicenseOverlayComponent::refreshState()
 void LicenseOverlayComponent::onCopyMachineIdClicked()
 {
     juce::SystemClipboard::copyTextToClipboard(licenseManager.getMachineId());
-    feedbackLabel.setColour(juce::Label::textColourId, juce::Colour(0xff00e5ff));
-    feedbackLabel.setText(juce::String::fromUTF8("✓ ID de Máquina copiado al portapapeles: ") + licenseManager.getMachineId(), juce::dontSendNotification);
+    feedbackLabel.setColour(juce::Label::textColourId, juce::Colour(0xff38bdf8));
+    feedbackLabel.setText(juce::String::fromUTF8("ID de Máquina copiado al portapapeles: ") + licenseManager.getMachineId(), juce::dontSendNotification);
 }
 
 void LicenseOverlayComponent::onPasteLicenseClicked()
@@ -176,66 +184,71 @@ void LicenseOverlayComponent::onContinueTrialClicked()
     }
 }
 
+// ==============================================================================
+// Renderizado Elegante y Diseño Responsivo del Modal de Licencia
+// ==============================================================================
 void LicenseOverlayComponent::paint(juce::Graphics& g)
 {
-    // Semi-transparent dark backdrop over the whole plugin window
-    g.fillAll(juce::Colour(0xee0b0d12));
+    // Velo traslúcido azul zafiro profundo sobre la ventana
+    g.fillAll(juce::Colour(0xe6111a2e));
 
-    const int cardW = juce::jlimit(620, 860, getWidth() - 120);
-    const int cardH = juce::jlimit(420, 520, getHeight() - 120);
+    const int cardW = juce::jlimit(460, 820, getWidth() - 60);
+    const int cardH = juce::jlimit(360, 500, getHeight() - 60);
     auto card = getLocalBounds().withSizeKeepingCentre(cardW, cardH).toFloat();
 
-    // Card background & border
-    g.setColour(juce::Colour(0xff181c26));
+    juce::ColourGradient cardGrad(juce::Colour(0xff233252), card.getX(), card.getY(),
+                                  juce::Colour(0xff18233b), card.getX(), card.getBottom(), false);
+    g.setGradientFill(cardGrad);
     g.fillRoundedRectangle(card, 12.0f);
 
     juce::Colour borderCol = licenseManager.isLicensed()
         ? juce::Colour(0xff00e676)
-        : (licenseManager.isTrialActive() ? juce::Colour(0xff00e5ff) : juce::Colour(0xffff1744));
+        : (licenseManager.isTrialActive() ? juce::Colour(0xff38bdf8) : juce::Colour(0xffff5252));
 
-    g.setColour(borderCol.withAlpha(0.75f));
+    g.setColour(borderCol.withAlpha(0.85f));
     g.drawRoundedRectangle(card, 12.0f, 2.0f);
 }
 
 void LicenseOverlayComponent::resized()
 {
-    const int cardW = juce::jlimit(620, 860, getWidth() - 120);
-    const int cardH = juce::jlimit(420, 520, getHeight() - 120);
-    auto card = getLocalBounds().withSizeKeepingCentre(cardW, cardH).reduced(28, 24);
+    const int cardW = juce::jlimit(460, 820, getWidth() - 60);
+    const int cardH = juce::jlimit(360, 500, getHeight() - 60);
+    auto card = getLocalBounds().withSizeKeepingCentre(cardW, cardH).reduced(24, 20);
+    const float hScale = juce::jlimit(0.80f, 1.15f, (float)cardH / 460.0f);
 
-    titleLabel.setBounds(card.removeFromTop(30));
-    card.removeFromTop(6);
-    subtitleLabel.setBounds(card.removeFromTop(42));
-    card.removeFromTop(18);
+    titleLabel.setBounds(card.removeFromTop(juce::roundToInt(28 * hScale)));
+    card.removeFromTop(juce::roundToInt(4 * hScale));
+    subtitleLabel.setBounds(card.removeFromTop(juce::roundToInt(40 * hScale)));
+    card.removeFromTop(juce::roundToInt(14 * hScale));
 
-    // Machine ID Row
-    machineIdTitleLabel.setBounds(card.removeFromTop(20));
+    // Fila de ID de Máquina
+    machineIdTitleLabel.setBounds(card.removeFromTop(juce::roundToInt(20 * hScale)));
     card.removeFromTop(4);
-    auto mchRow = card.removeFromTop(34);
+    auto mchRow = card.removeFromTop(juce::roundToInt(32 * hScale));
     copyMachineIdButton.setBounds(mchRow.removeFromRight(105));
     mchRow.removeFromRight(8);
     machineIdBox.setBounds(mchRow);
 
-    card.removeFromTop(16);
+    card.removeFromTop(juce::roundToInt(12 * hScale));
 
-    // License Key Row
-    licenseKeyTitleLabel.setBounds(card.removeFromTop(20));
+    // Fila de Clave de Licencia
+    licenseKeyTitleLabel.setBounds(card.removeFromTop(juce::roundToInt(20 * hScale)));
     card.removeFromTop(4);
-    auto keyRow = card.removeFromTop(36);
+    auto keyRow = card.removeFromTop(juce::roundToInt(34 * hScale));
     pasteLicenseButton.setBounds(keyRow.removeFromRight(105));
     keyRow.removeFromRight(8);
     licenseKeyEditor.setBounds(keyRow);
 
-    card.removeFromTop(18);
+    card.removeFromTop(juce::roundToInt(14 * hScale));
 
-    // Activate Button
-    activateButton.setBounds(card.removeFromTop(40));
-    card.removeFromTop(8);
-
-    // Feedback Label
-    feedbackLabel.setBounds(card.removeFromTop(24));
+    // Botón de Activación
+    activateButton.setBounds(card.removeFromTop(juce::roundToInt(38 * hScale)));
     card.removeFromTop(6);
 
-    // Continue Trial / Return Button
-    continueTrialButton.setBounds(card.removeFromTop(34).reduced(90, 0));
+    // Etiqueta de respuesta
+    feedbackLabel.setBounds(card.removeFromTop(juce::roundToInt(22 * hScale)));
+    card.removeFromTop(4);
+
+    // Botón para continuar la prueba gratuita
+    continueTrialButton.setBounds(card.removeFromTop(juce::roundToInt(32 * hScale)).reduced(juce::jmin(80, card.getWidth() / 6), 0));
 }

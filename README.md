@@ -1,106 +1,84 @@
-# ClipSampler10 - VSTi & AAX YouTube Audio Sampler
+# ClipSampler v2.4 - VSTi & AAX Multi-Platform Audio Sampler
 
-**ClipSampler10** es un instrumento virtual multiplataforma (Windows y macOS) diseñado con el framework **JUCE (v7/v8)** y **CMake**, concebido para capturar fragmentos de audio de alta fidelidad desde YouTube con un **límite estricto e infranqueable de 10 segundos**, tocarlos melódicamente vía MIDI en el Piano Roll y soltarlos directamente en las pistas de tu DAW mediante drag-and-drop.
+**ClipSampler v2.4** es un instrumento virtual multiplataforma (Windows y macOS) desarrollado con **JUCE (v7/v8)** y **CMake**, diseñado para extraer fragmentos de audio de alta fidelidad (**3s, 10s o 30s**) desde **YouTube, TikTok e Instagram**, procesarlos con IA Anti-Copyright, rebanarlos automáticamente al estilo **MPC Auto-Chop**, convertirlos de **Audio a MIDI** y arrastrarlos directamente a las pistas de tu DAW.
+
+> 📖 **¿Buscas cómo usar el plugin paso a paso?** Consulta el [**Manual de Usuario Completo (`MANUAL_DE_USUARIO.md`)**](./MANUAL_DE_USUARIO.md).
 
 ---
 
-## 🚀 Características y Mejoras Implementadas
+## 🚀 Características Principales (v2.4)
 
-1. **Sampler Instrumental MIDI (`juce::Synthesiser`):**
-   - Motor polifónico de 8 voces con `juce::SamplerSound`. Al extraer la muestra, se mapea automáticamente a todas las notas MIDI (0-127, raíz C3), permitiendo tocar el fragmento desde el Piano Roll o teclado controlador.
-2. **Sincronización Dinámica de Sample Rate:**
-   - Detecta la frecuencia de muestreo del DAW (`processor.getSampleRate()`) y la pasa dinámicamente al flag `-ar` de `ffmpeg` (44.1k, 48k, 96k, 192k) para evitar remuestreos innecesarios.
-3. **Filtros Anti-Click y Normalización:**
-   - Micro-fades DSP de 10ms aplicados al inicio y al final (`afade=t=in:ss=0:d=0.01,afade=t=out:st=9.99:d=0.01`) con normalización opcional a -1 dB, garantizando que el bucle o disparo no tenga pops ni clicks de DC offset.
-4. **Nombres de Archivo Limpios y Reales:**
-   - Usa `--restrict-filenames -o "%(title).40s_%(section_start)s.%(ext)s"`. Al arrastrar el `.wav` al DAW, la pista muestra el nombre real del video y el segundo exacto extraído.
-5. **Persistencia de Sesión DAW (`juce::ValueTree`):**
-   - Guarda y restaura automáticamente la última URL, el segundo de inicio y la ruta del último `.wav` al guardar el proyecto en el DAW.
-6. **Mantenimiento Integrado en GUI:**
-   - Botón **Actualizar yt-dlp (-U)** para mantener al día el motor de descarga frente a cambios en la plataforma YouTube.
-   - Botón **Limpiar Caché** para borrar archivos `.wav` temporales acumulados.
-7. **Formatos Exclusivos:**
-   - **VST3** (64-bit) y **AAX** (64-bit Avid Pro Tools).
-8. **Políticas de Usuario y EULA Integrados:**
-   - Pantalla obligatoria de aceptación de términos de licencia y aviso legal de derechos de autor (*Fair Use Disclaimer*) en los instaladores.
+1. **Extracción Multi-Plataforma Inteligente (`YouTube`, `TikTok`, `Instagram`):**
+   - Selector dedicado de plataforma y auto-detección al pegar enlaces de `youtube.com`, `youtu.be`, `tiktok.com` o `instagram.com/reel`.
+   - Botón **🔍 Analizar** que consulta título y duración total del video sin descargarlo y ajusta automáticamente el deslizador de tiempo.
+2. **Duraciones de Captura Flexibles (`3s`, `10s`, `30s`):**
+   - Selector instantáneo de duración de recorte con micro-fades anti-click de 10 ms y normalización a -1 dB.
+3. **Doble Visor de Onda Interactiva + IA Derechos:**
+   - **Visor 1 (Muestra Original):** Muestra la onda recién extraída con detección automática de **BPM** y **Tonalidad (Key)**.
+   - **Visor 2 (Audio Procesado IA Derechos):** Al pulsar **🤖 Derechos IA (±3 st)**, genera una versión transformada con pitch-shifting con preservación de formantes, micro-modulación y filtrado acústico.
+   - **🛡️ Detectar Derechos:** Analiza la huella espectral del Visor 1 y Visor 2 para verificar el nivel de coincidencia frente a sistemas de Content ID.
+4. **Modo MPC Auto-Chop + Rack de Efectos Macro:**
+   - **🥁 Modo Auto-Chop (MPC):** Detecta transientes rítmicos y asigna hasta 16 rebanadas cromáticas (`C1` a `D#2`) para dispararlas desde tu controlador MIDI o Piano Roll.
+   - **🎛️ FX Macro:** Perillas de **📻 Lo-Fi 12-Bit**, **🌀 Pitch (±12 semitonos)** y **🔗 Sync BPM al DAW** aplicables en tiempo real al Visor 1 o Visor 2.
+5. **Conversor de Audio a MIDI + Drag & Drop Dual:**
+   - Arrastra el archivo **`.WAV`** o la transcripción melódica **`.MID`** directamente desde el plugin hacia cualquier pista de tu DAW.
+6. **Diseño Elegante Royal Sapphire & 100% Responsive:**
+   - Interfaz redimensionable desde `680x540` hasta `1800x1300` con tipografía auto-adaptativa y acabado de estudio en tonos azul zafiro y titanio satinado.
+7. **Seguridad Anti-Piratería de Grado Industrial:**
+   - Prueba gratuita de 3 días con reloj monótono anti-rollback, vinculación criptográfica por Hardware ID (`MCH-XXXX-XXXX-XXXX`), bóvedas triplicadas cifradas con AES-CTR + HMAC-SHA256 y servidor local/web de licencias SQLite.
 
 ---
 
 ## 📁 Estructura del Proyecto
 
 ```text
-ClipSampler10/
-├── CMakeLists.txt                    # Configuración CMake con JUCE, IS_SYNTH, LTO y VST3/AAX
-├── README.md                         # Resumen técnico
-├── documentacion.md                  # Documentación técnica exhaustiva
-├── analicis.md                       # Informe de auditoría de arquitectura y calidad
-├── build_windows.ps1                 # Script automatizado de compilación y empaquetado (1 clic)
+ClipSampler/
+├── CMakeLists.txt                        # Configuración CMake (objetivo ClipSampler -> build/ClipSampler_artefacts)
+├── README.md                             # Resumen general del proyecto
+├── MANUAL_DE_USUARIO.md                  # Manual de usuario completo en español
+├── documentacion.md                      # Documentación técnica de arquitectura
+├── analicis.md                           # Informe de auditoría técnica y seguridad
+├── build_windows.ps1                     # Script automatizado de compilación y empaquetado (1 clic)
 ├── Source/
 │   ├── DSP/
-│   │   ├── PluginProcessor.h         # Motor DSP, juce::Synthesiser MIDI, APVTS y coordinador
-│   │   └── PluginProcessor.cpp       # processBlock wait-free (ScopedTryLock) y persistencia
+│   │   ├── PluginProcessor.h             # Motor DSP, síntesis MIDI, Auto-Chop, Audio-a-MIDI y APVTS
+│   │   └── PluginProcessor.cpp           # Implementación comentada en español del procesador de audio
+│   ├── Security/
+│   │   ├── LicenseManager.h              # Gestor de licencias, Trial de 3 días y Hardware ID
+│   │   └── LicenseManager.cpp            # Cifrado de bóvedas, anti-debug y validación criptográfica
 │   ├── Services/
-│   │   ├── AudioExtractorWorker.h    # Worker asíncrono (SR dinámico, anti-click, clean names)
-│   │   └── AudioExtractorWorker.cpp  # yt-dlp, ffmpeg, caché de rutas y limpieza segura
+│   │   ├── AudioExtractorWorker.h        # Hilo trabajador asíncrono (YouTube/TikTok/Instagram + IA)
+│   │   └── AudioExtractorWorker.cpp      # Ejecución de yt-dlp/ffmpeg, Derechos IA y huella espectral
 │   └── UI/
-│       ├── PluginEditor.h            # GUI dividida en 2 paneles desacoplada con SafePointer
-│       ├── PluginEditor.cpp          # Sincronización reactiva a 30 FPS y drag dual
-│       ├── WaveformComponent.h       # Componente interactivo de forma de onda
-│       └── WaveformComponent.cpp     # Dibujo con juce::AudioThumbnail y badge dinámico
+│       ├── PluginEditor.h                # Interfaz gráfica responsive Royal Sapphire
+│       ├── PluginEditor.cpp              # Layout adaptable, LookAndFeel auto-escalable y controles
+│       ├── WaveformComponent.h           # Visor interactivo de forma de onda y marcadores MPC
+│       ├── WaveformComponent.cpp         # Renderizado de onda, playhead y líneas de Auto-Chop
+│       ├── LicenseOverlayComponent.h     # Modal de activación de licencia y estado de prueba
+│       └── LicenseOverlayComponent.cpp   # Interfaz de activación Online/Offline
+├── license_system/
+│   ├── license_server.py                 # Servidor Web + Base de Datos SQLite + Generador de Licencias
+│   └── Iniciar_Generador_Licencias.bat   # Lanzador en 1 clic del panel de licencias
 ├── installer/
-│   ├── license.txt                   # Políticas de usuario y EULA (Fair Use & Disclaimer)
-│   ├── windows_installer.iss         # Script Inno Setup con salida unificada en dist_windows/
-│   ├── macos_distribution.xml        # Distribution XML para productbuild
-│   └── build_pkg.sh                  # Script de empaquetado para macOS
+│   ├── license.txt                       # Acuerdo de licencia EULA en español
+│   ├── windows_installer.iss             # Script Inno Setup (genera ClipSampler_Windows_Installer_v2.4.0.exe)
+│   ├── macos_distribution.xml            # Configuración de instalador macOS
+│   └── build_pkg.sh                      # Script de empaquetado macOS (.pkg)
 └── resources/
-    ├── README.md                     # Guía de binarios auxiliares (yt-dlp, ffmpeg)
-    └── tools/                        # Carpeta para colocar yt-dlp.exe y ffmpeg.exe portátiles
+    ├── README.md                         # Guía de herramientas externas
+    └── tools/                            # Binarios portátiles yt-dlp.exe y ffmpeg.exe
 ```
 
 ---
 
-## 🛠️ Requisitos Previos e Instalación Rápida
+## 💻 Compilación Rápida en Windows
 
-### En Windows (PowerShell como Administrador):
+Ejecuta en PowerShell:
+
 ```powershell
-winget install Kitware.CMake yt-dlp.yt-dlp jrsoftware.InnoSetup Microsoft.VisualStudio.2022.BuildTools
+powershell -ExecutionPolicy Bypass -File .\build_windows.ps1
 ```
 
-### En macOS (Terminal con Homebrew):
-```bash
-brew install cmake yt-dlp ffmpeg
-```
-
----
-
-## 💻 Instrucciones de Compilación
-
-### 1. Windows: 1 Clic Automatizado
-```powershell
-.\build_windows.ps1
-```
-
-O manual:
-```powershell
-cmake -B build -G "Visual Studio 17 2022" -A x64
-cmake --build build --config Release
-iscc installer\windows_installer.iss
-```
-
-### 2. macOS: Universal Binary
-```bash
-cmake -B build -G Xcode -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" -DCMAKE_OSX_DEPLOYMENT_TARGET="10.13"
-cmake --build build --config Release
-chmod +x installer/build_pkg.sh
-./installer/build_pkg.sh
-```
-
----
-
-## 🎧 Uso en el DAW
-
-1. Carga **ClipSampler10** en una pista de Instrumento Virtual / MIDI.
-2. Pega una URL de YouTube y define el segundo de inicio.
-3. Pulsa **Extraer Muestra de 10s**.
-4. Escucha por el mezclador pulsando **Play** o **tocando notas en el Piano Roll**.
-5. Arrastra la muestra directamente desde el visor de onda o el botón de arrastre hacia cualquier pista de audio del DAW.
+Esto genera:
+- **Plugin VST3:** `build\ClipSampler_artefacts\Release\VST3\ClipSampler.vst3`
+- **Instalador Windows:** `dist_windows\ClipSampler_Windows_Installer_v2.4.0.exe`

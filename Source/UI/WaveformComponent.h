@@ -5,31 +5,37 @@
 #include "../DSP/PluginProcessor.h"
 
 /**
- * WaveformComponent (v2.3)
- * 
- * Dual-slot interactive MPC Auto-Chop waveform visualizer:
- * - Slot 1: Displays the original extracted sample (3s / 10s / 30s).
- * - Slot 2: Displays the "Derechos IA" altered sample (±3 semitones + phase decorrelation).
- * - Draws MPC Auto-Chop transient divider lines and MIDI note headers (C1 | C#1 | D1 | D#1 | E1 | F1 | F#1 ...).
- * - Displays detected BPM & Musical Key (Tonalidad) badge in the header.
- * - Clicking a slice triggers that slice immediately; dragging exports the .WAV directly to the DAW.
+ * @class WaveformComponent
+ * @brief Visor interactivo de forma de onda con soporte para el Rebanador MPC (Auto-Chop C1-G2).
+ *
+ * Características:
+ * - Visor 1: Muestra el audio original extraído desde YouTube, TikTok o Instagram (3s / 10s / 30s).
+ * - Visor 2: Muestra el audio modificado por la función "Derechos IA" (±3 semitonos + dispersión de fase).
+ * - Dibuja las líneas divisorias de transientes y la cabecera de notas MIDI (C1 | C#1 | D1 | ... | G2).
+ * - Muestra en tiempo real la plataforma de origen, el Tempo (BPM) y la Tonalidad Musical (Tono).
+ * - Permite disparar cualquier rodaja haciendo clic sobre ella o arrastrar el archivo .WAV directamente al DAW.
  */
 class WaveformComponent : public juce::Component,
                           public juce::ChangeListener
 {
 public:
-    WaveformComponent(ClipSampler10AudioProcessor& processorToUse, int slotIndexToUse, const juce::String& titleText);
+    WaveformComponent(ClipSamplerAudioProcessor& processorToUse, int slotIndexToUse, const juce::String& titleText);
     ~WaveformComponent() override;
 
+    /** Dibuja el contenedor elegante azul zafiro, la onda, las divisiones MPC y el cabezal de reproducción. */
     void paint(juce::Graphics& g) override;
 
+    /** Escucha cambios en el AudioThumbnail para redibujar automáticamente la onda al cargar un archivo. */
     void changeListenerCallback(juce::ChangeBroadcaster* source) override;
 
+    /** Selecciona la ranura activa y dispara la rodaja MPC sobre la que hizo clic el usuario. */
     void mouseDown(const juce::MouseEvent& event) override;
+
+    /** Inicia la operación de arrastrar y soltar (Drag & Drop) del archivo .WAV hacia el DAW. */
     void mouseDrag(const juce::MouseEvent& event) override;
 
 private:
-    ClipSampler10AudioProcessor& processor;
+    ClipSamplerAudioProcessor& processor;
     int slotIndex = 1;
     juce::String viewerTitle;
     bool isDragging = false;
