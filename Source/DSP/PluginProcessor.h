@@ -72,12 +72,15 @@ public:
     static juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
 
     //==============================================================================
-    // ClipSampler v2.3 Custom Control, Multi-Duration & Derechos AI API
+    // ClipSampler v2.4 Multi-Platform (YouTube / TikTok / Instagram), Multi-Duration & Derechos AI API
     //==============================================================================
-    /** Starts a background YouTube extraction for the specified duration (3s, 10s, or 30s). */
+    void setSelectedPlatform(SourcePlatform platform) { selectedPlatform.store(static_cast<int>(platform), std::memory_order_relaxed); }
+    SourcePlatform getSelectedPlatform() const { return static_cast<SourcePlatform>(selectedPlatform.load(std::memory_order_relaxed)); }
+
+    /** Starts a background multi-platform extraction for the specified duration (3s, 10s, or 30s). */
     void startSampleExtraction(const juce::String& url, const juce::String& startTime, int durationSeconds = 10);
 
-    /** Queries the YouTube URL asynchronously to detect total video duration and copyright metadata. */
+    /** Queries the URL asynchronously (YouTube, TikTok, or Instagram) to detect total video duration and metadata. */
     void detectVideoDuration(const juce::String& url);
 
     /** Analyzes Slot 1 (Original Audio) for copyright / Content ID fingerprint risk. */
@@ -277,6 +280,7 @@ private:
     float lofiFilterStateR = 0.0f;
 
     // Stored session parameters
+    std::atomic<int> selectedPlatform { 0 }; // 0 = YouTube, 1 = TikTok, 2 = Instagram
     juce::String lastUrl;
     juce::String lastStartTime = "00:00";
     juce::String detectedVideoTitle;

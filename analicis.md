@@ -445,4 +445,25 @@ Se realizó una auditoría defensiva sobre [`Source/Security/LicenseManager.h`](
 | **6** | **Licencias revocadas en el servidor seguían activas indefinidamente en la PC del usuario y webhook sin token.** | 🟠 Alto | **Heartbeat Asíncrono de Revocación Online (`/api/verify`) + `X-Webhook-Secret`:** El plugin verifica silenciosamente contra `/api/verify` si la licencia fue revocada o clonada, desactivándola automáticamente en los 5 anclajes si fue revocada. |
 | **7** | **Banderas de protección de memoria del binario en compilación MSVC.** | 🟡 Medio | Se añadieron `/GS`, `/DYNAMICBASE` (ASLR) y `/NXCOMPAT` (DEP) en [`CMakeLists.txt`](file:///c:/Users/joncl/Downloads/Plugin/CMakeLists.txt). |
 
+---
+
+## 10. 🌐 Versión `v2.4.0` — Extracción Multi-Plataforma (`YouTube`, `TikTok`, `Instagram`) y Rediseño Visual UI/UX *Cyber-Studio*
+
+1. **Motor de Extracción, Lectura y Detección Multi-Plataforma ([`AudioExtractorWorker.h`](file:///c:/Users/joncl/Downloads/Plugin/Source/Services/AudioExtractorWorker.h) / [`AudioExtractorWorker.cpp`](file:///c:/Users/joncl/Downloads/Plugin/Source/Services/AudioExtractorWorker.cpp)):**
+   * Se incorporó `enum class SourcePlatform { YouTube = 0, TikTok = 1, Instagram = 2 }` con soporte completo para:
+     * **▶️ YouTube (`youtube.com`, `youtu.be`, `shorts`, `music.youtube.com`):** Extracción por secciones (`--download-sections`) y recorte exacto PCM.
+     * **🎵 TikTok (`tiktok.com`, `vm.tiktok.com`, `vt.tiktok.com`):** Inyección de cabeceras HTTP de navegador moderno (`--user-agent`, `--referer https://www.tiktok.com/`), extracción del stream MP4 progresivo de TikTok y recorte exacto mediante post-procesador `ffmpeg -ss <inicio> -t <duración>` + validación sample-accurate en C++.
+     * **📸 Instagram (`instagram.com/reel/...`, `/reels/...`, `/p/...`, `/tv/...`, `instagr.am`):** Normalización automática de enlaces de Reels/Posts, inyección de cabeceras `--referer https://www.instagram.com/` y recorte exacto con `ffmpeg` + normalización PCM 24-bit.
+   * **Selector Manual + Auto-Detección Inteligente:** El usuario puede elegir explícitamente la plataforma (`▶️ YouTube`, `🎵 TikTok`, `📸 Instagram`) para guiar al algoritmo de extracción y validación, y además el campo de URL detecta y conmuta automáticamente la plataforma al pegar un enlace.
+   * **Fallback de Duración Post-Extracción:** Cuando los servidores de TikTok o Instagram no reportan la duración en la consulta previa de metadatos, `PluginProcessor` actualiza automáticamente el indicador `Fin Video: MM:SS` y el rango de la barra de tiempo al finalizar la descarga.
+2. **Rediseño Visual UI/UX *Cyber-Studio Glassmorphic* ([`PluginEditor.h`](file:///c:/Users/joncl/Downloads/Plugin/Source/UI/PluginEditor.h) / [`PluginEditor.cpp`](file:///c:/Users/joncl/Downloads/Plugin/Source/UI/PluginEditor.cpp) / [`WaveformComponent.cpp`](file:///c:/Users/joncl/Downloads/Plugin/Source/UI/WaveformComponent.cpp)):**
+   * **Acentos Dinámicos por Plataforma:** El halo luminoso superior, el borde del buscador y el selector activo cambian de color según la plataforma seleccionada (**Rojo Carmesí `#ff1744`** para YouTube, **Cian Eléctrico `#00f2fe`** para TikTok y **Magenta Neón `#d500f9`** para Instagram).
+   * **`ScalablePluginLookAndFeel` Personalizado:**
+     * Tarjetas *glassmorphic* con encabezados en cápsula (*pill badges*) e iluminación sutil.
+     * Botones con gradiente metálico 3D, bisel superior especular y halo de color en *hover*.
+     * Perillas rotatorias 3D (`Lo-Fi 12-Bit`, `Pitch`, `Filtro`) con anillo de ticks radiales iluminados, cuerpo de metal cepillado y puntero luminoso.
+     * Deslizador de tiempo (`MM:SS`) y ganancia con pista iluminada por gradiente y pulgar de doble anillo neón.
+     * Visores de onda duales con resplandor ambiental (*ambient glow*), cabezal de reproducción con diamante superior y etiqueta de plataforma activa (`[YOUTUBE]`, `[TIKTOK]`, `[INSTAGRAM]`).
+
+
 

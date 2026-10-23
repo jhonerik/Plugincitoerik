@@ -99,20 +99,28 @@ void WaveformComponent::paint(juce::Graphics& g)
     auto& thumb = processor.getThumbnail(slotIndex);
     const double totalLength = thumb.getTotalLength();
 
-    // 1. Sleek Obsidian Container
-    g.setColour(juce::Colour(0xff12141a));
-    g.fillRoundedRectangle(bounds, 8.0f);
+    // 1. Cyber-Studio Glassmorphic Obsidian Container
+    juce::ColourGradient cardGrad(juce::Colour(0xff0b0e18), bounds.getX(), bounds.getY(),
+                                  juce::Colour(0xff111624), bounds.getX(), bounds.getBottom(), false);
+    g.setGradientFill(cardGrad);
+    g.fillRoundedRectangle(bounds, 9.0f);
 
     juce::Colour accentCol = (slotIndex == 2) ? juce::Colour(0xff00e676) : juce::Colour(0xff00e5ff);
-    juce::Colour borderCol = (isActiveSlot && totalLength > 0.0) ? accentCol.withAlpha(0.90f) : juce::Colour(0xff252b3b);
-    g.setColour(borderCol);
-    g.drawRoundedRectangle(bounds.reduced(0.75f), 8.0f, isActiveSlot ? 1.9f : 1.0f);
+    if (isActiveSlot && totalLength > 0.0)
+    {
+        g.setColour(accentCol.withAlpha(0.14f));
+        g.drawRoundedRectangle(bounds.reduced(1.5f), 9.0f, 3.5f);
+    }
 
-    auto headerBar = bounds.removeFromTop(21.0f).reduced(10.0f, 1.0f);
+    juce::Colour borderCol = (isActiveSlot && totalLength > 0.0) ? accentCol.withAlpha(0.92f) : juce::Colour(0xff232b3e);
+    g.setColour(borderCol);
+    g.drawRoundedRectangle(bounds.reduced(0.75f), 9.0f, isActiveSlot ? 1.8f : 1.0f);
+
+    auto headerBar = bounds.removeFromTop(22.0f).reduced(10.0f, 1.0f);
     g.setColour(accentCol);
     g.setFont(juce::Font(11.5f, juce::Font::bold));
     g.drawText(viewerTitle + (isActiveSlot && totalLength > 0.0 ? juce::String::fromUTF8("  [● ACTIVO EN FX / MIDI]") : ""),
-               headerBar.removeFromLeft(headerBar.getWidth() * 0.54f),
+               headerBar.removeFromLeft(headerBar.getWidth() * 0.50f),
                juce::Justification::centredLeft);
 
     auto waveformArea = bounds.reduced(8.0f, 4.0f);
@@ -128,9 +136,9 @@ void WaveformComponent::paint(juce::Graphics& g)
         if (chopMode && !slices.empty())
         {
             mpcNoteBar = waveformArea.removeFromTop(18.0f);
-            g.setColour(juce::Colour(0xff191e2b));
+            g.setColour(juce::Colour(0xff151a28));
             g.fillRect(mpcNoteBar);
-            g.setColour(juce::Colour(0xff2d364d));
+            g.setColour(juce::Colour(0xff2a334a));
             g.drawHorizontalLine((int)mpcNoteBar.getBottom(), mpcNoteBar.getX(), mpcNoteBar.getRight());
         }
 
@@ -140,13 +148,17 @@ void WaveformComponent::paint(juce::Graphics& g)
             const auto& activeS = slices[(size_t)playingSlice];
             float sx = waveformArea.getX() + activeS.startNorm * waveformArea.getWidth();
             float sw = (activeS.endNorm - activeS.startNorm) * waveformArea.getWidth();
-            g.setColour(juce::Colour(0x33ffab00));
+            g.setColour(juce::Colour(0x38ffab00));
             g.fillRect(sx, mpcNoteBar.getY(), sw, waveformArea.getBottom() - mpcNoteBar.getY());
         }
 
-        // 2. Render Waveform (Slot 1 = Cyan, Slot 2 = Neon Emerald/Purple for Derechos AI)
-        juce::Colour topWave = (slotIndex == 2) ? juce::Colour(0xff00e676) : juce::Colour(0xff00e5ff);
-        juce::Colour botWave = (slotIndex == 2) ? juce::Colour(0xff7c4dff) : juce::Colour(0xff0088cc);
+        // 2. Render Waveform (Slot 1 = Electric Cyan/Blue, Slot 2 = Neon Emerald/Violet for Derechos AI)
+        juce::Colour topWave = (slotIndex == 2) ? juce::Colour(0xff00e676) : juce::Colour(0xff00f2fe);
+        juce::Colour botWave = (slotIndex == 2) ? juce::Colour(0xff7c4dff) : juce::Colour(0xff0072ff);
+
+        // Ambient glow behind waveform
+        g.setColour(topWave.withAlpha(0.10f));
+        thumb.drawChannels(g, waveformArea.expanded(0.0f, 1.5f).toNearestInt(), 0.0, totalLength, 1.0f);
 
         juce::ColourGradient waveGrad(topWave, waveformArea.getX(), waveformArea.getY(),
                                      botWave, waveformArea.getX(), waveformArea.getBottom(), false);
@@ -155,7 +167,7 @@ void WaveformComponent::paint(juce::Graphics& g)
         thumb.drawChannels(g, waveformArea.toNearestInt(), 0.0, totalLength, 1.0f);
 
         // 3. Subtle center line
-        g.setColour(topWave.withAlpha(0.22f));
+        g.setColour(topWave.withAlpha(0.24f));
         g.drawHorizontalLine((int)waveformArea.getCentreY(), waveformArea.getX(), waveformArea.getRight());
 
         // 4. Draw MPC Auto-Chop Slice Divider Lines & MIDI Note Headers (C1 .. G2)
@@ -172,7 +184,7 @@ void WaveformComponent::paint(juce::Graphics& g)
                 // Vertical slice divider line
                 if (i > 0)
                 {
-                    g.setColour(juce::Colour(0xccffab00));
+                    g.setColour(juce::Colour(0xd8ffab00));
                     const float dashLengths[2] = { 4.0f, 3.0f };
                     g.drawDashedLine(juce::Line<float>(xStart, mpcNoteBar.getY(), xStart, waveformArea.getBottom()),
                                      dashLengths, 2, 1.3f);
@@ -191,7 +203,7 @@ void WaveformComponent::paint(juce::Graphics& g)
         else
         {
             // Standard quarter-duration grid lines when Auto-Chop is off
-            g.setColour(juce::Colour(0xff1a2130));
+            g.setColour(juce::Colour(0xff192030));
             for (int i = 1; i < 4; ++i)
             {
                 float x = waveformArea.getX() + (waveformArea.getWidth() * (i / 4.0f));
@@ -205,17 +217,26 @@ void WaveformComponent::paint(juce::Graphics& g)
             float progress = processor.getPlaybackProgress();
             float playheadX = waveformArea.getX() + (waveformArea.getWidth() * progress);
 
-            g.setColour(juce::Colour(0x88ffffff));
-            g.drawVerticalLine((int)playheadX, waveformArea.getY(), waveformArea.getBottom());
+            g.setColour(juce::Colour(0x44ff0055));
+            g.fillRect(playheadX - 3.5f, waveformArea.getY(), 7.0f, waveformArea.getHeight());
 
-            g.setColour(juce::Colour(0xffff0055));
+            g.setColour(juce::Colour(0xffff1744));
             g.fillRect(playheadX - 1.2f, waveformArea.getY(), 2.4f, waveformArea.getHeight());
+
+            juce::Path playCap;
+            playCap.addTriangle(playheadX - 5.0f, waveformArea.getY(),
+                                playheadX + 5.0f, waveformArea.getY(),
+                                playheadX, waveformArea.getY() + 6.0f);
+            g.setColour(juce::Colours::white);
+            g.fillPath(playCap);
         }
 
-        // 6. Dynamic BPM + Musical Key (Tonalidad) + Duration Badge in top-right of viewer
+        // 6. Dynamic Platform + BPM + Musical Key (Tonalidad) + Duration Badge in top-right of viewer
         double bpm = processor.getDetectedBpm(slotIndex);
         juce::String key = processor.getDetectedKey(slotIndex);
-        juce::String badgeText = juce::String::fromUTF8("🥁 ") + juce::String(bpm, 1) + " BPM | "
+        juce::String platBadge = AudioExtractorWorker::getPlatformName(processor.getSelectedPlatform()).toUpperCase();
+        juce::String badgeText = "[" + platBadge + "]  "
+                               + juce::String::fromUTF8("🥁 ") + juce::String(bpm, 1) + " BPM | "
                                + juce::String::fromUTF8("🎹 Key: ") + key + " | "
                                + juce::String(totalLength, 1) + "s";
         if (slotIndex == 2)
@@ -224,16 +245,16 @@ void WaveformComponent::paint(juce::Graphics& g)
             badgeText = ((st > 0) ? ("+" + juce::String(st)) : juce::String(st)) + " st IA | " + badgeText;
         }
 
-        g.setColour(juce::Colour(0xeeffffff));
+        g.setColour(juce::Colour(0xf0ffffff));
         g.setFont(juce::Font(11.0f, juce::Font::bold));
         g.drawText(badgeText, headerBar, juce::Justification::centredRight);
     }
     else
     {
-        g.setColour(juce::Colour(0x55ffffff));
+        g.setColour(juce::Colour(0x6698a6bd));
         g.setFont(juce::Font(12.0f, juce::Font::italic));
         juce::String placeholder = (slotIndex == 1)
-            ? juce::String::fromUTF8("1. Aquí aparecerá el Audio 1 con Auto-Chop MPC (C1-G2), BPM y Key tras pulsar Extraer 3s/10s/30s...")
+            ? juce::String::fromUTF8("1. Aquí aparecerá el Audio 1 (YouTube / TikTok / Instagram) con Auto-Chop MPC (C1-G2), BPM y Key...")
             : juce::String::fromUTF8("2. Aquí aparecerá el Audio 2 modificado al pulsar '🛡️ Derechos (±3 st IA)'...");
         g.drawText(placeholder, waveformArea, juce::Justification::centred);
     }

@@ -12,8 +12,8 @@ ClipSampler10AudioProcessorEditor::ClipSampler10AudioProcessorEditor(ClipSampler
 
     // Enable free user window resizing from the bottom-right corner
     setResizable(true, true);
-    setResizeLimits(860, 680, 1750, 1250);
-    setSize(980, 760);
+    setResizeLimits(880, 700, 1800, 1280);
+    setSize(1000, 790);
 
     // =========================================================================
     // Header Maintenance & License Controls
@@ -21,47 +21,71 @@ ClipSampler10AudioProcessorEditor::ClipSampler10AudioProcessorEditor(ClipSampler
     licenseBadgeButton.onClick = [this] { onLicenseBadgeClicked(); };
     addAndMakeVisible(licenseBadgeButton);
 
-    updateExtractorButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff222733));
-    updateExtractorButton.setColour(juce::TextButton::textColourOffId, juce::Colour(0xffb0bac9));
+    updateExtractorButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff222838));
+    updateExtractorButton.setColour(juce::TextButton::textColourOffId, juce::Colour(0xffd0dae8));
     updateExtractorButton.onClick = [this] { onUpdateExtractorClicked(); };
     addAndMakeVisible(updateExtractorButton);
 
-    cleanCacheButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff222733));
-    cleanCacheButton.setColour(juce::TextButton::textColourOffId, juce::Colour(0xffb0bac9));
+    cleanCacheButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff222838));
+    cleanCacheButton.setColour(juce::TextButton::textColourOffId, juce::Colour(0xffd0dae8));
     cleanCacheButton.onClick = [this] { onCleanCacheClicked(); };
     addAndMakeVisible(cleanCacheButton);
 
     // =========================================================================
-    // SECTION 1: TOP PANEL (LINK, VIDEO DURATION, 3s/10s/30s & NUEVA EXTRACCIÓN)
+    // SECTION 1: TOP PANEL (PLATFORM SELECTOR, URL, DURATION, 3s/10s/30s & DERECHOS)
     // =========================================================================
     topSectionGroup.setTextLabelPosition(juce::Justification::centredLeft);
     addAndMakeVisible(topSectionGroup);
 
-    urlLabel.setColour(juce::Label::textColourId, juce::Colour(0xffb0bac9));
+    // Platform Selector Row (YouTube / TikTok / Instagram)
+    platformLabel.setColour(juce::Label::textColourId, juce::Colour(0xffd0dae8));
+    platformLabel.setFont(juce::Font(13.0f, juce::Font::bold));
+    addAndMakeVisible(platformLabel);
+
+    platformYoutubeBtn.onClick   = [this] { onSelectPlatform(SourcePlatform::YouTube, true); };
+    platformTiktokBtn.onClick    = [this] { onSelectPlatform(SourcePlatform::TikTok, true); };
+    platformInstagramBtn.onClick = [this] { onSelectPlatform(SourcePlatform::Instagram, true); };
+    addAndMakeVisible(platformYoutubeBtn);
+    addAndMakeVisible(platformTiktokBtn);
+    addAndMakeVisible(platformInstagramBtn);
+
+    platformHintLabel.setJustificationType(juce::Justification::centredRight);
+    platformHintLabel.setColour(juce::Label::textColourId, juce::Colour(0xff8c9ba5));
+    addAndMakeVisible(platformHintLabel);
+
+    urlLabel.setColour(juce::Label::textColourId, juce::Colour(0xffd0dae8));
     urlLabel.setFont(juce::Font(13.5f, juce::Font::bold));
     addAndMakeVisible(urlLabel);
 
-    urlEditor.setTextToShowWhenEmpty("https://www.youtube.com/watch?v=...", juce::Colour(0xff606875));
-    urlEditor.setColour(juce::TextEditor::backgroundColourId, juce::Colour(0xff1e222d));
+    urlEditor.setColour(juce::TextEditor::backgroundColourId, juce::Colour(0xff141822));
     urlEditor.setColour(juce::TextEditor::textColourId, juce::Colours::white);
-    urlEditor.setColour(juce::TextEditor::outlineColourId, juce::Colour(0xff2d3444));
+    urlEditor.setColour(juce::TextEditor::outlineColourId, juce::Colour(0xff2d364d));
     if (audioProcessor.getLastUrl().isNotEmpty())
         urlEditor.setText(audioProcessor.getLastUrl(), false);
     urlEditor.onReturnKey = [this] { onDetectDurationClicked(); };
+    urlEditor.onTextChange = [this] {
+        juce::String txt = urlEditor.getText().trim();
+        if (txt.startsWithIgnoreCase("http"))
+        {
+            SourcePlatform autoPlat = AudioExtractorWorker::detectPlatformFromUrl(txt);
+            if (autoPlat != audioProcessor.getSelectedPlatform())
+                onSelectPlatform(autoPlat, false);
+        }
+    };
     addAndMakeVisible(urlEditor);
 
-    pasteButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff2d3444));
-    pasteButton.setColour(juce::TextButton::textColourOffId, juce::Colour(0xffe0e6ed));
+    pasteButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff2b3347));
+    pasteButton.setColour(juce::TextButton::textColourOffId, juce::Colours::white);
     pasteButton.onClick = [this] { onPasteClicked(); };
     addAndMakeVisible(pasteButton);
 
-    detectDurationButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff1b3a4b));
+    detectDurationButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff173b4d));
     detectDurationButton.setColour(juce::TextButton::textColourOffId, juce::Colour(0xff00e5ff));
     detectDurationButton.onClick = [this] { onDetectDurationClicked(); };
     addAndMakeVisible(detectDurationButton);
 
     // Start Time input + interactive time bar slider + video start/end badge
-    startTimeLabel.setColour(juce::Label::textColourId, juce::Colour(0xffb0bac9));
+    startTimeLabel.setColour(juce::Label::textColourId, juce::Colour(0xffd0dae8));
     startTimeLabel.setFont(juce::Font(13.5f, juce::Font::bold));
     addAndMakeVisible(startTimeLabel);
 
@@ -73,9 +97,9 @@ ClipSampler10AudioProcessorEditor::ClipSampler10AudioProcessorEditor(ClipSampler
 
     startTimeEditor.setText(savedTime, false);
     startTimeEditor.setJustification(juce::Justification::centred);
-    startTimeEditor.setColour(juce::TextEditor::backgroundColourId, juce::Colour(0xff1e222d));
+    startTimeEditor.setColour(juce::TextEditor::backgroundColourId, juce::Colour(0xff141822));
     startTimeEditor.setColour(juce::TextEditor::textColourId, juce::Colour(0xff00e5ff));
-    startTimeEditor.setColour(juce::TextEditor::outlineColourId, juce::Colour(0xff2d3444));
+    startTimeEditor.setColour(juce::TextEditor::outlineColourId, juce::Colour(0xff2d364d));
     startTimeEditor.onTextChange = [this] {
         int secs = AudioExtractorWorker::parseTimeToSeconds(startTimeEditor.getText());
         if (secs > startTimeSlider.getMaximum())
@@ -95,7 +119,7 @@ ClipSampler10AudioProcessorEditor::ClipSampler10AudioProcessorEditor(ClipSampler
     startTimeSlider.setRange(0.0, juce::jmax((double)initialMaxDur, (double)initialSeconds), 1.0);
     startTimeSlider.setSkewFactorFromMidPoint(120.0);
     startTimeSlider.setValue(static_cast<double>(initialSeconds), juce::dontSendNotification);
-    startTimeSlider.setColour(juce::Slider::backgroundColourId, juce::Colour(0xff161922));
+    startTimeSlider.setColour(juce::Slider::backgroundColourId, juce::Colour(0xff10131c));
     startTimeSlider.setColour(juce::Slider::trackColourId, juce::Colour(0xff00e5ff));
     startTimeSlider.setColour(juce::Slider::thumbColourId, juce::Colour(0xffff0055));
     startTimeSlider.onValueChange = [this] {
@@ -108,9 +132,9 @@ ClipSampler10AudioProcessorEditor::ClipSampler10AudioProcessorEditor(ClipSampler
     addAndMakeVisible(startTimeSlider);
 
     videoRangeBadgeLabel.setJustificationType(juce::Justification::centred);
-    videoRangeBadgeLabel.setColour(juce::Label::backgroundColourId, juce::Colour(0xff182232));
+    videoRangeBadgeLabel.setColour(juce::Label::backgroundColourId, juce::Colour(0xff162030));
     videoRangeBadgeLabel.setColour(juce::Label::textColourId, juce::Colour(0xff00e5ff));
-    videoRangeBadgeLabel.setColour(juce::Label::outlineColourId, juce::Colour(0xff2d4464));
+    videoRangeBadgeLabel.setColour(juce::Label::outlineColourId, juce::Colour(0xff294263));
     addAndMakeVisible(videoRangeBadgeLabel);
     refreshVideoTimeRangeLabel();
 
@@ -125,7 +149,7 @@ ClipSampler10AudioProcessorEditor::ClipSampler10AudioProcessorEditor(ClipSampler
     extract10sButton.onClick = [this] { onExtractDurationClicked(10); };
     addAndMakeVisible(extract10sButton);
 
-    extract30sButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xffad1457));
+    extract30sButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff8e24aa));
     extract30sButton.setColour(juce::TextButton::textColourOffId, juce::Colours::white);
     extract30sButton.onClick = [this] { onExtractDurationClicked(30); };
     addAndMakeVisible(extract30sButton);
@@ -136,8 +160,8 @@ ClipSampler10AudioProcessorEditor::ClipSampler10AudioProcessorEditor(ClipSampler
     addAndMakeVisible(newExtractionButton);
 
     // 3 Copyright Detection & Derechos AI Buttons
-    detectCopyrightBtn.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff2b3040));
-    detectCopyrightBtn.setColour(juce::TextButton::textColourOffId, juce::Colour(0xffffb74d));
+    detectCopyrightBtn.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff283044));
+    detectCopyrightBtn.setColour(juce::TextButton::textColourOffId, juce::Colour(0xffffca28));
     detectCopyrightBtn.onClick = [this] { onCheckCopyrightOriginalClicked(); };
     addAndMakeVisible(detectCopyrightBtn);
 
@@ -146,26 +170,26 @@ ClipSampler10AudioProcessorEditor::ClipSampler10AudioProcessorEditor(ClipSampler
     derechosAiBtn.onClick = [this] { onApplyDerechosClicked(); };
     addAndMakeVisible(derechosAiBtn);
 
-    verifyFreeBtn.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff0f3d29));
+    verifyFreeBtn.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff0b422b));
     verifyFreeBtn.setColour(juce::TextButton::textColourOffId, juce::Colour(0xff00e676));
     verifyFreeBtn.onClick = [this] { onVerifyDerechosFreeClicked(); };
     addAndMakeVisible(verifyFreeBtn);
 
     // Progress bar, status label & copyright status pill
     currentProgressValue = static_cast<double>(audioProcessor.getExtractionProgress());
-    progressBar.setColour(juce::ProgressBar::backgroundColourId, juce::Colour(0xff161922));
+    progressBar.setColour(juce::ProgressBar::backgroundColourId, juce::Colour(0xff10131c));
     progressBar.setColour(juce::ProgressBar::foregroundColourId, juce::Colour(0xff00e5ff));
     addAndMakeVisible(progressBar);
 
     lastDisplayedStatus = audioProcessor.getStatusMessage();
     statusLabel.setText(lastDisplayedStatus, juce::dontSendNotification);
-    statusLabel.setColour(juce::Label::textColourId, juce::Colour(0xffb0bac9));
+    statusLabel.setColour(juce::Label::textColourId, juce::Colour(0xffc0cad8));
     statusLabel.setJustificationType(juce::Justification::centredLeft);
     addAndMakeVisible(statusLabel);
 
     copyrightBadgeLabel.setText(audioProcessor.getCopyrightBadgeText(), juce::dontSendNotification);
     copyrightBadgeLabel.setJustificationType(juce::Justification::centredRight);
-    copyrightBadgeLabel.setColour(juce::Label::textColourId, juce::Colour(0xffffb74d));
+    copyrightBadgeLabel.setColour(juce::Label::textColourId, juce::Colour(0xffffca28));
     addAndMakeVisible(copyrightBadgeLabel);
 
     // =========================================================================
@@ -245,14 +269,14 @@ ClipSampler10AudioProcessorEditor::ClipSampler10AudioProcessorEditor(ClipSampler
     addAndMakeVisible(autoChopButton);
 
     bakeFxButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff37474f));
-    bakeFxButton.setColour(juce::TextButton::textColourOffId, juce::Colour(0xffffab00));
+    bakeFxButton.setColour(juce::TextButton::textColourOffId, juce::Colour(0xffffca28));
     bakeFxButton.onClick = [this] { onBakeFxClicked(); };
     addAndMakeVisible(bakeFxButton);
 
     bpmKeyBadgeLabel.setJustificationType(juce::Justification::centred);
-    bpmKeyBadgeLabel.setColour(juce::Label::backgroundColourId, juce::Colour(0xff182232));
+    bpmKeyBadgeLabel.setColour(juce::Label::backgroundColourId, juce::Colour(0xff162030));
     bpmKeyBadgeLabel.setColour(juce::Label::textColourId, juce::Colour(0xff00e5ff));
-    bpmKeyBadgeLabel.setColour(juce::Label::outlineColourId, juce::Colour(0xff2d4464));
+    bpmKeyBadgeLabel.setColour(juce::Label::outlineColourId, juce::Colour(0xff294263));
     addAndMakeVisible(bpmKeyBadgeLabel);
 
     addAndMakeVisible(originalWaveformComponent);
@@ -263,7 +287,7 @@ ClipSampler10AudioProcessorEditor::ClipSampler10AudioProcessorEditor(ClipSampler
     playButton.onClick = [this] { onPlayClicked(); };
     addAndMakeVisible(playButton);
 
-    stopButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff2d3444));
+    stopButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff2b3347));
     stopButton.setColour(juce::TextButton::textColourOffId, juce::Colours::white);
     stopButton.onClick = [this] { onStopClicked(); };
     addAndMakeVisible(stopButton);
@@ -287,6 +311,7 @@ ClipSampler10AudioProcessorEditor::ClipSampler10AudioProcessorEditor(ClipSampler
 
     addChildComponent(licenseOverlay);
     updateLicenseUiState();
+    updatePlatformUiState();
     updateFxAndMpcUiState();
 
     startTimerHz(30);
@@ -298,6 +323,67 @@ ClipSampler10AudioProcessorEditor::~ClipSampler10AudioProcessorEditor()
     dragDawButton.removeMouseListener(this);
     dragMidiButton.removeMouseListener(this);
     setLookAndFeel(nullptr);
+}
+
+void ClipSampler10AudioProcessorEditor::onSelectPlatform(SourcePlatform platform, bool updateStatusMsg)
+{
+    audioProcessor.setSelectedPlatform(platform);
+    updatePlatformUiState();
+
+    if (updateStatusMsg)
+    {
+        juce::String pName = AudioExtractorWorker::getPlatformName(platform);
+        audioProcessor.setStatusMessage(juce::String::fromUTF8("🌐 Plataforma seleccionada: ") + pName
+                                        + juce::String::fromUTF8(". Pega un enlace de ") + pName
+                                        + juce::String::fromUTF8(" y elige Extraer 3s, 10s o 30s."));
+    }
+    repaint();
+}
+
+void ClipSampler10AudioProcessorEditor::updatePlatformUiState()
+{
+    const SourcePlatform plat = audioProcessor.getSelectedPlatform();
+
+    // Dynamic Platform Theme Accent Colors (Cyber Studio UX)
+    juce::Colour accentCol(0xff00e5ff);
+    if (plat == SourcePlatform::YouTube)
+    {
+        accentCol = juce::Colour(0xffff1744);
+        urlEditor.setTextToShowWhenEmpty("https://www.youtube.com/watch?v=...  o  https://youtu.be/...", juce::Colour(0xff6b7588));
+        platformHintLabel.setText(juce::String::fromUTF8("⚡ Motor Activo: YouTube DASH / Shorts (Alta Precisión)"), juce::dontSendNotification);
+        platformHintLabel.setColour(juce::Label::textColourId, juce::Colour(0xffff5252));
+    }
+    else if (plat == SourcePlatform::TikTok)
+    {
+        accentCol = juce::Colour(0xff00f2fe);
+        urlEditor.setTextToShowWhenEmpty("https://www.tiktok.com/@usuario/video/...  o  https://vm.tiktok.com/...", juce::Colour(0xff6b7588));
+        platformHintLabel.setText(juce::String::fromUTF8("🎵 Motor Activo: TikTok Audio Stream + Anti-Block Headers"), juce::dontSendNotification);
+        platformHintLabel.setColour(juce::Label::textColourId, juce::Colour(0xff00f2fe));
+    }
+    else
+    {
+        accentCol = juce::Colour(0xffd500f9);
+        urlEditor.setTextToShowWhenEmpty("https://www.instagram.com/reel/...  o  https://www.instagram.com/p/...", juce::Colour(0xff6b7588));
+        platformHintLabel.setText(juce::String::fromUTF8("📸 Motor Activo: Instagram Reels / Posts Audio Extractor"), juce::dontSendNotification);
+        platformHintLabel.setColour(juce::Label::textColourId, juce::Colour(0xffe040fb));
+    }
+
+    scalableLnf.setThemeAccent(accentCol);
+    urlEditor.setColour(juce::TextEditor::outlineColourId, accentCol.withAlpha(0.65f));
+    progressBar.setColour(juce::ProgressBar::foregroundColourId, accentCol);
+
+    // Style the 3 Platform Selector Buttons
+    const bool isYt = (plat == SourcePlatform::YouTube);
+    platformYoutubeBtn.setColour(juce::TextButton::buttonColourId, isYt ? juce::Colour(0xffff1744) : juce::Colour(0xff1e2433));
+    platformYoutubeBtn.setColour(juce::TextButton::textColourOffId, isYt ? juce::Colours::white : juce::Colour(0xff9aa6b8));
+
+    const bool isTt = (plat == SourcePlatform::TikTok);
+    platformTiktokBtn.setColour(juce::TextButton::buttonColourId, isTt ? juce::Colour(0xff00c4cc) : juce::Colour(0xff1e2433));
+    platformTiktokBtn.setColour(juce::TextButton::textColourOffId, isTt ? juce::Colours::black : juce::Colour(0xff9aa6b8));
+
+    const bool isIg = (plat == SourcePlatform::Instagram);
+    platformInstagramBtn.setColour(juce::TextButton::buttonColourId, isIg ? juce::Colour(0xffaa00ff) : juce::Colour(0xff1e2433));
+    platformInstagramBtn.setColour(juce::TextButton::textColourOffId, isIg ? juce::Colours::white : juce::Colour(0xff9aa6b8));
 }
 
 void ClipSampler10AudioProcessorEditor::refreshVideoTimeRangeLabel()
@@ -316,7 +402,7 @@ void ClipSampler10AudioProcessorEditor::refreshVideoTimeRangeLabel()
     else
     {
         videoRangeBadgeLabel.setText(juce::String::fromUTF8("Inicio: ") + startStr
-                                     + juce::String::fromUTF8("  |  Fin Video: [Pulsa Detectar]"),
+                                     + juce::String::fromUTF8("  |  Fin Video: [Auto / Detectar]"),
                                      juce::dontSendNotification);
     }
 }
@@ -380,7 +466,7 @@ void ClipSampler10AudioProcessorEditor::timerCallback()
     detectDurationButton.setEnabled(unlocked && !fetchingMeta);
     updateExtractorButton.setEnabled(unlocked && !updating);
 
-    // Condition requested by user: Enable "Nueva Extracción" button ONLY when both Audio 1 & Audio 2 are extracted/ready!
+    // Condition requested by user: Enable "Nueva Extracción" button ONLY when both Audio 1 & Audio 2 are extracted/ready
     newExtractionButton.setEnabled(unlocked && !extracting && bothAudiosReady);
     if (bothAudiosReady)
     {
@@ -427,7 +513,7 @@ void ClipSampler10AudioProcessorEditor::timerCallback()
         else if (verifyState == 1)
             copyrightBadgeLabel.setColour(juce::Label::textColourId, juce::Colour(0xffff5252));
         else
-            copyrightBadgeLabel.setColour(juce::Label::textColourId, juce::Colour(0xffffb74d));
+            copyrightBadgeLabel.setColour(juce::Label::textColourId, juce::Colour(0xffffca28));
 
         originalWaveformComponent.repaint();
         transformedWaveformComponent.repaint();
@@ -445,6 +531,10 @@ void ClipSampler10AudioProcessorEditor::onPasteClicked()
     juce::String clip = juce::SystemClipboard::getTextFromClipboard().trim();
     if (clip.isNotEmpty())
     {
+        // Auto-recognize platform from pasted link (YouTube, TikTok, or Instagram)
+        SourcePlatform detectedPlat = AudioExtractorWorker::detectPlatformFromUrl(clip);
+        onSelectPlatform(detectedPlat, false);
+
         urlEditor.setText(clip, false);
         audioProcessor.detectVideoDuration(clip);
     }
@@ -455,7 +545,7 @@ void ClipSampler10AudioProcessorEditor::onDetectDurationClicked()
     juce::String url = urlEditor.getText().trim();
     if (url.isEmpty())
     {
-        audioProcessor.setStatusMessage(juce::String::fromUTF8("Primero pega una URL de YouTube para detectar su duración."));
+        audioProcessor.setStatusMessage(juce::String::fromUTF8("Primero pega un enlace de YouTube, TikTok o Instagram para detectar su duración."));
         return;
     }
     audioProcessor.detectVideoDuration(url);
@@ -466,7 +556,7 @@ void ClipSampler10AudioProcessorEditor::onExtractDurationClicked(int durationSec
     juce::String url = urlEditor.getText().trim();
     if (url.isEmpty())
     {
-        audioProcessor.setStatusMessage(juce::String::fromUTF8("Ingresa una URL válida de YouTube."));
+        audioProcessor.setStatusMessage(juce::String::fromUTF8("Ingresa un enlace válido de YouTube, TikTok o Instagram."));
         statusLabel.setText(audioProcessor.getStatusMessage(), juce::dontSendNotification);
         return;
     }
@@ -633,7 +723,6 @@ void ClipSampler10AudioProcessorEditor::mouseDrag(const juce::MouseEvent& event)
 {
     if (event.eventComponent == &dragDawButton && event.getDistanceFromDragStart() > 4)
     {
-        // If user moved any FX knob, automatically bake FX to the target slot so the dragged .WAV includes their FX!
         if (audioProcessor.getLofiAmount() > 0.01f
             || std::abs(audioProcessor.getFxPitchSemitones()) > 0.1f
             || audioProcessor.getFxToneFilter() < 0.98f)
@@ -745,37 +834,55 @@ void ClipSampler10AudioProcessorEditor::onExportWavClicked()
 
 void ClipSampler10AudioProcessorEditor::paint(juce::Graphics& g)
 {
-    g.fillAll(juce::Colour(0xff12141a));
+    // Deep Cyber-Obsidian Studio Background Gradient
+    juce::ColourGradient bgGrad(juce::Colour(0xff0e1118), 0.0f, 0.0f,
+                                juce::Colour(0xff141923), 0.0f, (float)getHeight(), false);
+    g.setGradientFill(bgGrad);
+    g.fillAll();
 
-    const float scale = juce::jlimit(0.9f, 1.6f, (float)getWidth() / 980.0f);
-    const int headerH = juce::roundToInt(54.0f * scale);
+    const float scale = juce::jlimit(0.9f, 1.6f, (float)getWidth() / 1000.0f);
+    const int headerH = juce::roundToInt(56.0f * scale);
 
     auto headerBounds = getLocalBounds().removeFromTop(headerH);
-    g.setColour(juce::Colour(0xff1a1d26));
+    juce::ColourGradient hdrGrad(juce::Colour(0xff1c2230), 0.0f, 0.0f,
+                                 juce::Colour(0xff131722), 0.0f, (float)headerH, false);
+    g.setGradientFill(hdrGrad);
     g.fillRect(headerBounds);
 
+    // Dynamic platform accent glow line under header
+    const SourcePlatform plat = audioProcessor.getSelectedPlatform();
+    juce::Colour platAccent = (plat == SourcePlatform::YouTube) ? juce::Colour(0xffff1744)
+                            : (plat == SourcePlatform::TikTok)  ? juce::Colour(0xff00f2fe)
+                                                                : juce::Colour(0xffd500f9);
+
     g.setColour(juce::Colour(0xff00e5ff));
-    g.setFont(juce::Font(21.5f * scale, juce::Font::bold));
-    g.drawText("CLIPSAMPLER v2.3", 18, juce::roundToInt(5.0f * scale), juce::roundToInt(270.0f * scale), juce::roundToInt(25.0f * scale), juce::Justification::left);
+    g.setFont(juce::Font(22.0f * scale, juce::Font::bold));
+    g.drawText("CLIPSAMPLER v2.4", 18, juce::roundToInt(5.0f * scale), juce::roundToInt(280.0f * scale), juce::roundToInt(26.0f * scale), juce::Justification::left);
 
-    g.setColour(juce::Colour(0xff8c9ba5));
-    g.setFont(juce::Font(11.0f * scale, juce::Font::plain));
-    g.drawText("MPC AUTO-CHOP (C1-G2) // FX MACRO // BPM & KEY // AUDIO A MIDI // DERECHOS IA", 18, juce::roundToInt(30.0f * scale), juce::roundToInt(420.0f * scale), juce::roundToInt(18.0f * scale), juce::Justification::left);
+    g.setColour(platAccent.brighter(0.2f));
+    g.setFont(juce::Font(11.0f * scale, juce::Font::bold));
+    g.drawText("YOUTUBE • TIKTOK • INSTAGRAM // MPC AUTO-CHOP // FX MACRO // AUDIO A MIDI",
+               18, juce::roundToInt(31.0f * scale), juce::roundToInt(460.0f * scale), juce::roundToInt(18.0f * scale), juce::Justification::left);
 
-    g.setColour(juce::Colour(0xff2d3444));
-    g.drawHorizontalLine(headerH, 0.0f, (float)getWidth());
+    // Glowing gradient separator bar
+    juce::ColourGradient lineGrad(platAccent, 0.0f, (float)headerH,
+                                  juce::Colour(0xff00e5ff), (float)getWidth(), (float)headerH, false);
+    g.setGradientFill(lineGrad);
+    g.fillRect(0.0f, (float)headerH - 1.5f, (float)getWidth(), 2.0f);
 }
 
 void ClipSampler10AudioProcessorEditor::resized()
 {
     licenseOverlay.setBounds(getLocalBounds());
 
-    const float wScale = juce::jlimit(0.88f, 1.75f, (float)getWidth() / 980.0f);
-    const float hScale = juce::jlimit(0.88f, 1.75f, (float)getHeight() / 760.0f);
+    const float wScale = juce::jlimit(0.88f, 1.75f, (float)getWidth() / 1000.0f);
+    const float hScale = juce::jlimit(0.88f, 1.75f, (float)getHeight() / 790.0f);
     const float uiScale = (wScale + hScale) * 0.5f;
     scalableLnf.setUiScale(uiScale);
 
     // Update label fonts proportionally when window stretches
+    platformLabel.setFont(juce::Font(12.5f * uiScale, juce::Font::bold));
+    platformHintLabel.setFont(juce::Font(11.5f * uiScale, juce::Font::bold));
     urlLabel.setFont(juce::Font(13.0f * uiScale, juce::Font::bold));
     startTimeLabel.setFont(juce::Font(13.0f * uiScale, juce::Font::bold));
     urlEditor.setFont(juce::Font(13.5f * uiScale));
@@ -790,8 +897,8 @@ void ClipSampler10AudioProcessorEditor::resized()
     bpmKeyBadgeLabel.setFont(juce::Font(11.5f * uiScale, juce::Font::bold));
 
     // 0. Header Layout
-    const int headerH = juce::roundToInt(54.0f * wScale);
-    auto headerArea = getLocalBounds().removeFromTop(headerH).reduced(14, juce::roundToInt(8.0f * hScale));
+    const int headerH = juce::roundToInt(56.0f * wScale);
+    auto headerArea = getLocalBounds().removeFromTop(headerH).reduced(14, juce::roundToInt(9.0f * hScale));
 
     cleanCacheButton.setBounds(headerArea.removeFromRight(juce::roundToInt(118.0f * wScale)));
     headerArea.removeFromRight(8);
@@ -800,24 +907,38 @@ void ClipSampler10AudioProcessorEditor::resized()
     licenseBadgeButton.setBounds(headerArea.removeFromRight(juce::roundToInt(275.0f * wScale)));
 
     auto totalArea = getLocalBounds();
-    totalArea.removeFromTop(headerH + 5);
+    totalArea.removeFromTop(headerH + 6);
     totalArea.reduce(14, 6);
 
-    const int topPanelHeight = juce::roundToInt(248.0f * hScale);
-    const int rowH = juce::roundToInt(32.0f * hScale);
-    const int gapY = juce::roundToInt(7.0f * hScale);
+    const int topPanelHeight = juce::roundToInt(282.0f * hScale);
+    const int rowH = juce::roundToInt(31.0f * hScale);
+    const int gapY = juce::roundToInt(6.0f * hScale);
 
     // =========================================================================
-    // 1. TOP PANEL LAYOUT
+    // 1. TOP PANEL LAYOUT (PLATFORM SELECTOR + URL + TIME + 3s/10s/30s + DERECHOS)
     // =========================================================================
     auto topArea = totalArea.removeFromTop(topPanelHeight);
     topSectionGroup.setBounds(topArea);
 
-    auto topInner = topArea.reduced(14, juce::roundToInt(20.0f * hScale));
+    auto topInner = topArea.reduced(14, juce::roundToInt(22.0f * hScale));
+
+    // Row 0: Multi-Platform Selector (YouTube / TikTok / Instagram) + Active Engine Hint
+    auto platRow = topInner.removeFromTop(juce::roundToInt(30.0f * hScale));
+    platformLabel.setBounds(platRow.removeFromLeft(juce::roundToInt(115.0f * wScale)));
+    const int platBtnW = juce::roundToInt(135.0f * wScale);
+    platformYoutubeBtn.setBounds(platRow.removeFromLeft(platBtnW));
+    platRow.removeFromLeft(8);
+    platformTiktokBtn.setBounds(platRow.removeFromLeft(platBtnW));
+    platRow.removeFromLeft(8);
+    platformInstagramBtn.setBounds(platRow.removeFromLeft(platBtnW));
+    platRow.removeFromLeft(10);
+    platformHintLabel.setBounds(platRow);
+
+    topInner.removeFromTop(gapY);
 
     // Row 1: URL input + Paste + Detect Video Duration
     auto urlRow = topInner.removeFromTop(rowH);
-    urlLabel.setBounds(urlRow.removeFromLeft(juce::roundToInt(120.0f * wScale)));
+    urlLabel.setBounds(urlRow.removeFromLeft(juce::roundToInt(115.0f * wScale)));
     detectDurationButton.setBounds(urlRow.removeFromRight(juce::roundToInt(162.0f * wScale)));
     urlRow.removeFromRight(6);
     pasteButton.setBounds(urlRow.removeFromRight(juce::roundToInt(85.0f * wScale)));
@@ -828,7 +949,7 @@ void ClipSampler10AudioProcessorEditor::resized()
 
     // Row 2: Start time + Interactive slider + Video Start/End Duration Badge
     auto timeRow = topInner.removeFromTop(rowH);
-    startTimeLabel.setBounds(timeRow.removeFromLeft(juce::roundToInt(120.0f * wScale)));
+    startTimeLabel.setBounds(timeRow.removeFromLeft(juce::roundToInt(115.0f * wScale)));
     startTimeEditor.setBounds(timeRow.removeFromLeft(juce::roundToInt(80.0f * wScale)));
     timeRow.removeFromLeft(8);
     videoRangeBadgeLabel.setBounds(timeRow.removeFromRight(juce::roundToInt(255.0f * wScale)));
@@ -838,7 +959,7 @@ void ClipSampler10AudioProcessorEditor::resized()
     topInner.removeFromTop(gapY);
 
     // Row 3: 3 Multi-Duration Extract Buttons (3s, 10s, 30s) + Conditional "Nueva Extracción" Button
-    auto extractRow = topInner.removeFromTop(juce::roundToInt(34.0f * hScale));
+    auto extractRow = topInner.removeFromTop(juce::roundToInt(33.0f * hScale));
     const int fourthW = (extractRow.getWidth() - 24) / 4;
     extract3sButton.setBounds(extractRow.removeFromLeft(fourthW));
     extractRow.removeFromLeft(8);
@@ -851,7 +972,7 @@ void ClipSampler10AudioProcessorEditor::resized()
     topInner.removeFromTop(gapY);
 
     // Row 4: 3 Copyright & Derechos AI Buttons
-    auto rightsRow = topInner.removeFromTop(juce::roundToInt(34.0f * hScale));
+    auto rightsRow = topInner.removeFromTop(juce::roundToInt(33.0f * hScale));
     const int rightsW = (rightsRow.getWidth() - 16) / 3;
     detectCopyrightBtn.setBounds(rightsRow.removeFromLeft(rightsW));
     rightsRow.removeFromLeft(8);
@@ -862,12 +983,12 @@ void ClipSampler10AudioProcessorEditor::resized()
     topInner.removeFromTop(gapY);
 
     // Row 5: Progress Bar & Status + Copyright Verdict Badge
-    auto progressRow = topInner.removeFromTop(juce::roundToInt(14.0f * hScale));
+    auto progressRow = topInner.removeFromTop(juce::roundToInt(13.0f * hScale));
     progressBar.setBounds(progressRow);
 
     topInner.removeFromTop(3);
-    auto statusRow = topInner.removeFromTop(juce::roundToInt(21.0f * hScale));
-    copyrightBadgeLabel.setBounds(statusRow.removeFromRight(juce::roundToInt(315.0f * wScale)));
+    auto statusRow = topInner.removeFromTop(juce::roundToInt(20.0f * hScale));
+    copyrightBadgeLabel.setBounds(statusRow.removeFromRight(juce::roundToInt(320.0f * wScale)));
     statusLabel.setBounds(statusRow);
 
     totalArea.removeFromTop(6);
@@ -878,9 +999,9 @@ void ClipSampler10AudioProcessorEditor::resized()
     auto bottomArea = totalArea;
     bottomSectionGroup.setBounds(bottomArea);
 
-    auto bottomInner = bottomArea.reduced(14, juce::roundToInt(20.0f * hScale));
+    auto bottomInner = bottomArea.reduced(14, juce::roundToInt(22.0f * hScale));
 
-    // Top row inside Section 2: FX Macro Knobs + Target Audio 1/2 + Sync + Auto-Chop MPC + BPM/Key Badge
+    // Top row inside Section 2: FX Macro Knobs + Target Audio 1/2 + Sync + Auto-Chop MPC
     auto fxRow = bottomInner.removeFromTop(juce::roundToInt(40.0f * hScale));
     fxMacroTitleLabel.setBounds(fxRow.removeFromLeft(juce::roundToInt(88.0f * wScale)));
 

@@ -302,6 +302,7 @@ juce::AudioProcessorEditor* ClipSampler10AudioProcessor::createEditor()
 void ClipSampler10AudioProcessor::getStateInformation(juce::MemoryBlock& destData)
 {
     auto state = apvts.copyState();
+    state.setProperty("selectedPlatform", selectedPlatform.load(), nullptr);
     state.setProperty("lastUrl", lastUrl, nullptr);
     state.setProperty("lastStartTime", lastStartTime, nullptr);
     state.setProperty("lastSelectedDurationSec", lastSelectedDurationSec.load(), nullptr);
@@ -335,6 +336,7 @@ void ClipSampler10AudioProcessor::setStateInformation(const void* data, int size
         if (state.hasType(apvts.state.getType()))
             apvts.replaceState(state);
 
+        selectedPlatform.store(static_cast<int>(state.getProperty("selectedPlatform", 0)));
         lastUrl = state.getProperty("lastUrl", "").toString();
         lastStartTime = state.getProperty("lastStartTime", "00:00").toString();
         lastSelectedDurationSec.store(static_cast<int>(state.getProperty("lastSelectedDurationSec", 10)));
@@ -447,10 +449,12 @@ void ClipSampler10AudioProcessor::detectVideoDuration(const juce::String& url)
     if (metadataInProgress.exchange(true))
         return;
 
-    setStatusMessage(juce::String::fromUTF8("🔍 Detectando duración total y metadatos del video de YouTube..."));
+    const SourcePlatform platform = getSelectedPlatform();
+    const juce::String platName = AudioExtractorWorker::getPlatformName(platform);
+    setStatusMessage(juce::String::fromUTF8("🔍 Detectando duración y metadatos en ") + platName + "...");
     auto weakAlive = aliveFlag;
 
-    AudioExtractorWorker::fetchVideoMetadata(cleanUrl, [this, weakAlive](const AudioExtractorWorker::VideoMetadata& meta) {
+    AudioExtractorWorker::fetchVideoMetadata(cleanUrl, platform, [this, weakAlive, platName](const AudioExtractorWorker::VideoMetadata& meta) {
         if (!weakAlive->load(std::memory_order_acquire))
             return;
 
@@ -466,11 +470,11 @@ void ClipSampler10AudioProcessor::detectVideoDuration(const juce::String& url)
             }
 
             juce::String durFormatted = AudioExtractorWorker::formatSecondsToMMSS(meta.durationSeconds);
-            setStatusMessage(juce::String::fromUTF8("✓ Video detectado [00:00 -> ") + durFormatted + "]: " + meta.title);
+            setStatusMessage(juce::String::fromUTF8("✓ [") + platName + juce::String::fromUTF8("] Detectado [00:00 -> ") + durFormatted + "]: " + meta.title);
         }
         else
         {
-            setStatusMessage(juce::String::fromUTF8("Aviso al consultar duración: ") + meta.errorMessage);
+            setStatusMessage(juce::String::fromUTF8("Aviso (") + platName + "): " + meta.errorMessage);
         }
     });
 }
@@ -489,12 +493,15 @@ void ClipSampler10AudioProcessor::startSampleExtraction(const juce::String& url,
     const int clampedDuration = (durationSeconds == 3 || durationSeconds == 10 || durationSeconds == 30) ? durationSeconds : 10;
     lastSelectedDurationSec.store(clampedDuration, std::memory_order_relaxed);
 
+    const SourcePlatform platform = getSelectedPlatform();
+    const juce::String platName = AudioExtractorWorker::getPlatformName(platform);
+
     if (detectedVideoDurationSec.load(std::memory_order_relaxed) <= 0)
         detectVideoDuration(lastUrl);
 
     extractionInProgress.store(true, std::memory_order_relaxed);
     extractionProgress.store(0.05f, std::memory_order_relaxed);
-    setStatusMessage(juce::String::fromUTF8("Iniciando extracción de ") + juce::String(clampedDuration) + juce::String::fromUTF8(" segundos..."));
+    setStatusMessage(juce::String::fromUTF8("Iniciando extracción de ") + platName + " (" + juce::String(clampedDuration) + juce::String::fromUTF8(" segundos)..."));
 
     int currentDawRate = static_cast<int>(getSampleRate());
     if (currentDawRate <= 0)
@@ -504,6 +511,7 @@ void ClipSampler10AudioProcessor::startSampleExtraction(const juce::String& url,
 
     extractorWorker.startExtraction(
         lastUrl,
+        platform,
         lastStartTime,
         clampedDuration,
         currentDawRate,
@@ -514,31 +522,39 @@ void ClipSampler10AudioProcessor::startSampleExtraction(const juce::String& url,
             extractionProgress.store(progress, std::memory_order_relaxed);
             setStatusMessage(msg);
         },
-        [this, weakAlive, clampedDuration](bool success, const juce::File& resultFile, const juce::String& error) {
+        [this, weakAlive, clampedDuration, platName](bool success, const juce::File& resultFile, const juce::String& error) {
             if (!weakAlive->load(std::memory_order_acquire))
                 return;
 
             if (success && resultFile.existsAsFile())
             {
                 loadAudioFileIntoSlot(resultFile, 1);
+
+                // If TikTok/Instagram clip didn't report total duration prior to download, update from actual audio length
+                if (detectedVideoDurationSec.load(std::memory_order_relaxed) <= 0)
+                {
+                    int actualLenSec = juce::jmax(1, (int)std::ceil(originalThumbnail.getTotalLength()));
+                    detectedVideoDurationSec.store(actualLenSec, std::memory_order_relaxed);
+                }
+
                 copyrightVerifyState.store(0, std::memory_order_relaxed);
                 {
                     const juce::ScopedLock sl(statusLock);
-                    currentCopyrightBadge = juce::String::fromUTF8("COPYRIGHT: Muestra original en Visor 1 (Sin verificar)");
+                    currentCopyrightBadge = juce::String::fromUTF8("COPYRIGHT [") + platName.toUpperCase() + juce::String::fromUTF8("]: Muestra en Visor 1 (Sin verificar)");
                 }
                 extractionProgress.store(1.0f, std::memory_order_relaxed);
 
                 double bpm = getDetectedBpm(1);
                 juce::String key = getDetectedKey(1);
-                setStatusMessage(juce::String::fromUTF8("¡Muestra de ") + juce::String(clampedDuration)
-                                 + juce::String::fromUTF8("s lista en Visor 1! [")
+                setStatusMessage(juce::String::fromUTF8("¡Muestra de ") + platName + " (" + juce::String(clampedDuration)
+                                 + juce::String::fromUTF8("s) lista en Visor 1! [")
                                  + juce::String(bpm, 1) + " BPM | Key: " + key
-                                 + juce::String::fromUTF8(" | Auto-Chop C1-G2 activo]. Pulsa '🛡️ Derechos' para generar Audio 2."));
+                                 + juce::String::fromUTF8(" | Auto-Chop C1-G2]. Pulsa '🛡️ Derechos' para generar Audio 2."));
             }
             else
             {
                 extractionProgress.store(0.0f, std::memory_order_relaxed);
-                setStatusMessage(juce::String::fromUTF8("Error en la extracción: ") + error);
+                setStatusMessage(juce::String::fromUTF8("Error en la extracción (") + platName + "): " + error);
             }
 
             extractionInProgress.store(false, std::memory_order_relaxed);

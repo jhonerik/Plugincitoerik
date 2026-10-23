@@ -7,11 +7,22 @@
 #include <atomic>
 
 /**
- * AudioExtractorWorker
+ * Supported source platforms for multi-platform audio extraction & analysis.
+ */
+enum class SourcePlatform
+{
+    YouTube = 0,
+    TikTok = 1,
+    Instagram = 2
+};
+
+/**
+ * AudioExtractorWorker (v2.4 Multi-Platform Engine)
  * 
  * Background worker thread responsible for:
- * 1. Inspecting YouTube video duration & copyright metadata via yt-dlp.
- * 2. Downloading a 3-second, 10-second, or 30-second slice of audio from a YouTube URL
+ * 1. Inspecting video duration, creator, & copyright metadata across YouTube, TikTok, and Instagram.
+ * 2. Platform-specific URL normalization, anti-block headers (User-Agent / Referer), and stream selection.
+ * 3. Downloading a 3-second, 10-second, or 30-second slice of audio from YouTube, TikTok, or Instagram
  *    and converting it to an uncompressed 24-bit PCM .wav file matched to the DAW's sample rate.
  */
 class AudioExtractorWorker : public juce::Thread
@@ -23,6 +34,7 @@ public:
     struct VideoMetadata
     {
         bool success = false;
+        SourcePlatform platform = SourcePlatform::YouTube;
         int durationSeconds = 0;
         juce::String title;
         juce::String licenseInfo;
@@ -34,8 +46,21 @@ public:
     AudioExtractorWorker();
     ~AudioExtractorWorker() override;
 
-    /** Starts an extraction job on a background thread with configurable duration (3s, 10s, 30s). */
-    void startExtraction(const juce::String& youtubeUrl,
+    /** Detects whether a URL belongs to YouTube, TikTok, or Instagram. */
+    static SourcePlatform detectPlatformFromUrl(const juce::String& url);
+
+    /** Returns display name ("YouTube", "TikTok", "Instagram"). */
+    static juce::String getPlatformName(SourcePlatform platform);
+
+    /** Normalizes platform links (e.g., Instagram /reels/ -> /reel/, strips tracking garbage). */
+    static juce::String normalizeUrlForPlatform(const juce::String& rawUrl, SourcePlatform platform);
+
+    /** Validates whether the URL matches the selected platform (or is a valid supported media URL). */
+    static bool isValidPlatformUrl(const juce::String& url, SourcePlatform platform, juce::String& outReason);
+
+    /** Starts an extraction job on a background thread with platform-specific handling and duration (3s, 10s, 30s). */
+    void startExtraction(const juce::String& mediaUrl,
+                         SourcePlatform platform,
                          const juce::String& startTimeString,
                          int durationSeconds,
                          int targetSampleRate,
@@ -48,8 +73,9 @@ public:
     /** Checks if a background job is actively processing. */
     bool isExtracting() const { return isThreadRunning(); }
 
-    /** Fetches video total duration and copyright metadata asynchronously. */
-    static void fetchVideoMetadata(const juce::String& youtubeUrl,
+    /** Fetches video total duration and copyright metadata asynchronously for YouTube, TikTok, or Instagram. */
+    static void fetchVideoMetadata(const juce::String& mediaUrl,
+                                   SourcePlatform platform,
                                    std::function<void(const VideoMetadata&)> onComplete);
 
     /** Helper to parse "MM:SS", "HH:MM:SS" or raw seconds into integer seconds. */
@@ -76,10 +102,12 @@ public:
 private:
     void run() override;
 
-    bool validateAndEnforceDuration(const juce::File& audioFile, int targetRate, int maxDurationSec);
+    bool validateAndEnforceDuration(const juce::File& audioFile, int targetRate, int startOffsetSec, int maxDurationSec);
     void killActiveProcessTree();
+    static void appendPlatformSpecificArgs(juce::StringArray& args, SourcePlatform platform);
 
     juce::String currentUrl;
+    SourcePlatform currentPlatform = SourcePlatform::YouTube;
     juce::String currentStartTimeStr;
     int currentDurationSec = 10;
     int currentSampleRate = 44100;

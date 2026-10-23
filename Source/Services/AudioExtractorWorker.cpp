@@ -1,6 +1,7 @@
 #include "AudioExtractorWorker.h"
 #include <map>
 #include <mutex>
+#include <cmath>
 
 #if JUCE_WINDOWS
  #define NOMINMAX
@@ -11,6 +12,9 @@ namespace
 {
     std::mutex gExecutableCacheMutex;
     std::map<juce::String, juce::File> gExecutableCache;
+
+    constexpr const char* kModernDesktopUserAgent =
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
 }
 
 AudioExtractorWorker::AudioExtractorWorker()
@@ -23,7 +27,119 @@ AudioExtractorWorker::~AudioExtractorWorker()
     cancelExtraction();
 }
 
-void AudioExtractorWorker::startExtraction(const juce::String& youtubeUrl,
+SourcePlatform AudioExtractorWorker::detectPlatformFromUrl(const juce::String& url)
+{
+    juce::String lower = url.trim().toLowerCase();
+    if (lower.contains("tiktok.com") || lower.contains("vm.tiktok.com") || lower.contains("vt.tiktok.com"))
+        return SourcePlatform::TikTok;
+
+    if (lower.contains("instagram.com") || lower.contains("instagr.am"))
+        return SourcePlatform::Instagram;
+
+    return SourcePlatform::YouTube;
+}
+
+juce::String AudioExtractorWorker::getPlatformName(SourcePlatform platform)
+{
+    switch (platform)
+    {
+        case SourcePlatform::TikTok:    return "TikTok";
+        case SourcePlatform::Instagram: return "Instagram";
+        case SourcePlatform::YouTube:
+        default:                        return "YouTube";
+    }
+}
+
+juce::String AudioExtractorWorker::normalizeUrlForPlatform(const juce::String& rawUrl, SourcePlatform platform)
+{
+    juce::String clean = rawUrl.trim();
+    if (clean.isEmpty())
+        return clean;
+
+    if (platform == SourcePlatform::Instagram)
+    {
+        // Normalize /reels/ to /reel/ so yt-dlp's Instagram extractor matches reliably
+        clean = clean.replace("instagram.com/reels/", "instagram.com/reel/", true);
+        int qIdx = clean.indexOfChar('?');
+        if (qIdx > 0 && (clean.containsIgnoreCase("/reel/") || clean.containsIgnoreCase("/p/") || clean.containsIgnoreCase("/tv/")))
+            clean = clean.substring(0, qIdx);
+    }
+    else if (platform == SourcePlatform::TikTok)
+    {
+        // Strip tracking query strings from full tiktok.com/@user/video/12345 URLs
+        if (clean.containsIgnoreCase("/video/") || clean.containsIgnoreCase("/photo/"))
+        {
+            int qIdx = clean.indexOfChar('?');
+            if (qIdx > 0)
+                clean = clean.substring(0, qIdx);
+        }
+    }
+
+    return clean;
+}
+
+bool AudioExtractorWorker::isValidPlatformUrl(const juce::String& url, SourcePlatform platform, juce::String& outReason)
+{
+    juce::String clean = url.trim();
+    if (clean.isEmpty() || (!clean.startsWithIgnoreCase("http://") && !clean.startsWithIgnoreCase("https://")))
+    {
+        outReason = juce::String::fromUTF8("Ingresa un enlace válido que comience con https://");
+        return false;
+    }
+
+    juce::String lower = clean.toLowerCase();
+    if (platform == SourcePlatform::TikTok)
+    {
+        if (!lower.contains("tiktok.com"))
+        {
+            outReason = juce::String::fromUTF8("Seleccionaste modo TikTok, pero el enlace no parece ser de TikTok (tiktok.com).");
+            return false;
+        }
+    }
+    else if (platform == SourcePlatform::Instagram)
+    {
+        if (!lower.contains("instagram.com") && !lower.contains("instagr.am"))
+        {
+            outReason = juce::String::fromUTF8("Seleccionaste modo Instagram, pero el enlace no parece ser de Instagram (instagram.com).");
+            return false;
+        }
+    }
+    else
+    {
+        if (!lower.contains("youtube.com") && !lower.contains("youtu.be"))
+        {
+            outReason = juce::String::fromUTF8("Seleccionaste modo YouTube, pero el enlace pertenece a otra plataforma. Cambia el selector arriba a TikTok o Instagram.");
+            return false;
+        }
+    }
+
+    return true;
+}
+
+void AudioExtractorWorker::appendPlatformSpecificArgs(juce::StringArray& args, SourcePlatform platform)
+{
+    args.add("--no-playlist");
+    args.add("--geo-bypass");
+    args.add("--no-check-certificates");
+
+    if (platform == SourcePlatform::TikTok)
+    {
+        args.add("--user-agent");
+        args.add(kModernDesktopUserAgent);
+        args.add("--referer");
+        args.add("https://www.tiktok.com/");
+    }
+    else if (platform == SourcePlatform::Instagram)
+    {
+        args.add("--user-agent");
+        args.add(kModernDesktopUserAgent);
+        args.add("--referer");
+        args.add("https://www.instagram.com/");
+    }
+}
+
+void AudioExtractorWorker::startExtraction(const juce::String& mediaUrl,
+                                           SourcePlatform platform,
                                            const juce::String& startTimeString,
                                            int durationSeconds,
                                            int targetSampleRate,
@@ -33,7 +149,8 @@ void AudioExtractorWorker::startExtraction(const juce::String& youtubeUrl,
     if (isThreadRunning())
         cancelExtraction();
 
-    currentUrl = youtubeUrl.trim();
+    currentPlatform = platform;
+    currentUrl = normalizeUrlForPlatform(mediaUrl, platform);
     currentStartTimeStr = startTimeString.trim();
     currentDurationSec = juce::jlimit(1, 60, durationSeconds);
     currentSampleRate = (targetSampleRate > 0) ? targetSampleRate : 44100;
@@ -135,7 +252,8 @@ int AudioExtractorWorker::clearCacheDirectory(const juce::File& activeFile1, con
         if (activeFile2 != juce::File() && f == activeFile2)
             continue;
 
-        if (f.hasFileExtension(".wav") || f.hasFileExtension(".part") || f.hasFileExtension(".ytdl") || f.hasFileExtension(".webm") || f.hasFileExtension(".m4a"))
+        if (f.hasFileExtension(".wav") || f.hasFileExtension(".mid") || f.hasFileExtension(".part")
+            || f.hasFileExtension(".ytdl") || f.hasFileExtension(".webm") || f.hasFileExtension(".m4a") || f.hasFileExtension(".mp4"))
         {
             if (f.deleteFile())
                 count++;
@@ -144,15 +262,20 @@ int AudioExtractorWorker::clearCacheDirectory(const juce::File& activeFile1, con
     return count;
 }
 
-void AudioExtractorWorker::fetchVideoMetadata(const juce::String& youtubeUrl,
+void AudioExtractorWorker::fetchVideoMetadata(const juce::String& mediaUrl,
+                                              SourcePlatform platform,
                                               std::function<void(const VideoMetadata&)> onComplete)
 {
-    juce::String cleanUrl = youtubeUrl.trim();
-    juce::Thread::launch([cleanUrl, onComplete = std::move(onComplete)] {
+    juce::String cleanUrl = normalizeUrlForPlatform(mediaUrl, platform);
+    juce::Thread::launch([cleanUrl, platform, onComplete = std::move(onComplete)] {
         VideoMetadata meta;
-        if (cleanUrl.isEmpty() || (!cleanUrl.startsWithIgnoreCase("http://") && !cleanUrl.startsWithIgnoreCase("https://")))
+        meta.platform = platform;
+        juce::String platformName = getPlatformName(platform);
+
+        juce::String validationErr;
+        if (!isValidPlatformUrl(cleanUrl, platform, validationErr))
         {
-            meta.errorMessage = juce::String::fromUTF8("URL no válida.");
+            meta.errorMessage = validationErr;
             if (onComplete)
                 juce::MessageManager::callAsync([onComplete, meta] { onComplete(meta); });
             return;
@@ -169,16 +292,16 @@ void AudioExtractorWorker::fetchVideoMetadata(const juce::String& youtubeUrl,
 
         juce::StringArray args;
         args.add(ytDlpBin.getFullPathName());
-        args.add("--no-playlist");
+        appendPlatformSpecificArgs(args, platform);
         args.add("--skip-download");
         args.add("--print");
-        args.add("%(duration)s|||%(title)s|||%(license)s|||%(track)s|||%(artist)s|||%(channel)s");
+        args.add("%(duration)s|||%(title)s|||%(license)s|||%(track)s|||%(artist)s|||%(uploader)s");
         args.add(cleanUrl);
 
         juce::ChildProcess process;
         if (!process.start(args, juce::ChildProcess::wantStdOut | juce::ChildProcess::wantStdErr))
         {
-            meta.errorMessage = juce::String::fromUTF8("No se pudo consultar la duración del video.");
+            meta.errorMessage = juce::String::fromUTF8("No se pudo consultar metadatos de ") + platformName + ".";
             if (onComplete)
                 juce::MessageManager::callAsync([onComplete, meta] { onComplete(meta); });
             return;
@@ -195,7 +318,7 @@ void AudioExtractorWorker::fetchVideoMetadata(const juce::String& youtubeUrl,
                 buffer[n] = '\0';
                 output += juce::String::fromUTF8(buffer, n);
             }
-            if ((juce::Time::getMillisecondCounterHiRes() - startMs) > 15000.0)
+            if ((juce::Time::getMillisecondCounterHiRes() - startMs) > 16000.0)
             {
                 process.kill();
                 break;
@@ -217,8 +340,6 @@ void AudioExtractorWorker::fetchVideoMetadata(const juce::String& youtubeUrl,
         {
             if (line.contains("|||"))
             {
-                auto parts = juce::StringArray::fromTokens(line, "|||", "");
-                // Tokenize carefully by splitting on "|||"
                 juce::String remaining = line;
                 juce::StringArray fields;
                 while (remaining.isNotEmpty())
@@ -238,12 +359,13 @@ void AudioExtractorWorker::fetchVideoMetadata(const juce::String& youtubeUrl,
 
                 if (fields.size() >= 2)
                 {
-                    meta.durationSeconds = juce::jmax(0, fields[0].getIntValue());
-                    meta.title = fields[1];
+                    double rawDur = fields[0].getDoubleValue();
+                    meta.durationSeconds = (rawDur > 0.0) ? juce::jmax(1, (int)std::ceil(rawDur)) : 0;
+                    meta.title = fields[1].isNotEmpty() && fields[1] != "NA" ? fields[1] : (platformName + " Audio Clip");
                     juce::String lic = (fields.size() >= 3) ? fields[2] : "";
                     juce::String track = (fields.size() >= 4) ? fields[3] : "";
                     juce::String artist = (fields.size() >= 5) ? fields[4] : "";
-                    juce::String channel = (fields.size() >= 6) ? fields[5] : "";
+                    juce::String uploader = (fields.size() >= 6) ? fields[5] : "";
 
                     bool isCreativeCommons = lic.containsIgnoreCase("Creative Commons") || lic.containsIgnoreCase("CC BY");
                     bool hasMusicTrack = (track.isNotEmpty() && track != "NA") || (artist.isNotEmpty() && artist != "NA");
@@ -252,11 +374,16 @@ void AudioExtractorWorker::fetchVideoMetadata(const juce::String& youtubeUrl,
                     if (hasMusicTrack)
                         meta.trackInfo = artist + " - " + track;
                     else
-                        meta.trackInfo = channel.isNotEmpty() ? channel : meta.title;
+                        meta.trackInfo = (uploader.isNotEmpty() && uploader != "NA") ? uploader : meta.title;
 
                     meta.licenseInfo = isCreativeCommons
-                        ? juce::String::fromUTF8("Licencia Creative Commons declarada")
-                        : juce::String::fromUTF8("Licencia Estándar de YouTube / Content ID Protegido");
+                        ? juce::String::fromUTF8("Licencia Creative Commons")
+                        : (juce::String::fromUTF8("Audio Comercial Protegido (") + platformName + ")");
+
+                    // TikTok and Instagram Reels sometimes omit duration in metadata print; default to 60s range if 0
+                    if (meta.durationSeconds <= 0 && (platform == SourcePlatform::TikTok || platform == SourcePlatform::Instagram))
+                        meta.durationSeconds = 60;
+
                     meta.success = (meta.durationSeconds > 0);
                     break;
                 }
@@ -264,7 +391,7 @@ void AudioExtractorWorker::fetchVideoMetadata(const juce::String& youtubeUrl,
         }
 
         if (!meta.success && meta.errorMessage.isEmpty())
-            meta.errorMessage = juce::String::fromUTF8("No se pudo detectar la duración del video.");
+            meta.errorMessage = juce::String::fromUTF8("No se pudo leer la duración de ") + platformName + juce::String::fromUTF8(" (puedes extraer directamente).");
 
         if (onComplete)
             juce::MessageManager::callAsync([onComplete, meta] { onComplete(meta); });
@@ -502,11 +629,13 @@ juce::File AudioExtractorWorker::findExecutable(const juce::String& executableNa
 void AudioExtractorWorker::run()
 {
     const int durationToExtract = juce::jlimit(1, 60, currentDurationSec);
+    const juce::String platformName = getPlatformName(currentPlatform);
 
     if (progressCallback)
     {
-        juce::MessageManager::callAsync([cb = progressCallback, durationToExtract] {
-            cb(0.05f, juce::String::fromUTF8("Iniciando motor de extracción (") + juce::String(durationToExtract) + "s)...");
+        juce::MessageManager::callAsync([cb = progressCallback, durationToExtract, platformName] {
+            cb(0.05f, juce::String::fromUTF8("Iniciando extracción desde ") + platformName
+                      + " (" + juce::String(durationToExtract) + "s)...");
         });
     }
 
@@ -524,12 +653,13 @@ void AudioExtractorWorker::run()
         return;
     }
 
-    if (currentUrl.isEmpty() || (!currentUrl.startsWithIgnoreCase("http://") && !currentUrl.startsWithIgnoreCase("https://")))
+    juce::String urlValidationError;
+    if (!isValidPlatformUrl(currentUrl, currentPlatform, urlValidationError))
     {
         if (completionCallback)
         {
-            juce::MessageManager::callAsync([cb = completionCallback] {
-                cb(false, juce::File(), juce::String::fromUTF8("Error: URL de YouTube no válida."));
+            juce::MessageManager::callAsync([cb = completionCallback, urlValidationError] {
+                cb(false, juce::File(), urlValidationError);
             });
         }
         return;
@@ -544,14 +674,27 @@ void AudioExtractorWorker::run()
     auto jobStartTime = juce::Time::getCurrentTime();
     int sampleRateToUse = (currentSampleRate > 0) ? currentSampleRate : 44100;
 
+    juce::String platPrefix = (currentPlatform == SourcePlatform::TikTok) ? "TT_"
+                            : (currentPlatform == SourcePlatform::Instagram) ? "IG_" : "YT_";
+
     auto outputTemplate = cacheDir.getFullPathName() + juce::File::getSeparatorString()
-                        + "%(title).36s_" + juce::String(startSec) + "s_" + juce::String(durationToExtract) + "s.%(ext)s";
+                        + platPrefix + "%(id).20s_" + juce::String(startSec) + "s_" + juce::String(durationToExtract) + "s.%(ext)s";
 
     juce::StringArray args;
     args.add(ytDlpBin.getFullPathName());
-    args.add("--no-playlist");
-    args.add("--download-sections");
-    args.add("*" + startTimestamp + "-" + endTimestamp);
+    appendPlatformSpecificArgs(args, currentPlatform);
+
+    // Platform-specific slicing strategy:
+    // - YouTube supports DASH byte-range "--download-sections" natively.
+    // - TikTok & Instagram serve short progressive MP4/AAC streams where "--download-sections" can fail on CDN;
+    //   we download the short stream and slice sample-accurately via ffmpeg + validateAndEnforceDuration().
+    const bool useDownloadSections = (currentPlatform == SourcePlatform::YouTube);
+    if (useDownloadSections)
+    {
+        args.add("--download-sections");
+        args.add("*" + startTimestamp + "-" + endTimestamp);
+    }
+
     args.add("-x");
     args.add("--audio-format");
     args.add("wav");
@@ -564,7 +707,15 @@ void AudioExtractorWorker::run()
     }
 
     args.add("--postprocessor-args");
-    args.add("ffmpeg:-acodec pcm_s24le -ar " + juce::String(sampleRateToUse) + " -t " + juce::String(durationToExtract));
+    if (useDownloadSections)
+    {
+        args.add("ffmpeg:-acodec pcm_s24le -ar " + juce::String(sampleRateToUse) + " -t " + juce::String(durationToExtract));
+    }
+    else
+    {
+        args.add("ffmpeg:-ss " + startTimestamp + " -t " + juce::String(durationToExtract)
+                 + " -acodec pcm_s24le -ar " + juce::String(sampleRateToUse));
+    }
 
     args.add("-o");
     args.add(outputTemplate);
@@ -572,9 +723,9 @@ void AudioExtractorWorker::run()
 
     if (progressCallback)
     {
-        juce::MessageManager::callAsync([cb = progressCallback, startTimestamp, endTimestamp, durationToExtract, sampleRateToUse] {
-            cb(0.15f, juce::String::fromUTF8("Extrayendo ") + juce::String(durationToExtract)
-                      + juce::String::fromUTF8("s [") + startTimestamp + " -> " + endTimestamp
+        juce::MessageManager::callAsync([cb = progressCallback, platformName, startTimestamp, endTimestamp, durationToExtract, sampleRateToUse] {
+            cb(0.15f, juce::String::fromUTF8("Extrayendo de ") + platformName + " (" + juce::String(durationToExtract)
+                      + juce::String::fromUTF8("s) [") + startTimestamp + " -> " + endTimestamp
                       + juce::String::fromUTF8("] a ") + juce::String(sampleRateToUse) + " Hz...");
         });
     }
@@ -634,8 +785,8 @@ void AudioExtractorWorker::run()
                         float normalized = 0.2f + (pct * 0.6f);
                         if (progressCallback)
                         {
-                            juce::MessageManager::callAsync([cb = progressCallback, normalized, pctStr] {
-                                cb(normalized, juce::String::fromUTF8("Descargando audio: ") + pctStr + "%");
+                            juce::MessageManager::callAsync([cb = progressCallback, normalized, pctStr, platformName] {
+                                cb(normalized, juce::String::fromUTF8("Descargando audio de ") + platformName + ": " + pctStr + "%");
                             });
                         }
                     }
@@ -696,7 +847,7 @@ void AudioExtractorWorker::run()
 
     if (!finalResultFile.existsAsFile() || finalResultFile.getSize() == 0)
     {
-        juce::String errorMsg = juce::String::fromUTF8("La extracción falló (Exit code: ") + juce::String(exitCode) + ").";
+        juce::String errorMsg = juce::String::fromUTF8("Extracción de ") + platformName + juce::String::fromUTF8(" falló (Código: ") + juce::String(exitCode) + ").";
         if (accumulatedOutput.isNotEmpty())
         {
             auto lines = juce::StringArray::fromLines(accumulatedOutput);
@@ -719,7 +870,8 @@ void AudioExtractorWorker::run()
         return;
     }
 
-    if (!validateAndEnforceDuration(finalResultFile, sampleRateToUse, durationToExtract))
+    const int dspOffsetSec = useDownloadSections ? 0 : 0; // ffmpeg postprocessor already applied -ss startTimestamp
+    if (!validateAndEnforceDuration(finalResultFile, sampleRateToUse, dspOffsetSec, durationToExtract))
     {
         if (completionCallback)
         {
@@ -732,8 +884,8 @@ void AudioExtractorWorker::run()
 
     if (progressCallback)
     {
-        juce::MessageManager::callAsync([cb = progressCallback, durationToExtract] {
-            cb(1.0f, juce::String::fromUTF8("¡Muestra de ") + juce::String(durationToExtract) + juce::String::fromUTF8("s extraída con éxito!"));
+        juce::MessageManager::callAsync([cb = progressCallback, durationToExtract, platformName] {
+            cb(1.0f, juce::String::fromUTF8("¡Muestra de ") + platformName + " (" + juce::String(durationToExtract) + juce::String::fromUTF8("s) extraída con éxito!"));
         });
     }
 
@@ -745,7 +897,7 @@ void AudioExtractorWorker::run()
     }
 }
 
-bool AudioExtractorWorker::validateAndEnforceDuration(const juce::File& audioFile, int targetRate, int maxDurationSec)
+bool AudioExtractorWorker::validateAndEnforceDuration(const juce::File& audioFile, int targetRate, int startOffsetSec, int maxDurationSec)
 {
     juce::AudioFormatManager formatManager;
     formatManager.registerBasicFormats();
@@ -756,14 +908,19 @@ bool AudioExtractorWorker::validateAndEnforceDuration(const juce::File& audioFil
 
     double sampleRate = reader->sampleRate > 0.0 ? reader->sampleRate : (double)targetRate;
     juce::int64 lengthInSamples = reader->lengthInSamples;
+    juce::int64 offsetSamples = static_cast<juce::int64>(sampleRate * juce::jmax(0, startOffsetSec));
+    if (offsetSamples >= lengthInSamples)
+        offsetSamples = 0;
+
+    juce::int64 availableSamples = lengthInSamples - offsetSamples;
     juce::int64 maxAllowedSamples = static_cast<juce::int64>(sampleRate * juce::jlimit(1, 60, maxDurationSec));
 
-    juce::int64 samplesToRead = juce::jmin(lengthInSamples, maxAllowedSamples);
+    juce::int64 samplesToRead = juce::jmin(availableSamples, maxAllowedSamples);
     if (samplesToRead <= 0)
         return false;
 
     juce::AudioBuffer<float> buffer((int)reader->numChannels, (int)samplesToRead);
-    reader->read(&buffer, 0, (int)samplesToRead, 0, true, true);
+    reader->read(&buffer, 0, (int)samplesToRead, offsetSamples, true, true);
     reader.reset();
 
     int fadeSamples = juce::jmin((int)(sampleRate * 0.01), (int)(samplesToRead / 2));
@@ -809,8 +966,8 @@ bool AudioExtractorWorker::validateAndEnforceDuration(const juce::File& audioFil
 
     if (tempTrimmed.existsAsFile() && tempTrimmed.getSize() > 0)
     {
-        audioFile.deleteFile();
         tempTrimmed.moveFileTo(audioFile);
+        return true;
     }
 
     return true;
