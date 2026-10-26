@@ -118,13 +118,20 @@ En la **Fila 4 (Rack de Efectos Macro + Modo MPC)**:
 
 ---
 
-## 8. Paso 5: Arrastrar Audio (.WAV) y Arrastrar Notas (.MIDI) al DAW
+## 8. Paso 5: Selección por Corte Exacto (`✂ Corte Exacto`), Arrastrar Audio (.WAV) y Arrastrar Notas (.MIDI) al DAW
 
-En la **Fila 5 (Barra Inferior de Transporte y Exportación)**:
+En los **Visores de Onda** y en la **Fila 5 (Barra Inferior de Transporte, Corte Exacto y Exportación)**:
 
-- **Botón `▶ Reproducir` / `⏹ Detener`:** Escucha directamente la muestra activa a través del mezclador de tu DAW.
-- **Botón `✥ Arrastrar .WAV`:** Mantén presionado el clic izquierdo sobre este botón (o directamente sobre cualquiera de los dos visores de onda) y arrástralo hacia una pista de audio o sampler de tu DAW. Se soltará el archivo `.wav` con el nombre limpio del video.
-- **Botón `🎹 Arrastrar .MIDI`:** Mantén presionado el clic izquierdo sobre este botón y arrástralo hacia una pista MIDI o al Piano Roll de tu DAW. **ClipSampler** transcribe automáticamente las notas melódicas detectadas en el audio y genera un archivo `.mid` listo para usar con cualquier sintetizador o piano virtual.
+- **Selección de Audio Completo (1 Clic):** Haz **1 solo clic** sobre el visor de onda (Audio 1 o Audio 2) para seleccionar y reproducir **el audio completo**. Al arrastrar hacia el DAW se enviará la muestra completa.
+- **Selección de Corte Exacto por Nota (2 Clics Seguidos / Doble Clic):** Haz **2 clics seguidos (doble clic)** sobre cualquier nota o división del visor (`C1`, `C#1`, `D1`, `D#1`, `E1`, `F1`, `F#1`, etc.):
+  - Se iluminará únicamente ese trozo exacto en color cian/dorado con el indicador **`[✂ CORTE EXACTO: C1]`** y se reproducirá solo ese fragmento.
+  - El plugin generará automáticamente un archivo `.WAV` independiente (24-bit PCM con micro-fundidos anti-clic) que contiene **exclusivamente ese corte exacto**.
+- **Botón `✂ Corte Exacto`:**
+  - Si haces clic en **`✂ Corte Exacto`**, selecciona y reproduce el corte exacto activo (por defecto `C1` si aún no habías hecho doble clic en otro trozo).
+  - Mantén presionado el clic izquierdo sobre el botón **`✂ Corte Exacto`** (o directamente sobre la nota iluminada en el visor de onda) y **arrástralo hacia una pista de tu DAW** para pasar únicamente ese trozo de audio y no la muestra completa.
+- **Botón `▶ Reproducir` / `⏹ Detener`:** Escucha directamente la muestra activa (o el corte exacto seleccionado) a través del mezclador de tu DAW.
+- **Botón `Arrastrar .WAV`:** Mantén presionado el clic izquierdo sobre este botón (o directamente sobre cualquiera de los dos visores de onda) y arrástralo hacia una pista de audio o sampler de tu DAW. Si tienes un corte exacto seleccionado (ej. `C1`), el botón mostrará `Arrastrar C1 (.WAV)` y arrastrará únicamente ese trozo.
+- **Botón `Arrastrar .MIDI`:** Mantén presionado el clic izquierdo sobre este botón y arrástralo hacia una pista MIDI o al Piano Roll de tu DAW. **ClipSampler** transcribe automáticamente las notas melódicas detectadas en el audio y genera un archivo `.mid` listo para usar con cualquier sintetizador o piano virtual.
 
 ---
 

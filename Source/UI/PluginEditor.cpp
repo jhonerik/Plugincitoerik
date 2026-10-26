@@ -303,6 +303,12 @@ ClipSamplerAudioProcessorEditor::ClipSamplerAudioProcessorEditor(ClipSamplerAudi
     stopButton.onClick = [this] { onStopClicked(); };
     addAndMakeVisible(stopButton);
 
+    exactCutButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff0097a7));
+    exactCutButton.setColour(juce::TextButton::textColourOffId, juce::Colours::white);
+    exactCutButton.onClick = [this] { onExactCutClicked(); };
+    exactCutButton.addMouseListener(this, false);
+    addAndMakeVisible(exactCutButton);
+
     dragDawButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff6200ea));
     dragDawButton.setColour(juce::TextButton::textColourOffId, juce::Colours::white);
     dragDawButton.onClick = [this] { onDragDawClicked(); };
@@ -332,6 +338,7 @@ ClipSamplerAudioProcessorEditor::ClipSamplerAudioProcessorEditor(ClipSamplerAudi
 ClipSamplerAudioProcessorEditor::~ClipSamplerAudioProcessorEditor()
 {
     stopTimer();
+    exactCutButton.removeMouseListener(this);
     dragDawButton.removeMouseListener(this);
     dragMidiButton.removeMouseListener(this);
     setLookAndFeel(nullptr);
@@ -441,6 +448,25 @@ void ClipSamplerAudioProcessorEditor::updateFxAndMpcUiState()
     autoChopButton.setColour(juce::TextButton::textColourOffId, chopOn ? juce::Colours::black : juce::Colours::white);
 
     const int curSlot = audioProcessor.getActiveSlot();
+    const int selectedSliceIdx = audioProcessor.getSelectedSliceIndex(curSlot);
+    if (selectedSliceIdx >= 0)
+    {
+        const juce::String sliceName = audioProcessor.getSelectedSliceName(curSlot);
+        exactCutButton.setButtonText(juce::String::fromUTF8("✂ Corte Exacto (") + sliceName + ")");
+        exactCutButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff00e5ff));
+        exactCutButton.setColour(juce::TextButton::textColourOffId, juce::Colours::black);
+
+        dragDawButton.setButtonText(juce::String::fromUTF8("Arrastrar ") + sliceName + " (.WAV)");
+    }
+    else
+    {
+        exactCutButton.setButtonText(juce::String::fromUTF8("✂ Corte Exacto"));
+        exactCutButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff00838f));
+        exactCutButton.setColour(juce::TextButton::textColourOffId, juce::Colours::white);
+
+        dragDawButton.setButtonText(juce::String::fromUTF8("Arrastrar .WAV"));
+    }
+
     const double detBpm = audioProcessor.getDetectedBpm(curSlot);
     const juce::String detKey = audioProcessor.getDetectedKey(curSlot);
     const double hostBpm = audioProcessor.getHostBpm();
@@ -708,18 +734,70 @@ void ClipSamplerAudioProcessorEditor::onStopClicked()
     transformedWaveformComponent.repaint();
 }
 
+void ClipSamplerAudioProcessorEditor::onExactCutClicked()
+{
+    const int curSlot = audioProcessor.getActiveSlot();
+    if (!audioProcessor.hasSlotAudio(curSlot))
+    {
+        audioProcessor.setStatusMessage(juce::String::fromUTF8("Primero debes extraer una muestra para seleccionar o arrastrar un Corte Exacto."));
+        return;
+    }
+
+    // Si aún no hay un trozo seleccionado en este visor, seleccionamos automáticamente la primera nota (C1)
+    // o la última nota tocada, para que el usuario pueda escucharla o arrastrarla de inmediato.
+    int selSlice = audioProcessor.getSelectedSliceIndex(curSlot);
+    ChopSlice slice;
+
+    if (selSlice < 0)
+    {
+        int targetSlice = audioProcessor.getActivePlayingSlice();
+        if (targetSlice < 0)
+            targetSlice = 0; // C1 por defecto
+
+        if (audioProcessor.selectSliceByIndex(curSlot, targetSlice, slice))
+        {
+            audioProcessor.triggerChopSlice(targetSlice);
+            updateFxAndMpcUiState();
+            originalWaveformComponent.repaint();
+            transformedWaveformComponent.repaint();
+        }
+    }
+    else
+    {
+        // Si ya hay un corte exacto seleccionado (ej. C1), lo reproducimos y recordamos que puede arrastrar el botón
+        audioProcessor.triggerChopSlice(selSlice);
+        const juce::String sName = audioProcessor.getSelectedSliceName(curSlot);
+        audioProcessor.setStatusMessage(
+            juce::String::fromUTF8("✂ CORTE EXACTO ACTIVO [") + sName
+            + juce::String::fromUTF8("]: Arrastra este botón '✂ Corte Exacto' o el visor hacia tu DAW para pasar SOLO el trozo ")
+            + sName + juce::String::fromUTF8(" (o haz 1 clic en la onda para seleccionar todo el audio)."));
+        originalWaveformComponent.repaint();
+        transformedWaveformComponent.repaint();
+    }
+}
+
 void ClipSamplerAudioProcessorEditor::onDragDawClicked()
 {
-    auto loadedFile = audioProcessor.getCurrentAudioFile();
-    if (!loadedFile.existsAsFile())
+    const int slot = audioProcessor.getActiveSlot();
+    if (!audioProcessor.hasSlotAudio(slot))
     {
         audioProcessor.setStatusMessage(juce::String::fromUTF8("Primero debes extraer una muestra para poder arrastrar el .WAV al DAW."));
         return;
     }
 
-    int slot = audioProcessor.getActiveSlot();
-    audioProcessor.setStatusMessage(juce::String::fromUTF8("Mantén presionado 'Arrastrar .WAV' y suéltalo en una pista de audio de tu DAW. [Activo: Audio ")
-                                    + juce::String(slot) + "]");
+    const int selSlice = audioProcessor.getSelectedSliceIndex(slot);
+    if (selSlice >= 0)
+    {
+        const juce::String sName = audioProcessor.getSelectedSliceName(slot);
+        audioProcessor.setStatusMessage(juce::String::fromUTF8("Mantén presionado 'Arrastrar ") + sName
+                                        + juce::String::fromUTF8(" (.WAV)' o '✂ Corte Exacto' y suéltalo en tu DAW para pasar SOLO la nota ")
+                                        + sName + ".");
+    }
+    else
+    {
+        audioProcessor.setStatusMessage(juce::String::fromUTF8("Mantén presionado 'Arrastrar .WAV' y suéltalo en una pista de audio de tu DAW. [Activo: Audio ")
+                                        + juce::String(slot) + juce::String::fromUTF8(" Completo]"));
+    }
 }
 
 void ClipSamplerAudioProcessorEditor::onDragMidiClicked()
@@ -740,7 +818,43 @@ void ClipSamplerAudioProcessorEditor::onDragMidiClicked()
 
 void ClipSamplerAudioProcessorEditor::mouseDrag(const juce::MouseEvent& event)
 {
-    if (event.eventComponent == &dragDawButton && event.getDistanceFromDragStart() > 4)
+    if (event.eventComponent == &exactCutButton && event.getDistanceFromDragStart() > 4)
+    {
+        const int curSlot = audioProcessor.getActiveSlot();
+        if (!audioProcessor.hasSlotAudio(curSlot))
+            return;
+
+        if (audioProcessor.getLofiAmount() > 0.01f
+            || std::abs(audioProcessor.getFxPitchSemitones()) > 0.1f
+            || audioProcessor.getFxToneFilter() < 0.98f)
+        {
+            juce::String rep;
+            audioProcessor.applyFxMacroToTargetSlot(rep);
+        }
+
+        // Si el usuario arrastra directamente desde el botón "✂ Corte Exacto" sin haber hecho doble clic antes,
+        // seleccionamos automáticamente el corte C1 (o el último corte tocado) y generamos su .WAV exacto.
+        if (audioProcessor.getSelectedSliceIndex(curSlot) < 0)
+        {
+            int targetSlice = audioProcessor.getActivePlayingSlice();
+            if (targetSlice < 0)
+                targetSlice = 0; // C1 por defecto
+            ChopSlice slice;
+            audioProcessor.selectSliceByIndex(curSlot, targetSlice, slice);
+            updateFxAndMpcUiState();
+            originalWaveformComponent.repaint();
+            transformedWaveformComponent.repaint();
+        }
+
+        auto sliceFile = audioProcessor.getOrCreateSelectedSliceWavFile(curSlot);
+        if (sliceFile.existsAsFile())
+        {
+            juce::StringArray files;
+            files.add(sliceFile.getFullPathName());
+            performExternalDragDropOfFiles(files, false, &exactCutButton);
+        }
+    }
+    else if (event.eventComponent == &dragDawButton && event.getDistanceFromDragStart() > 4)
     {
         if (audioProcessor.getLofiAmount() > 0.01f
             || std::abs(audioProcessor.getFxPitchSemitones()) > 0.1f
@@ -750,11 +864,17 @@ void ClipSamplerAudioProcessorEditor::mouseDrag(const juce::MouseEvent& event)
             audioProcessor.applyFxMacroToTargetSlot(rep);
         }
 
-        auto loadedFile = audioProcessor.getCurrentAudioFile();
-        if (loadedFile.existsAsFile())
+        const int curSlot = audioProcessor.getActiveSlot();
+        juce::File fileToDrag;
+        if (audioProcessor.getSelectedSliceIndex(curSlot) >= 0)
+            fileToDrag = audioProcessor.getOrCreateSelectedSliceWavFile(curSlot);
+        else
+            fileToDrag = audioProcessor.getCurrentAudioFile();
+
+        if (fileToDrag.existsAsFile())
         {
             juce::StringArray files;
-            files.add(loadedFile.getFullPathName());
+            files.add(fileToDrag.getFullPathName());
             performExternalDragDropOfFiles(files, false, &dragDawButton);
         }
     }
@@ -816,7 +936,13 @@ void ClipSamplerAudioProcessorEditor::updateLicenseUiState()
 
 void ClipSamplerAudioProcessorEditor::onExportWavClicked()
 {
-    auto currentFile = audioProcessor.getCurrentAudioFile();
+    const int curSlot = audioProcessor.getActiveSlot();
+    juce::File currentFile;
+    if (audioProcessor.getSelectedSliceIndex(curSlot) >= 0)
+        currentFile = audioProcessor.getOrCreateSelectedSliceWavFile(curSlot);
+    else
+        currentFile = audioProcessor.getCurrentAudioFile();
+
     if (!currentFile.existsAsFile())
     {
         audioProcessor.setStatusMessage(juce::String::fromUTF8("Primero extrae una muestra antes de exportar."));
@@ -1130,22 +1256,24 @@ void ClipSamplerAudioProcessorEditor::resized()
 
     bottomInner.removeFromTop(5);
 
-    // Barra inferior de transporte y exportación (Reproducir, Detener, BPM/Tono, Arrastrar .WAV/.MIDI, Exportar)
+    // Barra inferior de transporte, Corte Exacto y exportación (Reproducir, Detener, BPM/Tono, ✂ Corte Exacto, Arrastrar .WAV/.MIDI, Exportar)
     const int actionRowH = juce::jlimit(26, 36, juce::roundToInt(32.0f * hScale));
     auto actionRow = bottomInner.removeFromBottom(actionRowH);
 
-    playButton.setBounds(actionRow.removeFromLeft(juce::jlimit(78, 118, juce::roundToInt(botW * 0.115f))));
+    playButton.setBounds(actionRow.removeFromLeft(juce::jlimit(72, 108, juce::roundToInt(botW * 0.105f))));
     actionRow.removeFromLeft(5);
-    stopButton.setBounds(actionRow.removeFromLeft(juce::jlimit(62, 88, juce::roundToInt(botW * 0.085f))));
-    actionRow.removeFromLeft(6);
-    bpmKeyBadgeLabel.setBounds(actionRow.removeFromLeft(juce::jlimit(140, 245, juce::roundToInt(botW * 0.245f))));
-    actionRow.removeFromLeft(6);
+    stopButton.setBounds(actionRow.removeFromLeft(juce::jlimit(58, 82, juce::roundToInt(botW * 0.078f))));
+    actionRow.removeFromLeft(5);
+    bpmKeyBadgeLabel.setBounds(actionRow.removeFromLeft(juce::jlimit(125, 215, juce::roundToInt(botW * 0.21f))));
+    actionRow.removeFromLeft(5);
 
-    exportWavButton.setBounds(actionRow.removeFromRight(juce::jlimit(88, 128, juce::roundToInt(botW * 0.125f))));
+    exportWavButton.setBounds(actionRow.removeFromRight(juce::jlimit(82, 118, juce::roundToInt(botW * 0.115f))));
     actionRow.removeFromRight(5);
 
-    const int dragBtnW = (actionRow.getWidth() - 5) / 2;
-    dragDawButton.setBounds(actionRow.removeFromLeft(dragBtnW));
+    const int middleBtnW = (actionRow.getWidth() - 10) / 3;
+    exactCutButton.setBounds(actionRow.removeFromLeft(middleBtnW));
+    actionRow.removeFromLeft(5);
+    dragDawButton.setBounds(actionRow.removeFromLeft(middleBtnW));
     actionRow.removeFromLeft(5);
     dragMidiButton.setBounds(actionRow);
 

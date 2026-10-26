@@ -6,14 +6,14 @@
 
 /**
  * @class WaveformComponent
- * @brief Visor interactivo de forma de onda con soporte para el Rebanador MPC (Auto-Chop C1-G2).
+ * @brief Visor interactivo de forma de onda con soporte para el Rebanador MPC (Auto-Chop C1-G2)
+ *        y Selección de Corte Exacto (1 clic = Todo el audio | Doble clic = Nota/Trozo bajo el cursor).
  *
  * Características:
  * - Visor 1: Muestra el audio original extraído desde YouTube, TikTok o Instagram (3s / 10s / 30s).
  * - Visor 2: Muestra el audio modificado por la función "Derechos IA" (±3 semitonos + dispersión de fase).
- * - Dibuja las líneas divisorias de transientes y la cabecera de notas MIDI (C1 | C#1 | D1 | ... | G2).
- * - Muestra en tiempo real la plataforma de origen, el Tempo (BPM) y la Tonalidad Musical (Tono).
- * - Permite disparar cualquier rodaja haciendo clic sobre ella o arrastrar el archivo .WAV directamente al DAW.
+ * - 1 Clic sobre el visor selecciona el audio completo; 2 clics seguidos (doble clic) selecciona
+ *   únicamente la nota/trozo donde está el cursor (C1, C#1, D1...) para arrastrar solo ese Corte Exacto al DAW.
  */
 class WaveformComponent : public juce::Component,
                           public juce::ChangeListener
@@ -22,23 +22,32 @@ public:
     WaveformComponent(ClipSamplerAudioProcessor& processorToUse, int slotIndexToUse, const juce::String& titleText);
     ~WaveformComponent() override;
 
-    /** Dibuja el contenedor elegante azul zafiro, la onda, las divisiones MPC y el cabezal de reproducción. */
+    /** Dibuja el contenedor elegante azul zafiro, la onda, las divisiones MPC, el corte seleccionado y el cabezal. */
     void paint(juce::Graphics& g) override;
 
     /** Escucha cambios en el AudioThumbnail para redibujar automáticamente la onda al cargar un archivo. */
     void changeListenerCallback(juce::ChangeBroadcaster* source) override;
 
-    /** Selecciona la ranura activa y dispara la rodaja MPC sobre la que hizo clic el usuario. */
+    /** 1 Clic: selecciona todo el audio (o prepara el arrastre si se presiona sobre el corte ya seleccionado). */
     void mouseDown(const juce::MouseEvent& event) override;
 
-    /** Inicia la operación de arrastrar y soltar (Drag & Drop) del archivo .WAV hacia el DAW. */
+    /** Confirma la selección de todo el audio cuando fue 1 solo clic sin arrastrar. */
+    void mouseUp(const juce::MouseEvent& event) override;
+
+    /** 2 Clics seguidos (Doble Clic): selecciona la nota/corte exacto (C1, C#1, D1...) donde está el cursor. */
+    void mouseDoubleClick(const juce::MouseEvent& event) override;
+
+    /** Arrastra hacia el DAW el Corte Exacto seleccionado (si hay uno) o el archivo .WAV completo. */
     void mouseDrag(const juce::MouseEvent& event) override;
 
 private:
+    float getNormalizedXFromEvent(const juce::MouseEvent& event) const;
+
     ClipSamplerAudioProcessor& processor;
     int slotIndex = 1;
     juce::String viewerTitle;
     bool isDragging = false;
+    bool pendingSelectFullOnMouseUp = false;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(WaveformComponent)
 };

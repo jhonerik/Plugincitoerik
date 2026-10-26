@@ -142,6 +142,30 @@ public:
     int getActivePlayingSlice() const { return activePlayingSlice.load(std::memory_order_relaxed); }
 
     //==============================================================================
+    // Selección de Corte Exacto (1 Clic = Todo el Audio | Doble Clic = Nota / Trozo)
+    //==============================================================================
+    void setExactCutModeEnabled(bool enabled);
+    bool isExactCutModeEnabled() const { return exactCutModeEnabled.load(std::memory_order_relaxed); }
+
+    /** Selecciona todo el audio completo en la ranura indicada (1 clic). */
+    void selectFullAudioInSlot(int slotIndex);
+
+    /** Selecciona la nota/trozo exacto (C1, C#1, D1...) en la posición normalizada donde se hizo doble clic. */
+    bool selectSliceAtNormalizedPosition(int slotIndex, float normalizedPos, ChopSlice& outSlice);
+
+    /** Selecciona directamente una nota/trozo por índice (0 = C1, 1 = C#1...) y genera su archivo .WAV recortado. */
+    bool selectSliceByIndex(int slotIndex, int sliceIndex, ChopSlice& outSlice);
+
+    /** Devuelve el índice de la nota seleccionada en la ranura (-1 si está seleccionado todo el audio). */
+    int getSelectedSliceIndex(int slotIndex) const;
+
+    /** Devuelve el nombre de la nota seleccionada (ej. "C1", "D#1") o cadena vacía si está seleccionado todo el audio. */
+    juce::String getSelectedSliceName(int slotIndex) const;
+
+    /** Genera y devuelve un archivo .WAV exclusivo con el trozo exacto seleccionado listo para arrastrar al DAW. */
+    juce::File getOrCreateSelectedSliceWavFile(int slotIndex);
+
+    //==============================================================================
     // Macro de Efectos (Lo-Fi 12-Bit, Tono en Semitonos, Filtro y Sincronización BPM)
     //==============================================================================
     void setFxTargetSlot(int slotIndex);
@@ -254,8 +278,13 @@ private:
     std::atomic<int> activeSlot { 1 };
     std::atomic<double> loadedFileSampleRate { 44100.0 };
 
-    // Estado del Rebanador MPC, BPM y Tonalidad por cada ranura
+    // Estado del Rebanador MPC, Corte Exacto, BPM y Tonalidad por cada ranura
     std::atomic<bool> autoChopEnabled { true };
+    std::atomic<bool> exactCutModeEnabled { false };
+    std::atomic<int> slot1SelectedSlice { -1 }; // -1 = Todo el audio, >= 0 = Índice de rodaja (C1, C#1, D1...)
+    std::atomic<int> slot2SelectedSlice { -1 };
+    juce::File slot1SelectedSliceWavFile;
+    juce::File slot2SelectedSliceWavFile;
     std::vector<ChopSlice> slot1Slices;
     std::vector<ChopSlice> slot2Slices;
     std::atomic<double> slot1Bpm { 0.0 };

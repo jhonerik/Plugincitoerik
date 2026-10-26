@@ -303,6 +303,7 @@ private:
     void onBakeFxClicked();
     void onPlayClicked();
     void onStopClicked();
+    void onExactCutClicked();
     void onExportWavClicked();
     void onDragDawClicked();
     void onDragMidiClicked();
@@ -403,9 +404,10 @@ private:
     WaveformComponent originalWaveformComponent;
     WaveformComponent transformedWaveformComponent;
 
-    // Controles de transporte inferior y exportación Drag & Drop (.WAV y .MIDI)
+    // Controles de transporte inferior, Corte Exacto y exportación Drag & Drop (.WAV y .MIDI)
     juce::TextButton playButton      { juce::String::fromUTF8("▶ Reproducir") };
     juce::TextButton stopButton      { juce::String::fromUTF8("■ Detener") };
+    juce::TextButton exactCutButton  { juce::String::fromUTF8("✂ Corte Exacto") };
     juce::TextButton dragDawButton   { juce::String::fromUTF8("Arrastrar .WAV") };
     juce::TextButton dragMidiButton  { juce::String::fromUTF8("Arrastrar .MIDI") };
     juce::TextButton exportWavButton { juce::String::fromUTF8("Exportar .WAV...") };

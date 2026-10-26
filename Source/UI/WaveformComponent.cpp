@@ -23,61 +23,112 @@ void WaveformComponent::changeListenerCallback(juce::ChangeBroadcaster* source)
         repaint();
 }
 
-// ==============================================================================
-// Interacción con el Ratón: Audición de Rodajas MPC y Selección de Ranura Activa
-// ==============================================================================
-void WaveformComponent::mouseDown(const juce::MouseEvent& event)
+float WaveformComponent::getNormalizedXFromEvent(const juce::MouseEvent& event) const
 {
-    if (event.mods.isLeftButtonDown())
-    {
-        auto slotFile = processor.getSlotAudioFile(slotIndex);
-        if (slotFile.existsAsFile())
-        {
-            // Activamos esta ranura (Audio 1 o Audio 2) en memoria de forma instantánea (sin recargar disco)
-            processor.setActiveSlot(slotIndex);
+    auto waveBounds = getLocalBounds().toFloat();
+    const float headerH = juce::jlimit(18.0f, 24.0f, waveBounds.getHeight() * 0.22f);
+    waveBounds.removeFromTop(headerH);
+    waveBounds = waveBounds.reduced(8.0f, 4.0f);
 
-            auto waveBounds = getLocalBounds().toFloat();
-            waveBounds.removeFromTop(22.0f);
-            waveBounds = waveBounds.reduced(8.0f, 4.0f);
-            const float clickNorm = (waveBounds.getWidth() > 10.0f)
-                ? juce::jlimit(0.0f, 0.9999f, (event.position.x - waveBounds.getX()) / waveBounds.getWidth())
-                : 0.0f;
+    if (waveBounds.getWidth() <= 4.0f)
+        return 0.0f;
 
-            // Si el modo Rebanador MPC está activo, reproducimos inmediatamente la rodaja donde se hizo clic
-            if (processor.isAutoChopEnabled())
-            {
-                auto slices = processor.getChopSlices(slotIndex);
-                if (!slices.empty() && waveBounds.getWidth() > 10.0f)
-                {
-                    for (size_t i = 0; i < slices.size(); ++i)
-                    {
-                        if (clickNorm >= slices[i].startNorm && clickNorm <= slices[i].endNorm)
-                        {
-                            processor.triggerChopSlice((int)i);
-                            processor.setStatusMessage(juce::String::fromUTF8("Rebanador MPC [Audio ")
-                                                       + juce::String(slotIndex) + "]: Reproduciendo rodaja "
-                                                       + slices[i].noteName + " (Nota MIDI " + juce::String(slices[i].midiNote) + ")");
-                            break;
-                        }
-                    }
-                }
-            }
-            else
-            {
-                // En modo normal/cromático, hacer clic sobre la onda reproduce suavemente desde ese punto
-                processor.playFromNormalizedPosition(slotIndex, clickNorm);
-            }
-
-            if (auto* parent = getParentComponent())
-                parent->repaint();
-            else
-                repaint();
-        }
-    }
+    return juce::jlimit(0.0f, 0.9999f, (event.position.x - waveBounds.getX()) / waveBounds.getWidth());
 }
 
 // ==============================================================================
-// Arrastrar y Soltar (Drag & Drop) del Archivo .WAV Directamente desde la Onda
+// Interacción con el Ratón:
+// - 1 Clic: Selecciona TODO el audio completo.
+// - 2 Clics seguidos (Doble Clic): Selecciona el CORTE EXACTO (C1, C#1, D1...) bajo el cursor.
+// ==============================================================================
+void WaveformComponent::mouseDown(const juce::MouseEvent& event)
+{
+    if (!event.mods.isLeftButtonDown())
+        return;
+
+    auto slotFile = processor.getSlotAudioFile(slotIndex);
+    if (!slotFile.existsAsFile())
+        return;
+
+    // Si es el segundo clic de un doble clic, dejamos que mouseDoubleClick seleccione el corte exacto
+    if (event.getNumberOfClicks() >= 2)
+    {
+        pendingSelectFullOnMouseUp = false;
+        return;
+    }
+
+    processor.setActiveSlot(slotIndex);
+    const int currentlySelectedSlice = processor.getSelectedSliceIndex(slotIndex);
+
+    // Si ya había un corte exacto seleccionado (ej. C1), esperamos a mouseUp para saber si el usuario
+    // está iniciando un arrastre (Drag & Drop) de ese corte hacia el DAW o si dio 1 clic para volver a seleccionar todo.
+    if (currentlySelectedSlice >= 0)
+    {
+        pendingSelectFullOnMouseUp = true;
+        return;
+    }
+
+    // 1 Clic normal: selecciona TODO el audio completo y lo reproduce desde el principio
+    pendingSelectFullOnMouseUp = false;
+    processor.selectFullAudioInSlot(slotIndex);
+    processor.startPlayback();
+    processor.setStatusMessage(juce::String::fromUTF8("Audio ") + juce::String(slotIndex)
+                               + juce::String::fromUTF8(" completo seleccionado (1 clic). Da 2 clics seguidos sobre una nota (C1, C#1, D1...) para seleccionar solo ese Corte Exacto."));
+
+    if (auto* parent = getParentComponent())
+        parent->repaint();
+    else
+        repaint();
+}
+
+void WaveformComponent::mouseUp(const juce::MouseEvent& event)
+{
+    if (pendingSelectFullOnMouseUp && !isDragging && event.getNumberOfClicks() == 1)
+    {
+        pendingSelectFullOnMouseUp = false;
+        processor.selectFullAudioInSlot(slotIndex);
+        processor.startPlayback();
+        processor.setStatusMessage(juce::String::fromUTF8("Audio ") + juce::String(slotIndex)
+                                   + juce::String::fromUTF8(" completo seleccionado (1 clic). Da 2 clics seguidos sobre una nota (C1, C#1, D1...) para seleccionar solo ese Corte Exacto."));
+
+        if (auto* parent = getParentComponent())
+            parent->repaint();
+        else
+            repaint();
+    }
+    pendingSelectFullOnMouseUp = false;
+}
+
+void WaveformComponent::mouseDoubleClick(const juce::MouseEvent& event)
+{
+    if (!event.mods.isLeftButtonDown())
+        return;
+
+    auto slotFile = processor.getSlotAudioFile(slotIndex);
+    if (!slotFile.existsAsFile())
+        return;
+
+    pendingSelectFullOnMouseUp = false;
+    const float clickNorm = getNormalizedXFromEvent(event);
+
+    ChopSlice chosenSlice;
+    if (processor.selectSliceAtNormalizedPosition(slotIndex, clickNorm, chosenSlice))
+    {
+        processor.setStatusMessage(juce::String::fromUTF8("✂ Corte Exacto seleccionado [Audio ")
+                                   + juce::String(slotIndex) + " - Nota " + chosenSlice.noteName
+                                   + juce::String::fromUTF8("]: Arrastra desde aquí o desde el botón '✂ Corte Exacto' hacia tu DAW (1 clic = seleccionar todo)."));
+    }
+
+    if (auto* parent = getParentComponent())
+        parent->repaint();
+    else
+        repaint();
+}
+
+// ==============================================================================
+// Arrastrar y Soltar (Drag & Drop) hacia el DAW:
+// - Si hay un Corte Exacto seleccionado (doble clic), arrastra SOLO ese trozo .WAV.
+// - Si está seleccionado todo el audio (1 clic), arrastra el archivo .WAV completo.
 // ==============================================================================
 void WaveformComponent::mouseDrag(const juce::MouseEvent& event)
 {
@@ -88,15 +139,37 @@ void WaveformComponent::mouseDrag(const juce::MouseEvent& event)
     if (!slotFile.existsAsFile())
         return;
 
-    if (event.getDistanceFromDragStart() > 7)
+    if (event.getDistanceFromDragStart() > 6)
     {
+        pendingSelectFullOnMouseUp = false;
         auto* container = juce::DragAndDropContainer::findParentDragContainerFor(this);
         if (container != nullptr)
         {
             processor.setActiveSlot(slotIndex);
+
+            const int selectedSliceIdx = processor.getSelectedSliceIndex(slotIndex);
+            juce::File fileToDrag = (selectedSliceIdx >= 0)
+                ? processor.getOrCreateSelectedSliceWavFile(slotIndex)
+                : slotFile;
+
+            if (!fileToDrag.existsAsFile())
+                fileToDrag = slotFile;
+
+            if (selectedSliceIdx >= 0)
+            {
+                juce::String sliceName = processor.getSelectedSliceName(slotIndex);
+                processor.setStatusMessage(juce::String::fromUTF8("Arrastrando Corte Exacto [Nota ") + sliceName
+                                           + juce::String::fromUTF8("] de Audio ") + juce::String(slotIndex) + " al DAW...");
+            }
+            else
+            {
+                processor.setStatusMessage(juce::String::fromUTF8("Arrastrando Audio ") + juce::String(slotIndex)
+                                           + juce::String::fromUTF8(" completo al DAW..."));
+            }
+
             isDragging = true;
             juce::StringArray files;
-            files.add(slotFile.getFullPathName());
+            files.add(fileToDrag.getFullPathName());
 
             juce::Component::SafePointer<WaveformComponent> safeThis(this);
             container->performExternalDragDropOfFiles(files, false, this, [safeThis] {
@@ -116,6 +189,8 @@ void WaveformComponent::paint(juce::Graphics& g)
     const bool isActiveSlot = (processor.getActiveSlot() == slotIndex);
     auto& thumb = processor.getThumbnail(slotIndex);
     const double totalLength = thumb.getTotalLength();
+    const int selectedSliceIdx = processor.getSelectedSliceIndex(slotIndex);
+    const juce::String selectedSliceName = processor.getSelectedSliceName(slotIndex);
 
     // 1. Fondo elegante Azul Zafiro Acústico (evita el fondo negro plano)
     juce::ColourGradient cardGrad(juce::Colour(0xff162238), bounds.getX(), bounds.getY(),
@@ -143,12 +218,21 @@ void WaveformComponent::paint(juce::Graphics& g)
     const float headerH = juce::jlimit(18.0f, 24.0f, bounds.getHeight() * 0.22f);
     auto headerBar = bounds.removeFromTop(headerH).reduced(10.0f, 1.0f);
 
-    g.setColour(accentCol.brighter(0.15f));
+    g.setColour(selectedSliceIdx >= 0 ? juce::Colour(0xffffd54f) : accentCol.brighter(0.15f));
     g.setFont(juce::Font(juce::jlimit(10.0f, 12.5f, headerH * 0.54f), juce::Font::bold));
 
-    juce::String fullTitle = viewerTitle + (isActiveSlot && totalLength > 0.0 ? juce::String::fromUTF8("  [ACTIVO EN EFECTOS / MIDI]") : "");
-    auto leftHeaderRect = headerBar.removeFromLeft(headerBar.getWidth() * 0.52f).toNearestInt();
-    g.drawFittedText(fullTitle, leftHeaderRect, juce::Justification::centredLeft, 1, 0.68f);
+    juce::String selectionBadge;
+    if (totalLength > 0.0)
+    {
+        if (selectedSliceIdx >= 0 && selectedSliceName.isNotEmpty())
+            selectionBadge = juce::String::fromUTF8("  [✂ CORTE EXACTO: ") + selectedSliceName + "]";
+        else if (isActiveSlot)
+            selectionBadge = juce::String::fromUTF8("  [TODO EL AUDIO | 2 CLICS = CORTE]");
+    }
+
+    juce::String fullTitle = viewerTitle + selectionBadge;
+    auto leftHeaderRect = headerBar.removeFromLeft(headerBar.getWidth() * 0.56f).toNearestInt();
+    g.drawFittedText(fullTitle, leftHeaderRect, juce::Justification::centredLeft, 1, 0.65f);
 
     auto waveformArea = bounds.reduced(8.0f, 4.0f);
 
@@ -160,7 +244,7 @@ void WaveformComponent::paint(juce::Graphics& g)
 
         // 2. Franja superior de notas MIDI del Rebanador MPC ("| C1 | C#1 | D1 | D#1 | E1 | F1 | F#1 |")
         juce::Rectangle<float> mpcNoteBar;
-        if (chopMode && !slices.empty())
+        if ((chopMode || selectedSliceIdx >= 0) && !slices.empty())
         {
             const float barH = juce::jlimit(14.0f, 19.0f, waveformArea.getHeight() * 0.22f);
             mpcNoteBar = waveformArea.removeFromTop(barH);
@@ -170,14 +254,38 @@ void WaveformComponent::paint(juce::Graphics& g)
             g.drawHorizontalLine((int)mpcNoteBar.getBottom(), mpcNoteBar.getX(), mpcNoteBar.getRight());
         }
 
-        // Iluminar la rodaja MPC que se está reproduciendo actualmente
-        if (chopMode && playingSlice >= 0 && playingSlice < (int)slices.size())
+        // Resaltar el Corte Exacto seleccionado con doble clic (o la rodaja que está sonando)
+        if (!slices.empty())
         {
-            const auto& activeS = slices[(size_t)playingSlice];
-            float sx = waveformArea.getX() + activeS.startNorm * waveformArea.getWidth();
-            float sw = (activeS.endNorm - activeS.startNorm) * waveformArea.getWidth();
-            g.setColour(juce::Colour(0x40ffab00));
-            g.fillRect(sx, mpcNoteBar.getY(), sw, waveformArea.getBottom() - mpcNoteBar.getY());
+            if (selectedSliceIdx >= 0 && selectedSliceIdx < (int)slices.size())
+            {
+                const auto& selS = slices[(size_t)selectedSliceIdx];
+                float sx = waveformArea.getX() + selS.startNorm * waveformArea.getWidth();
+                float sw = (selS.endNorm - selS.startNorm) * waveformArea.getWidth();
+                float topY = mpcNoteBar.isEmpty() ? waveformArea.getY() : mpcNoteBar.getY();
+
+                // Atenuamos ligeramente el resto del audio para que destaque claramente el trozo seleccionado
+                g.setColour(juce::Colour(0x55091220));
+                if (sx > waveformArea.getX())
+                    g.fillRect(waveformArea.getX(), waveformArea.getY(), sx - waveformArea.getX(), waveformArea.getHeight());
+                if (sx + sw < waveformArea.getRight())
+                    g.fillRect(sx + sw, waveformArea.getY(), waveformArea.getRight() - (sx + sw), waveformArea.getHeight());
+
+                // Halo y borde brillante sobre la nota seleccionada
+                g.setColour(juce::Colour(0x4400e5ff));
+                g.fillRect(sx, topY, sw, waveformArea.getBottom() - topY);
+
+                g.setColour(juce::Colour(0xffffd54f));
+                g.drawRect(juce::Rectangle<float>(sx, topY, sw, waveformArea.getBottom() - topY), 2.0f);
+            }
+            else if (chopMode && playingSlice >= 0 && playingSlice < (int)slices.size())
+            {
+                const auto& activeS = slices[(size_t)playingSlice];
+                float sx = waveformArea.getX() + activeS.startNorm * waveformArea.getWidth();
+                float sw = (activeS.endNorm - activeS.startNorm) * waveformArea.getWidth();
+                g.setColour(juce::Colour(0x40ffab00));
+                g.fillRect(sx, mpcNoteBar.getY(), sw, waveformArea.getBottom() - mpcNoteBar.getY());
+            }
         }
 
         // 3. Dibujo de la Forma de Onda con Resplandor y Gradiente Luminoso
@@ -197,7 +305,7 @@ void WaveformComponent::paint(juce::Graphics& g)
         g.drawHorizontalLine((int)waveformArea.getCentreY(), waveformArea.getX(), waveformArea.getRight());
 
         // 4. Líneas divisorias verticales del Rebanador MPC y etiquetas de notas (C1 .. G2)
-        if (chopMode && !slices.empty())
+        if ((chopMode || selectedSliceIdx >= 0) && !slices.empty())
         {
             g.setFont(juce::Font(juce::jlimit(9.0f, 11.0f, mpcNoteBar.getHeight() * 0.62f), juce::Font::bold));
             for (size_t i = 0; i < slices.size(); ++i)
@@ -216,11 +324,26 @@ void WaveformComponent::paint(juce::Graphics& g)
                 }
 
                 juce::Rectangle<float> padBox(xStart, mpcNoteBar.getY(), sliceW, mpcNoteBar.getHeight());
-                bool isThisSlicePlaying = ((int)i == playingSlice);
-                g.setColour(isThisSlicePlaying ? juce::Colour(0xffffca28) : juce::Colour(0xffeef4ff));
-                if (sliceW >= 16.0f)
+                const bool isThisSliceSelected = ((int)i == selectedSliceIdx);
+                const bool isThisSlicePlaying = ((int)i == playingSlice);
+
+                if (isThisSliceSelected)
                 {
-                    g.drawFittedText(s.noteName, padBox.toNearestInt(), juce::Justification::centred, 1, 0.7f);
+                    g.setColour(juce::Colour(0xffffca28));
+                    g.fillRect(padBox.reduced(0.5f));
+                    g.setColour(juce::Colours::black);
+                }
+                else
+                {
+                    g.setColour(isThisSlicePlaying ? juce::Colour(0xffffca28) : juce::Colour(0xffeef4ff));
+                }
+
+                if (sliceW >= 14.0f)
+                {
+                    juce::String labelTxt = isThisSliceSelected
+                        ? (juce::String::fromUTF8("✂") + s.noteName)
+                        : s.noteName;
+                    g.drawFittedText(labelTxt, padBox.toNearestInt(), juce::Justification::centred, 1, 0.68f);
                 }
             }
         }
@@ -268,7 +391,7 @@ void WaveformComponent::paint(juce::Graphics& g)
         g.setColour(juce::Colour(0xff9cb0cf));
         g.setFont(juce::Font(juce::jlimit(10.5f, 13.0f, waveformArea.getHeight() * 0.16f), juce::Font::italic));
         juce::String placeholder = (slotIndex == 1)
-            ? juce::String::fromUTF8("1. Aquí aparecerá el Audio 1 (YouTube / TikTok / Instagram) con Rebanador MPC (C1-G2), BPM y Tono...")
+            ? juce::String::fromUTF8("1. Aquí aparecerá el Audio 1 (1 clic = Todo el audio | 2 clics = Seleccionar y arrastrar Corte Exacto C1..G2)...")
             : juce::String::fromUTF8("2. Aquí aparecerá el Audio 2 modificado al pulsar '2. Derechos IA (±3 Semitonos)'...");
         g.drawFittedText(placeholder, waveformArea.reduced(12.0f, 4.0f).toNearestInt(), juce::Justification::centred, 2, 0.72f);
     }

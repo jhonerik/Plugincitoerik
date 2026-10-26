@@ -776,9 +776,15 @@ void ClipSamplerAudioProcessor::resetForNewExtraction()
         transformedLoadedFile = juce::File();
         slot1MidiFile = juce::File();
         slot2MidiFile = juce::File();
+        slot1SelectedSliceWavFile = juce::File();
+        slot2SelectedSliceWavFile = juce::File();
         slot1Slices.clear();
         slot2Slices.clear();
     }
+
+    exactCutModeEnabled.store(false, std::memory_order_relaxed);
+    slot1SelectedSlice.store(-1, std::memory_order_relaxed);
+    slot2SelectedSlice.store(-1, std::memory_order_relaxed);
 
     {
         const juce::ScopedLock sl(retiredLock);
@@ -1243,6 +1249,225 @@ void ClipSamplerAudioProcessor::triggerChopSlice(int sliceIndex)
 
     if (startS >= 0 && endS > startS)
         requestPlayRegion(startS, endS, sliceIndex);
+}
+
+//==============================================================================
+// Selección y Extracción de Corte Exacto (1 Clic = Todo | Doble Clic = Nota C1..G2)
+//==============================================================================
+void ClipSamplerAudioProcessor::setExactCutModeEnabled(bool enabled)
+{
+    exactCutModeEnabled.store(enabled, std::memory_order_relaxed);
+    if (!enabled)
+    {
+        const int curSlot = activeSlot.load(std::memory_order_relaxed);
+        selectFullAudioInSlot(curSlot);
+    }
+}
+
+void ClipSamplerAudioProcessor::selectFullAudioInSlot(int slotIndex)
+{
+    const int targetSlot = (slotIndex == 2) ? 2 : 1;
+    setActiveSlot(targetSlot);
+
+    if (targetSlot == 2)
+        slot2SelectedSlice.store(-1, std::memory_order_relaxed);
+    else
+        slot1SelectedSlice.store(-1, std::memory_order_relaxed);
+
+    {
+        const juce::ScopedLock sl(bufferLock);
+        if (targetSlot == 2)
+            slot2SelectedSliceWavFile = juce::File();
+        else
+            slot1SelectedSliceWavFile = juce::File();
+    }
+
+    exactCutModeEnabled.store(false, std::memory_order_relaxed);
+}
+
+int ClipSamplerAudioProcessor::getSelectedSliceIndex(int slotIndex) const
+{
+    return (slotIndex == 2)
+        ? slot2SelectedSlice.load(std::memory_order_relaxed)
+        : slot1SelectedSlice.load(std::memory_order_relaxed);
+}
+
+juce::String ClipSamplerAudioProcessor::getSelectedSliceName(int slotIndex) const
+{
+    const int selIdx = getSelectedSliceIndex(slotIndex);
+    if (selIdx < 0)
+        return {};
+
+    const juce::ScopedLock sl(bufferLock);
+    const auto& slices = (slotIndex == 2) ? slot2Slices : slot1Slices;
+    if (selIdx >= 0 && selIdx < (int)slices.size())
+        return slices[(size_t)selIdx].noteName;
+
+    return {};
+}
+
+bool ClipSamplerAudioProcessor::selectSliceByIndex(int slotIndex, int sliceIndex, ChopSlice& outSlice)
+{
+    if (!licenseManager.isUnlocked())
+        return false;
+
+    const int targetSlot = (slotIndex == 2) ? 2 : 1;
+    setActiveSlot(targetSlot);
+
+    bool found = false;
+    {
+        const juce::ScopedLock sl(bufferLock);
+        const auto& slices = (targetSlot == 2) ? slot2Slices : slot1Slices;
+        if (sliceIndex >= 0 && sliceIndex < (int)slices.size())
+        {
+            outSlice = slices[(size_t)sliceIndex];
+            found = true;
+            if (targetSlot == 2)
+                slot2SelectedSliceWavFile = juce::File();
+            else
+                slot1SelectedSliceWavFile = juce::File();
+        }
+    }
+
+    if (!found)
+        return false;
+
+    if (targetSlot == 2)
+        slot2SelectedSlice.store(sliceIndex, std::memory_order_relaxed);
+    else
+        slot1SelectedSlice.store(sliceIndex, std::memory_order_relaxed);
+
+    exactCutModeEnabled.store(true, std::memory_order_relaxed);
+    autoChopEnabled.store(true, std::memory_order_relaxed);
+
+    // Pre-generamos el archivo .WAV de este corte exacto y lo reproducimos inmediatamente
+    getOrCreateSelectedSliceWavFile(targetSlot);
+    requestPlayRegion(outSlice.startSample, outSlice.endSample, sliceIndex);
+    return true;
+}
+
+bool ClipSamplerAudioProcessor::selectSliceAtNormalizedPosition(int slotIndex, float normalizedPos, ChopSlice& outSlice)
+{
+    const int targetSlot = (slotIndex == 2) ? 2 : 1;
+    setActiveSlot(targetSlot);
+
+    int matchedIdx = -1;
+    {
+        const juce::ScopedLock sl(bufferLock);
+        const auto& slices = (targetSlot == 2) ? slot2Slices : slot1Slices;
+        const float clampedNorm = juce::jlimit(0.0f, 0.9999f, normalizedPos);
+        for (size_t i = 0; i < slices.size(); ++i)
+        {
+            if (clampedNorm >= slices[i].startNorm && clampedNorm <= slices[i].endNorm)
+            {
+                matchedIdx = (int)i;
+                break;
+            }
+        }
+        if (matchedIdx < 0 && !slices.empty())
+            matchedIdx = 0;
+    }
+
+    if (matchedIdx < 0)
+        return false;
+
+    return selectSliceByIndex(targetSlot, matchedIdx, outSlice);
+}
+
+juce::File ClipSamplerAudioProcessor::getOrCreateSelectedSliceWavFile(int slotIndex)
+{
+    const int targetSlot = (slotIndex == 2) ? 2 : 1;
+    const int selIdx = getSelectedSliceIndex(targetSlot);
+    if (selIdx < 0)
+        return getSlotAudioFile(targetSlot);
+
+    std::shared_ptr<PlaybackData> slotData;
+    ChopSlice chosenSlice;
+    {
+        const juce::ScopedLock sl(bufferLock);
+        juce::File cachedWav = (targetSlot == 2) ? slot2SelectedSliceWavFile : slot1SelectedSliceWavFile;
+        if (cachedWav.existsAsFile() && cachedWav.getSize() > 64)
+            return cachedWav;
+
+        slotData = (targetSlot == 2) ? slot2PlaybackData : slot1PlaybackData;
+        const auto& slices = (targetSlot == 2) ? slot2Slices : slot1Slices;
+        if (selIdx < 0 || selIdx >= (int)slices.size())
+            return getSlotAudioFile(targetSlot);
+
+        chosenSlice = slices[(size_t)selIdx];
+    }
+
+    if (slotData == nullptr || slotData->buffer.getNumSamples() <= 0)
+    {
+        auto f = getSlotAudioFile(targetSlot);
+        if (!f.existsAsFile() || !activateSlotBuffer(f, targetSlot))
+            return {};
+
+        const juce::ScopedLock sl(bufferLock);
+        slotData = (targetSlot == 2) ? slot2PlaybackData : slot1PlaybackData;
+    }
+
+    if (slotData == nullptr || slotData->buffer.getNumSamples() <= 0)
+        return {};
+
+    const int totalSamples = slotData->buffer.getNumSamples();
+    const int numCh = juce::jmax(1, slotData->buffer.getNumChannels());
+    const int startS = juce::jlimit(0, totalSamples - 1, chosenSlice.startSample);
+    const int endS   = juce::jlimit(startS + 1, totalSamples, chosenSlice.endSample);
+    const int sliceLen = endS - startS;
+    if (sliceLen <= 4)
+        return getSlotAudioFile(targetSlot);
+
+    juce::AudioBuffer<float> sliceBuf(numCh, sliceLen);
+    for (int ch = 0; ch < numCh; ++ch)
+        sliceBuf.copyFrom(ch, 0, slotData->buffer, ch, startS, sliceLen);
+
+    // Micro-fade anti-click de 2.5 ms en el inicio y final del corte exacto
+    const double sr = loadedFileSampleRate.load(std::memory_order_relaxed) > 8000.0
+        ? loadedFileSampleRate.load(std::memory_order_relaxed)
+        : 44100.0;
+    const int fadeLen = juce::jmin(sliceLen / 4, juce::jmax(24, (int)std::round(sr * 0.0025)));
+    if (fadeLen > 1)
+    {
+        for (int ch = 0; ch < numCh; ++ch)
+        {
+            sliceBuf.applyGainRamp(ch, 0, fadeLen, 0.0f, 1.0f);
+            sliceBuf.applyGainRamp(ch, sliceLen - fadeLen, fadeLen, 1.0f, 0.0f);
+        }
+    }
+
+    juce::String safeNote = chosenSlice.noteName.replace("#", "s").retainCharacters("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_");
+    if (safeNote.isEmpty())
+        safeNote = "Slice" + juce::String(selIdx + 1);
+
+    juce::File outSliceFile = AudioExtractorWorker::getCacheDirectory().getChildFile(
+        "ClipSampler_Audio" + juce::String(targetSlot) + "_CorteExacto_" + safeNote + ".wav");
+    outSliceFile.deleteFile();
+
+    {
+        std::unique_ptr<juce::FileOutputStream> outStream(outSliceFile.createOutputStream());
+        if (outStream == nullptr)
+            return getSlotAudioFile(targetSlot);
+
+        juce::WavAudioFormat wavFormat;
+        std::unique_ptr<juce::AudioFormatWriter> writer(wavFormat.createWriterFor(
+            outStream.get(), sr, (unsigned int)numCh, 24, {}, 0));
+        if (writer == nullptr)
+            return getSlotAudioFile(targetSlot);
+
+        outStream.release();
+        writer->writeFromAudioSampleBuffer(sliceBuf, 0, sliceLen);
+    }
+
+    {
+        const juce::ScopedLock sl(bufferLock);
+        if (targetSlot == 2)
+            slot2SelectedSliceWavFile = outSliceFile;
+        else
+            slot1SelectedSliceWavFile = outSliceFile;
+    }
+
+    return outSliceFile;
 }
 
 std::vector<ChopSlice> ClipSamplerAudioProcessor::computeTransientSlices(const juce::AudioBuffer<float>& buffer, double sampleRate)
@@ -1977,15 +2202,23 @@ bool ClipSamplerAudioProcessor::loadAudioFileIntoSlot(const juce::File& file, in
         {
             transformedLoadedFile = file;
             slot2MidiFile = juce::File();
+            slot2SelectedSliceWavFile = juce::File();
             slot2PlaybackData.reset();
         }
         else
         {
             originalLoadedFile = file;
             slot1MidiFile = juce::File();
+            slot1SelectedSliceWavFile = juce::File();
             slot1PlaybackData.reset();
         }
     }
+
+    if (targetSlot == 2)
+        slot2SelectedSlice.store(-1, std::memory_order_relaxed);
+    else
+        slot1SelectedSlice.store(-1, std::memory_order_relaxed);
+    exactCutModeEnabled.store(false, std::memory_order_relaxed);
 
     if (targetSlot == 2)
         transformedThumbnail.setSource(new juce::FileInputSource(file));
@@ -2095,6 +2328,14 @@ void ClipSamplerAudioProcessor::startPlayback()
 {
     if (!licenseManager.isUnlocked())
         return;
+
+    const int curSlot = activeSlot.load(std::memory_order_relaxed);
+    const int selIdx = getSelectedSliceIndex(curSlot);
+    if (selIdx >= 0)
+    {
+        triggerChopSlice(selIdx);
+        return;
+    }
 
     int total = totalSampleCount.load(std::memory_order_relaxed);
     if (total > 0)

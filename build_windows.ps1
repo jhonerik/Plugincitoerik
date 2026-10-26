@@ -142,7 +142,7 @@ if ($LASTEXITCODE -ne 0) {
 
 # 4. Compilación del objetivo ClipSampler en modo Release
 Write-Host "`n[4/5] Compilando plugin ClipSampler en modo Release..." -ForegroundColor Yellow
-& cmake --build $BuildDir --config Release --parallel
+& cmake --build $BuildDir --config Release
 if ($LASTEXITCODE -ne 0) {
     Write-Host "  [ERROR] Error durante la compilación de C++." -ForegroundColor Red
     exit $LASTEXITCODE
