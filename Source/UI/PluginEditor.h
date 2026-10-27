@@ -262,7 +262,7 @@ private:
 
 /**
  * @class ClipSamplerAudioProcessorEditor
- * @brief Interfaz Gráfica Principal 100% Adaptable (Responsive) y en Español de ClipSampler v2.4.
+ * @brief Interfaz Gráfica Principal 100% Adaptable (Responsive) y en Español de ClipSampler v2.5.
  *
  * Características principales:
  * - Estética elegante en Azul Zafiro Real y Titanio Satinado con iluminación ambiental e indicadores dinámicos.
@@ -297,9 +297,8 @@ private:
     void onExtractDurationClicked(int durationSec);
     void onNewExtractionClicked();
     void onTapeWarmthClicked();
-    void onSpatialAirClicked();
     void onCheckCopyrightOriginalClicked();
-    void onApplyDerechosClicked();
+    void onApplyDerechosClicked(int semitones);
     void onVerifyDerechosFreeClicked();
     void onSelectFxTargetSlot(int slotIndex);
     void onToggleAutoChopClicked();
@@ -325,7 +324,6 @@ private:
     ScalablePluginLookAndFeel scalableLnf;
     int licenseCheckTickCounter = 0;
     int lastKnownVideoDuration = -1;
-    bool nextShiftPositive = true;
 
     // Botones de la barra de encabezado (Estado de Licencia / Prueba de 3 Días y Mantenimiento)
     juce::TextButton licenseBadgeButton;
@@ -365,12 +363,12 @@ private:
     juce::TextButton extract3sButton     { juce::String::fromUTF8("Extraer 3 Segundos") };
     juce::TextButton extract10sButton    { juce::String::fromUTF8("Extraer 10 Segundos") };
     juce::TextButton extract30sButton    { juce::String::fromUTF8("Extraer 30 Segundos") };
-    juce::TextButton newExtractionButton { juce::String::fromUTF8("Nueva Extracción (2 Audios)") };
+    juce::TextButton newExtractionButton { juce::String::fromUTF8("🔄 Nueva Extracción") };
 
-    // Fila 4: Suite de 4 botones de Coloración y Derechos IA (Calor Analógico, Aire 3D, Derechos IA, Verificar)
+    // Fila 4: Suite de Coloración y Derechos IA (Calor Analógico, Alterar +3 Tonos Más, Alterar -3 Tonos Menos, Verificar)
     juce::TextButton tapeWarmthBtn      { juce::String::fromUTF8("📼 Calor Analógico") };
-    juce::TextButton spatialAirBtn      { juce::String::fromUTF8("✨ Aire y Espacio 3D") };
-    juce::TextButton derechosAiBtn      { juce::String::fromUTF8("🤖 Derechos IA (±3 st)") };
+    juce::TextButton derechosPlusBtn    { juce::String::fromUTF8("▲ Alterar +3 Tonos Más") };
+    juce::TextButton derechosMinusBtn   { juce::String::fromUTF8("▼ Alterar -3 Tonos Menos") };
     juce::TextButton detectCopyrightBtn { juce::String::fromUTF8("🛡️ Verificar Derechos") };
     juce::TextButton verifyFreeBtn      { juce::String::fromUTF8("Verificar Audio 2") };
 

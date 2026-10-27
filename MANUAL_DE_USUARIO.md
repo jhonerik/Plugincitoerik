@@ -11,7 +11,7 @@ Bienvenido al **Manual Oficial de Usuario de ClipSampler v2.5**, el instrumento 
 3. [Vista General de la Interfaz (Responsive)](#3-vista-general-de-la-interfaz-responsive)
 4. [Paso 1: Seleccionar Plataforma y Analizar Enlace](#4-paso-1-seleccionar-plataforma-y-analizar-enlace)
 5. [Paso 2: Modo de Extracción (Segundos vs Compases) y Captura](#5-paso-2-modo-de-extracción-segundos-vs-compases-y-captura)
-6. [Paso 3: Doble Visor de Onda, Coloración Analógica, Aire 3D y Derechos IA](#6-paso-3-doble-visor-de-onda-coloración-analógica-aire-3d-y-derechos-ia)
+6. [Paso 3: Doble Visor de Onda, Coloración Analógica y Suite de Derechos IA](#6-paso-3-doble-visor-de-onda-coloración-analógica-y-suite-de-derechos-ia)
 7. [Paso 4: Modo Auto-Chop (Estilo MPC) y Rack de Efectos Macro](#7-paso-4-modo-auto-chop-estilo-mpc-y-rack-de-efectos-macro)
 8. [Paso 5: Reverse y Half-Time por Pad, Ajuste de Transientes y Exportación](#8-paso-5-reverse-y-half-time-por-pad-ajuste-de-transientes-y-exportación)
 9. [Botón Nueva Extracción y Mantenimiento](#9-botón-nueva-extracción-y-mantenimiento)
@@ -81,13 +81,13 @@ En la **Fila 2 y Fila 3 (Tiempo, Duración y Captura)**:
      - **`4 Bars`:** Recorta una progresión completa de 4 compases (16 tiempos) en bucle perfecto.
 3. **Casilla `Norm -1dB`:** Si está activada (recomendado), nivela el volumen del audio extraído a `-1.0 dB` y aplica micro-fundidos de 10 ms al inicio y final para evitar chasquidos (*clicks*).
 4. **Botón `⚡ EXTRAER`:** Inicia la descarga y recorte en alta fidelidad sincronizado a los Hz de tu proyecto.
-5. **Botón `🔄 Nueva Extracción`:** Permite limpiar la sesión con un solo clic para comenzar una nueva captura desde cero.
+5. **Botón `🔄 Nueva Extracción`:** Se habilita inmediatamente apenas se extrae el primer corte de audio en el Visor 1 (o al tener ambos audios), permitiendo reiniciar y limpiar toda la sesión con un solo clic para comenzar una nueva captura desde cero.
 
 ---
 
-## 6. Paso 3: Doble Visor de Onda, Coloración Analógica, Aire 3D y Derechos IA
+## 6. Paso 3: Doble Visor de Onda, Coloración Analógica y Suite de Derechos IA
 
-**ClipSampler v2.4** cuenta con una suite de herramientas avanzadas de **Modificación y Coloración de Audio** ubicada en la Fila 4:
+**ClipSampler v2.5** cuenta con una suite de herramientas avanzadas de **Modificación y Coloración de Audio** ubicada en la Fila 4:
 
 ### 📼 Botón `📼 Calor Analógico`
 - **¿Qué hace?** Aplica una coloración analógica vintage inspirada en grabadoras de cinta de carrete abierto (*tape machines*) y previos a válvulas:
@@ -96,17 +96,12 @@ En la **Fila 2 y Fila 3 (Tiempo, Duración y Captura)**:
 - El resultado se carga automáticamente en el **Visor 2 (`VISOR 2: CALOR ANALÓGICO (TAPE WARMTH)`)**.
 - **Usos creativos:** Dar calidez, cohesión y pegada a samples fríos o delgados sin distorsión áspera.
 
-### ✨ Botón `✨ Aire y Espacio 3D`
-- **¿Qué hace?** Abre el campo estéreo dimensional y aporta brillo cristalino sedoso:
-  - Separa la señal en componentes *Mid/Side* (centro y laterales). El centro monofónico se mantiene 100% puro para preservar total compatibilidad mono sin desfases.
-  - Expande la imagen espacial estéreo (+2.2 dB) con micro-decorrelación de fase envolvente.
-  - Aplica un excitador armónico en la banda de aire (*Air Band* > 10.5 kHz) aportando brillo moderno y presencia.
-- El resultado se carga en el **Visor 2 (`VISOR 2: AIRE Y ESPACIO 3D`)**.
-- **Usos creativos:** Abrir sintetizadores, guitarras, pianos y bucles para que tengan profundidad 3D y brillo profesional en la mezcla.
-
-### 🤖 Botón `🤖 Derechos IA (±3 st)`
-- Aplica procesamiento DSP transformativo (desplazamiento de tono de ±3 semitonos con preservación de formantes, micro-estiramiento temporal y dispersión de fase all-pass) para alterar la huella acústica de la muestra original y evadir sistemas de Content ID.
-- El resultado se carga en el **Visor 2 (`VISOR 2: AUDIO MODIFICADO (DERECHOS ±3 ST IA)`)**.
+### 🤖 Botones `▲ Alterar +3 Tonos Más` y `▼ Alterar -3 Tonos Menos`
+- **Control Directo y sin Confusiones:** Ahora cuentas con dos botones dedicados e independientes:
+  - **`▲ Alterar +3 Tonos Más`:** Sube el tono exactamente +3 semitonos musicales.
+  - **`▼ Alterar -3 Tonos Menos`:** Baja el tono exactamente -3 semitonos musicales.
+- **Procesamiento DSP Anti-Copyright:** Ambos botones aplican interpolación de Lagrange, preservación de formantes y dispersión de fase all-pass para transformar la huella acústica y evadir la detección de Content ID sin arruinar la musicalidad del sample.
+- El resultado se carga en el **Visor 2 (`VISOR 2: AUDIO MODIFICADO (DERECHOS IA)`)**.
 
 ### 🛡️ Botón `🛡️ Verificar Derechos`
 - Analiza matemáticamente la correlación espectral y la divergencia entre el Audio 1 y el Audio 2:

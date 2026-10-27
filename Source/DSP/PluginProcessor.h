@@ -28,7 +28,7 @@ struct ChopSlice
 
 /**
  * @class ClipSamplerAudioProcessor
- * @brief Motor principal DSP e Instrumento Virtual (VST3 / AAX) de ClipSampler v2.4.
+ * @brief Motor principal DSP e Instrumento Virtual (VST3 / AAX) de ClipSampler v2.5.
  *
  * Coordina los subsistemas del plugin:
  * - Extracción asíncrona multi-plataforma (YouTube, TikTok, Instagram) en 3s, 10s o 30s.
