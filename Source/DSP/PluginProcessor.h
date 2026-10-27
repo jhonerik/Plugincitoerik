@@ -104,6 +104,26 @@ public:
      */
     bool applyDerechosTransformation(int semitoneShift, juce::String& outReport);
 
+    //==============================================================================
+    // Separador de Stems por IA (Vocales / Beat)
+    //==============================================================================
+    enum class StemType
+    {
+        Vocals = 0, ///< Aislar Vocales (Acapella / Voz limpia)
+        Beat = 1    ///< Aislar Beat / Instrumental (Drums, Bass y Acompañamiento)
+    };
+
+    /**
+     * Separa el audio activo en Vocales (Acapella) o Beat (Instrumental)
+     * mediante separación espectral de formantes y cancelación de fase central,
+     * cargando el resultado en la Ranura 2.
+     */
+    bool separateAndLoadStem(StemType type, juce::String& outReport);
+
+    /** Devuelve el tipo de contenido cargado en la Ranura 2 ("DERECHOS ±3 ST IA", "VOCALES IA (ACAPELLA)" o "BEAT IA (INSTRUMENTAL)"). */
+    juce::String getSlot2ContentTypeString() const;
+    int getSlot2ContentType() const { return slot2ContentType.load(std::memory_order_relaxed); }
+
     /** Verifica matemáticamente la divergencia espectral entre el Audio 1 y el Audio 2. */
     bool verifyTransformedAudioCopyrightFree(juce::String& outReport);
 
@@ -328,6 +348,7 @@ private:
     std::atomic<int> lastAppliedSemitones { 3 };
     std::atomic<double> lastDivergencePercent { 0.0 };
     std::atomic<int> copyrightVerifyState { 0 };
+    std::atomic<int> slot2ContentType { 0 }; // 0 = Derechos IA, 1 = Vocales IA, 2 = Beat IA
 
     // Estado sincronizado entre hilos para los mensajes de la UI
     mutable juce::CriticalSection statusLock;

@@ -342,7 +342,11 @@ void WaveformComponent::paint(juce::Graphics& g)
             selectionBadge = juce::String::fromUTF8("  [TODO EL AUDIO | 2 CLICS = CORTE]");
     }
 
-    juce::String fullTitle = viewerTitle + selectionBadge;
+    juce::String baseTitle = viewerTitle;
+    if (slotIndex == 2 && processor.hasSlotAudio(2))
+        baseTitle = "VISOR 2: " + processor.getSlot2ContentTypeString();
+
+    juce::String fullTitle = baseTitle + selectionBadge;
     auto leftHeaderRect = headerBar.removeFromLeft(headerBar.getWidth() * 0.56f).toNearestInt();
     g.drawFittedText(fullTitle, leftHeaderRect, juce::Justification::centredLeft, 1, 0.65f);
 

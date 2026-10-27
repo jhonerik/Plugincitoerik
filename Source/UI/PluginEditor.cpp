@@ -165,21 +165,26 @@ ClipSamplerAudioProcessorEditor::ClipSamplerAudioProcessorEditor(ClipSamplerAudi
     newExtractionButton.onClick = [this] { onNewExtractionClicked(); };
     addAndMakeVisible(newExtractionButton);
 
-    // Fila 4: Suite de 3 botones de Derechos de Autor e IA
-    detectCopyrightBtn.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff2c3e66));
-    detectCopyrightBtn.setColour(juce::TextButton::textColourOffId, juce::Colour(0xffffd54f));
-    detectCopyrightBtn.onClick = [this] { onCheckCopyrightOriginalClicked(); };
-    addAndMakeVisible(detectCopyrightBtn);
+    // Fila 4: Suite de 4 Botones de Inteligencia Artificial (Vocales IA, Beat IA, Derechos IA, Verificar)
+    isolateVocalsBtn.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff8e24aa));
+    isolateVocalsBtn.setColour(juce::TextButton::textColourOffId, juce::Colours::white);
+    isolateVocalsBtn.onClick = [this] { onIsolateVocalsClicked(); };
+    addAndMakeVisible(isolateVocalsBtn);
 
-    derechosAiBtn.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff6200ea));
+    isolateBeatBtn.setColour(juce::TextButton::buttonColourId, juce::Colour(0xffe65100));
+    isolateBeatBtn.setColour(juce::TextButton::textColourOffId, juce::Colours::white);
+    isolateBeatBtn.onClick = [this] { onIsolateBeatClicked(); };
+    addAndMakeVisible(isolateBeatBtn);
+
+    derechosAiBtn.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff4a148c));
     derechosAiBtn.setColour(juce::TextButton::textColourOffId, juce::Colours::white);
     derechosAiBtn.onClick = [this] { onApplyDerechosClicked(); };
     addAndMakeVisible(derechosAiBtn);
 
-    verifyFreeBtn.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff0d5c3a));
-    verifyFreeBtn.setColour(juce::TextButton::textColourOffId, juce::Colour(0xff69f0ae));
-    verifyFreeBtn.onClick = [this] { onVerifyDerechosFreeClicked(); };
-    addAndMakeVisible(verifyFreeBtn);
+    detectCopyrightBtn.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff0d5c3a));
+    detectCopyrightBtn.setColour(juce::TextButton::textColourOffId, juce::Colour(0xff69f0ae));
+    detectCopyrightBtn.onClick = [this] { onCheckCopyrightOriginalClicked(); };
+    addAndMakeVisible(detectCopyrightBtn);
 
     // Fila 5: Barra de Progreso, Estado e Indicador de Derechos
     currentProgressValue = static_cast<double>(audioProcessor.getExtractionProgress());
@@ -548,6 +553,12 @@ void ClipSamplerAudioProcessorEditor::timerCallback()
     detectDurationButton.setEnabled(unlocked && !fetchingMeta);
     updateExtractorButton.setEnabled(unlocked && !updating);
 
+    const bool hasAudio1 = audioProcessor.hasSlotAudio(1);
+    isolateVocalsBtn.setEnabled(unlocked && !extracting && hasAudio1);
+    isolateBeatBtn.setEnabled(unlocked && !extracting && hasAudio1);
+    derechosAiBtn.setEnabled(unlocked && !extracting && hasAudio1);
+    detectCopyrightBtn.setEnabled(unlocked && !extracting && hasAudio1);
+
     // El botón "Nueva Extracción" se habilita al tener tanto el Audio 1 como el Audio 2 listos
     newExtractionButton.setEnabled(unlocked && !extracting && bothAudiosReady);
     if (bothAudiosReady)
@@ -681,10 +692,38 @@ void ClipSamplerAudioProcessorEditor::onNewExtractionClicked()
     timerCallback();
 }
 
+void ClipSamplerAudioProcessorEditor::onIsolateVocalsClicked()
+{
+    juce::String report;
+    if (audioProcessor.separateAndLoadStem(ClipSamplerAudioProcessor::StemType::Vocals, report))
+    {
+        updateFxAndMpcUiState();
+        originalWaveformComponent.repaint();
+        transformedWaveformComponent.repaint();
+    }
+    timerCallback();
+}
+
+void ClipSamplerAudioProcessorEditor::onIsolateBeatClicked()
+{
+    juce::String report;
+    if (audioProcessor.separateAndLoadStem(ClipSamplerAudioProcessor::StemType::Beat, report))
+    {
+        updateFxAndMpcUiState();
+        originalWaveformComponent.repaint();
+        transformedWaveformComponent.repaint();
+    }
+    timerCallback();
+}
+
 void ClipSamplerAudioProcessorEditor::onCheckCopyrightOriginalClicked()
 {
     juce::String report;
-    audioProcessor.analyzeOriginalCopyright(report);
+    const int curSlot = audioProcessor.getActiveSlot();
+    if (curSlot == 2 && audioProcessor.hasSlotAudio(2))
+        audioProcessor.verifyTransformedAudioCopyrightFree(report);
+    else
+        audioProcessor.analyzeOriginalCopyright(report);
     timerCallback();
 }
 
@@ -694,8 +733,8 @@ void ClipSamplerAudioProcessorEditor::onApplyDerechosClicked()
     nextShiftPositive = !nextShiftPositive;
 
     juce::String nextBtnLabel = nextShiftPositive
-        ? juce::String::fromUTF8("2. Derechos IA (Alterar +3 Semitonos)")
-        : juce::String::fromUTF8("2. Derechos IA (Alterar -3 Semitonos)");
+        ? juce::String::fromUTF8("🤖 Derechos IA (+3 st)")
+        : juce::String::fromUTF8("🤖 Derechos IA (-3 st)");
     derechosAiBtn.setButtonText(nextBtnLabel);
 
     juce::String report;
@@ -1251,14 +1290,16 @@ void ClipSamplerAudioProcessorEditor::resized()
 
     topInner.removeFromTop(gapY);
 
-    // Fila 4: 3 Botones proporcionales de Derechos de Autor e IA
+    // Fila 4: 4 Botones proporcionales de Inteligencia Artificial (Vocales IA, Beat IA, Derechos ±3st, Verificar)
     auto rightsRow = topInner.removeFromTop(rowH);
-    const int rightsW = (rightsRow.getWidth() - 12) / 3;
-    detectCopyrightBtn.setBounds(rightsRow.removeFromLeft(rightsW));
+    const int fourthRightsW = (rightsRow.getWidth() - 18) / 4;
+    isolateVocalsBtn.setBounds(rightsRow.removeFromLeft(fourthRightsW));
     rightsRow.removeFromLeft(6);
-    derechosAiBtn.setBounds(rightsRow.removeFromLeft(rightsW));
+    isolateBeatBtn.setBounds(rightsRow.removeFromLeft(fourthRightsW));
     rightsRow.removeFromLeft(6);
-    verifyFreeBtn.setBounds(rightsRow);
+    derechosAiBtn.setBounds(rightsRow.removeFromLeft(fourthRightsW));
+    rightsRow.removeFromLeft(6);
+    detectCopyrightBtn.setBounds(rightsRow);
 
     topInner.removeFromTop(gapY);
 

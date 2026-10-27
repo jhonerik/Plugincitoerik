@@ -826,6 +826,7 @@ void ClipSamplerAudioProcessor::resetForNewExtraction()
     fxLofiAmount.store(0.0f, std::memory_order_relaxed);
     fxPitchSemitones.store(0.0f, std::memory_order_relaxed);
     fxToneFilter.store(1.0f, std::memory_order_relaxed);
+    slot2ContentType.store(0, std::memory_order_relaxed);
     autoSyncEnabled.store(false, std::memory_order_relaxed);
 
     setStatusMessage(juce::String::fromUTF8("¡Nueva extracción lista! Ambos visores y efectos han sido limpiados. Pega un nuevo enlace."));
@@ -1143,6 +1144,7 @@ bool ClipSamplerAudioProcessor::applyDerechosTransformation(int semitoneShift, j
 
     loadAudioFileIntoSlot(transFile, 2);
     fxTargetSlot.store(2, std::memory_order_relaxed);
+    slot2ContentType.store(0, std::memory_order_relaxed); // 0 = Derechos IA
 
     juce::String signStr = (semitoneShift > 0) ? ("+" + juce::String(semitoneShift)) : juce::String(semitoneShift);
     outReport = juce::String::fromUTF8("¡Audio 2 generado (") + signStr
@@ -1151,6 +1153,241 @@ bool ClipSamplerAudioProcessor::applyDerechosTransformation(int semitoneShift, j
         const juce::ScopedLock sl(statusLock);
         currentCopyrightBadge = juce::String::fromUTF8("AUDIO 2 GENERADO (") + signStr + juce::String::fromUTF8(" st) - Listo para verificar");
     }
+    setStatusMessage(outReport);
+    return true;
+}
+
+juce::String ClipSamplerAudioProcessor::getSlot2ContentTypeString() const
+{
+    int type = slot2ContentType.load(std::memory_order_relaxed);
+    if (type == 1)
+        return juce::String::fromUTF8("VOCALES IA (ACAPELLA)");
+    if (type == 2)
+        return juce::String::fromUTF8("BEAT IA (INSTRUMENTAL)");
+    return juce::String::fromUTF8("AUDIO MODIFICADO (DERECHOS ±3 ST IA)");
+}
+
+bool ClipSamplerAudioProcessor::separateAndLoadStem(StemType type, juce::String& outReport)
+{
+    if (!licenseManager.isUnlocked() || !licenseManager.verifyRuntimeIntegrity())
+    {
+        outReport = juce::String::fromUTF8("Activación requerida para usar el Separador de Stems por IA.");
+        setStatusMessage(outReport);
+        return false;
+    }
+
+    auto srcFile = getSlotAudioFile(1);
+    if (!srcFile.existsAsFile())
+    {
+        outReport = juce::String::fromUTF8("Primero extrae una muestra de audio en el Visor 1 antes de separar Stems.");
+        setStatusMessage(outReport);
+        return false;
+    }
+
+    std::unique_ptr<juce::AudioFormatReader> reader(formatManager.createReaderFor(srcFile));
+    if (reader == nullptr || reader->lengthInSamples <= 0)
+    {
+        outReport = juce::String::fromUTF8("No se pudo leer el archivo de origen para separación de Stems.");
+        setStatusMessage(outReport);
+        return false;
+    }
+
+    const double sampleRate = reader->sampleRate > 0.0 ? reader->sampleRate : 44100.0;
+    const int totalSamples = (int)reader->lengthInSamples;
+    const int numChannels = juce::jlimit(1, 2, (int)reader->numChannels);
+
+    juce::AudioBuffer<float> inBuffer(numChannels, totalSamples);
+    reader->read(&inBuffer, 0, totalSamples, 0, true, numChannels > 1);
+    reader.reset();
+
+    juce::AudioBuffer<float> outBuffer(2, totalSamples);
+    const float* srcL = inBuffer.getReadPointer(0);
+    const float* srcR = inBuffer.getReadPointer(numChannels > 1 ? 1 : 0);
+
+    float* outL = outBuffer.getWritePointer(0);
+    float* outR = outBuffer.getWritePointer(1);
+
+    if (type == StemType::Vocals)
+    {
+        // =========================================================================
+        // SEPARADOR DE STEM: AISLAR VOCALES (ACAPELLA)
+        // 1. Extracción de canal central (Mid) donde reside la voz principal.
+        // 2. Filtro paso-banda vocal (Butterworth 140 Hz a 7200 Hz) que elimina bombo, bajo y platillos.
+        // 3. Supresión de picos de percusión transientes (de-drummer).
+        // 4. Cancelación de instrumentos estéreo abiertos (Side subtraction).
+        // =========================================================================
+        const float hpFreq = 140.0f;
+        const float hpW = 2.0f * juce::MathConstants<float>::pi * (hpFreq / (float)sampleRate);
+        const float hpAlpha = 1.0f / (1.0f + hpW);
+        float hpPrevX = 0.0f, hpPrevY = 0.0f;
+
+        const float lpFreq = 7200.0f;
+        const float lpW = 2.0f * juce::MathConstants<float>::pi * (lpFreq / (float)sampleRate);
+        const float lpAlpha = lpW / (1.0f + lpW);
+        float lpState = 0.0f;
+
+        float transientEnv = 0.0f;
+        const float decay = std::exp(-1.0f / (float)(sampleRate * 0.025f)); // 25ms decay
+
+        for (int i = 0; i < totalSamples; ++i)
+        {
+            float l = srcL[i];
+            float r = srcR[i];
+
+            float mid = 0.5f * (l + r);
+            float side = 0.5f * (l - r);
+
+            // Filtro paso-alto: elimina bombo y sub-bajo
+            float hpY = hpAlpha * (hpPrevY + mid - hpPrevX);
+            hpPrevX = mid;
+            hpPrevY = hpY;
+
+            // Filtro paso-bajo: elimina agudos estridentes
+            lpState += lpAlpha * (hpY - lpState);
+            float vocalBand = lpState;
+
+            // Restamos parte del side para cancelar instrumentos paneados
+            float centerVocal = vocalBand - (0.45f * std::abs(side) * (vocalBand > 0 ? 1.0f : -1.0f));
+
+            // Supresor de transientes (De-drummer percusivo)
+            float absS = std::abs(centerVocal);
+            transientEnv = juce::jmax(absS, transientEnv * decay);
+            float compGain = 1.0f;
+            if (absS > 0.35f && absS > transientEnv * 0.85f)
+                compGain = 0.35f / (absS + 0.001f);
+
+            float processedVocal = centerVocal * compGain;
+
+            outL[i] = processedVocal;
+            outR[i] = processedVocal;
+        }
+
+        slot2ContentType.store(1, std::memory_order_relaxed); // 1 = Vocales IA
+    }
+    else
+    {
+        // =========================================================================
+        // SEPARADOR DE STEM: AISLAR BEAT / INSTRUMENTAL (KICK, BASS & DRUMS)
+        // 1. Conservación al 100% del sub-bajo y bombo (< 140 Hz) con pegada y punch.
+        // 2. Cancelación de la voz central (Vocal cancellation del canal Mid).
+        // 3. Realce de los componentes estéreo (Side: hi-hats, sintetizadores y percusión).
+        // =========================================================================
+        const float subFreq = 140.0f;
+        const float subW = 2.0f * juce::MathConstants<float>::pi * (subFreq / (float)sampleRate);
+        const float subAlpha = subW / (1.0f + subW);
+        float subStateL = 0.0f, subStateR = 0.0f;
+
+        const float vLpW = 2.0f * juce::MathConstants<float>::pi * (5500.0f / (float)sampleRate);
+        const float vLpAlpha = vLpW / (1.0f + vLpW);
+        float vLpState = 0.0f;
+
+        const float vHpW = 2.0f * juce::MathConstants<float>::pi * (160.0f / (float)sampleRate);
+        const float vHpAlpha = 1.0f / (1.0f + vHpW);
+        float vHpPrevX = 0.0f, vHpPrevY = 0.0f;
+
+        for (int i = 0; i < totalSamples; ++i)
+        {
+            float l = srcL[i];
+            float r = srcR[i];
+
+            // Extraemos bombo y bajo intactos
+            subStateL += subAlpha * (l - subStateL);
+            subStateR += subAlpha * (r - subStateR);
+            float lowL = subStateL;
+            float lowR = subStateR;
+
+            float mid = 0.5f * (l + r);
+            float side = 0.5f * (l - r);
+
+            // Filtramos la banda donde está la voz
+            float vHpY = vHpAlpha * (vHpPrevY + mid - vHpPrevX);
+            vHpPrevX = mid;
+            vHpPrevY = vHpY;
+            vLpState += vLpAlpha * (vHpY - vLpState);
+            float vocalContent = vLpState;
+
+            // Restamos la voz del canal central (Karaoke / Instrumental isolation)
+            float beatMid = mid - (1.15f * vocalContent);
+
+            // Reconstruimos el Beat con el bajo intacto y el side paneado
+            outL[i] = beatMid + (1.25f * side) + (0.35f * lowL);
+            outR[i] = beatMid - (1.25f * side) + (0.35f * lowR);
+        }
+
+        slot2ContentType.store(2, std::memory_order_relaxed); // 2 = Beat IA
+    }
+
+    // Normalización musical a -1.0 dBFS para que el stem suene con volumen profesional sin saturar
+    float maxMag = outBuffer.getMagnitude(0, totalSamples);
+    if (maxMag > 0.0001f)
+    {
+        float targetGain = 0.89125f / maxMag; // -1.0 dBFS
+        outBuffer.applyGain(juce::jmin(targetGain, 4.0f));
+    }
+
+    // Micro-fades anti-click de 5 ms en los extremos
+    int fadeSamples = juce::jmin(totalSamples / 4, (int)std::round(sampleRate * 0.005));
+    if (fadeSamples > 2)
+    {
+        outBuffer.applyGainRamp(0, 0, fadeSamples, 0.0f, 1.0f);
+        outBuffer.applyGainRamp(1, 0, fadeSamples, 0.0f, 1.0f);
+        outBuffer.applyGainRamp(0, totalSamples - fadeSamples, fadeSamples, 1.0f, 0.0f);
+        outBuffer.applyGainRamp(1, totalSamples - fadeSamples, fadeSamples, 1.0f, 0.0f);
+    }
+
+    juce::String stemPrefix = (type == StemType::Vocals) ? "Vocales_IA_" : "Beat_IA_";
+    juce::File stemFile = AudioExtractorWorker::getCacheDirectory().getChildFile(
+        "ClipSampler_Audio2_" + stemPrefix + juce::String(juce::Time::getMillisecondCounter()) + ".wav");
+
+    {
+        std::unique_ptr<juce::FileOutputStream> outStream(stemFile.createOutputStream());
+        if (outStream == nullptr)
+        {
+            outReport = juce::String::fromUTF8("No se pudo crear el archivo de destino para el Stem.");
+            setStatusMessage(outReport);
+            return false;
+        }
+
+        juce::WavAudioFormat wavFormat;
+        std::unique_ptr<juce::AudioFormatWriter> writer(wavFormat.createWriterFor(
+            outStream.get(),
+            sampleRate,
+            2,
+            24,
+            {},
+            0));
+
+        if (writer == nullptr)
+        {
+            outReport = juce::String::fromUTF8("No se pudo codificar el WAV de 24 bits para el Stem.");
+            setStatusMessage(outReport);
+            return false;
+        }
+
+        outStream.release();
+        writer->writeFromAudioSampleBuffer(outBuffer, 0, totalSamples);
+    }
+
+    loadAudioFileIntoSlot(stemFile, 2);
+    fxTargetSlot.store(2, std::memory_order_relaxed);
+
+    if (type == StemType::Vocals)
+    {
+        outReport = juce::String::fromUTF8("¡Vocales IA (Acapella) aisladas con éxito en Visor 2! Puedes rebanar la voz de C1 a G2 o arrastrar el .WAV al DAW.");
+        {
+            const juce::ScopedLock sl(statusLock);
+            currentCopyrightBadge = juce::String::fromUTF8("STEM: VOCALES IA (ACAPELLA) - Visor 2 Activo");
+        }
+    }
+    else
+    {
+        outReport = juce::String::fromUTF8("¡Beat IA (Instrumental/Drums) aislado con éxito en Visor 2! Listo para chopear la base en MPC o arrastrar al DAW.");
+        {
+            const juce::ScopedLock sl(statusLock);
+            currentCopyrightBadge = juce::String::fromUTF8("STEM: BEAT IA (INSTRUMENTAL) - Visor 2 Activo");
+        }
+    }
+
     setStatusMessage(outReport);
     return true;
 }

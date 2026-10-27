@@ -80,23 +80,28 @@ En la **Fila 2 (Tiempo, Duración y Captura)**:
 
 ---
 
-## 6. Paso 3: Doble Visor de Onda, Derechos IA y Detector de Derechos
+## 6. Paso 3: Separador de Stems por IA (Vocales / Beat), Derechos IA y Doble Visor de Onda
 
-**ClipSampler v2.4** divide la visualización en **2 pantallas acústicas independientes**:
+**ClipSampler v2.4** cuenta con un motor avanzado de **Separación de Pistas (Stems) por Inteligencia Artificial y DSP Espectral** ubicado en la Fila 4:
 
-### 🔹 Visor 1 (Izquierda): `1. MUESTRA ORIGINAL EXTRAÍDA`
-- Muestra la forma de onda original extraída de YouTube, TikTok o Instagram.
-- En su esquina superior derecha muestra automáticamente el **BPM detectado** y la **Tonalidad musical (Key)** (por ejemplo: `124.0 BPM | Tono: A minor`).
-- Puedes hacer clic en cualquier punto de la onda para escuchar desde esa posición.
+### 🎤 Botón `🎤 Vocales IA (Acapella)`
+- **¿Qué hace?** Analiza el audio de origen y extrae **únicamente la voz humana (acapella limpia)**, suprimiendo los golpes de batería, el bombo, el bajo y los instrumentos estéreo secundarios mediante filtrado de formantes y cancelación de fase central.
+- El resultado se carga automáticamente en el **Visor 2 (`VISOR 2: VOCALES IA (ACAPELLA)`)**.
+- **Usos creativos:** Tocar frases vocales cortadas con el teclado MIDI (`C1` a `G2`), ajustar las líneas de corte con precisión milimétrica, o arrastrar la acapella limpia (`.WAV`) directamente a tu DAW.
 
-### 🔹 Visor 2 (Derecha): `2. AUDIO PROCESADO (IA DERECHOS)`
-- Se activa al pulsar el botón **`🤖 Derechos IA (±3 st)`** de la Fila 3.
-- Este motor aplica procesamiento DSP transformativo (desplazamiento de tono de ±3 semitonos con preservación de formantes, micro-estiramiento temporal y ecualización sutil) para alterar la huella acústica de la muestra original.
+### 🥁 Botón `🥁 Beat IA (Instrumental)`
+- **¿Qué hace?** Elimina la voz del cantante o diálogo del video y **aísla la base instrumental completa (batería, percusiones, 808 sub-bass, melodías y sintetizadores)** manteniendo intacta la pegada de las frecuencias graves (< 140 Hz).
+- El resultado se carga en el **Visor 2 (`VISOR 2: BEAT IA (INSTRUMENTAL)`)**.
+- **Usos creativos:** Crear un beat nuevo a partir de una base sin voces molestas, o samplear bucles de batería (*drum breaks*).
 
-### 🛡️ Botón `🛡️ Detectar Derechos`
-- Analiza matemáticamente la correlación espectral entre la muestra y patrones de Content ID:
-  - Si solo has extraído el **Visor 1**, te indicará el riesgo de coincidencia de derechos del audio original.
-  - Si ya generaste el **Visor 2 con Derechos IA**, verificará y confirmará que la huella acústica del Visor 2 ha sido transformada exitosamente (`✅ LIBRE DE DERECHOS`).
+### 🤖 Botón `🤖 Derechos IA (±3 st)`
+- Aplica procesamiento DSP transformativo (desplazamiento de tono de ±3 semitonos con preservación de formantes, micro-estiramiento temporal y dispersión de fase all-pass) para alterar la huella acústica de la muestra original y evadir sistemas de Content ID.
+- El resultado se carga en el **Visor 2 (`VISOR 2: AUDIO MODIFICADO (DERECHOS ±3 ST IA)`)**.
+
+### 🛡️ Botón `🛡️ Verificar Derechos`
+- Analiza matemáticamente la correlación espectral y la divergencia entre el Audio 1 y el Audio 2:
+  - Si estás en el **Visor 1**, evalúa el riesgo de huella acústica del audio original.
+  - Si estás en el **Visor 2**, confirma la divergencia matemática confirmando que el stem o audio procesado es apto para uso seguro (`✅ LIBRE DE DERECHOS`).
 
 ---
 

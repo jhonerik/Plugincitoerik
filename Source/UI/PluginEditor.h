@@ -295,6 +295,8 @@ private:
     void onDetectDurationClicked();
     void onExtractDurationClicked(int durationSec);
     void onNewExtractionClicked();
+    void onIsolateVocalsClicked();
+    void onIsolateBeatClicked();
     void onCheckCopyrightOriginalClicked();
     void onApplyDerechosClicked();
     void onVerifyDerechosFreeClicked();
@@ -332,7 +334,7 @@ private:
     // =========================================================================
     juce::GroupComponent topSectionGroup {
         "topGroup",
-        juce::String::fromUTF8("1. PLATAFORMA (YOUTUBE / TIKTOK / INSTAGRAM), EXTRACCIÓN (3s/10s/30s) Y DERECHOS IA")
+        juce::String::fromUTF8("1. PLATAFORMA (YOUTUBE / TIKTOK / INSTAGRAM), EXTRACCIÓN Y STEMS IA (VOCALES / BEAT)")
     };
 
     // Fila 0: Selector de Plataforma
@@ -360,10 +362,12 @@ private:
     juce::TextButton extract30sButton    { juce::String::fromUTF8("Extraer 30 Segundos") };
     juce::TextButton newExtractionButton { juce::String::fromUTF8("Nueva Extracción (2 Audios)") };
 
-    // Fila 4: Suite de 3 botones de Derechos de Autor e IA
-    juce::TextButton detectCopyrightBtn { juce::String::fromUTF8("1. Detectar Derechos (Audio 1)") };
-    juce::TextButton derechosAiBtn      { juce::String::fromUTF8("2. Derechos IA (Alterar +3 Semitonos)") };
-    juce::TextButton verifyFreeBtn      { juce::String::fromUTF8("3. Verificar Audio 2 (Sin Derechos)") };
+    // Fila 4: Suite de 4 botones de Inteligencia Artificial (Vocales, Beat, Derechos IA, Verificar)
+    juce::TextButton isolateVocalsBtn   { juce::String::fromUTF8("🎤 Vocales IA") };
+    juce::TextButton isolateBeatBtn     { juce::String::fromUTF8("🥁 Beat IA") };
+    juce::TextButton derechosAiBtn      { juce::String::fromUTF8("🤖 Derechos IA (±3 st)") };
+    juce::TextButton detectCopyrightBtn { juce::String::fromUTF8("🛡️ Verificar Derechos") };
+    juce::TextButton verifyFreeBtn      { juce::String::fromUTF8("Verificar Audio 2") };
 
     // Fila 5: Barra de progreso y estado
     double currentProgressValue = 0.0;
