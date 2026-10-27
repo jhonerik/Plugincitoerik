@@ -1,11 +1,11 @@
 cmake_minimum_required(VERSION 3.22)
 
 # ==============================================================================
-# ClipSampler v2.4 - Instrumento Virtual (VST3 / AAX)
+# ClipSampler v2.5 - Instrumento Virtual (VST3 / AAX)
 # Extractor Multi-Plataforma (YouTube, TikTok, Instagram), Rebanador MPC,
 # Procesador de Efectos Macro, Detector de BPM/Tonalidad y Conversor Audio a MIDI.
 # ==============================================================================
-project(ClipSampler VERSION 2.4.0 LANGUAGES C CXX)
+project(ClipSampler VERSION 2.5.0 LANGUAGES C CXX)
 
 # Estándar C++17 requerido por JUCE 8 y las utilidades modernas de concurrencia
 set(CMAKE_CXX_STANDARD 17)

@@ -15,12 +15,15 @@
  */
 struct ChopSlice
 {
+    int sliceIndex = 0;     ///< Índice numérico de la rodaja (0 .. N-1).
     int midiNote = 36;      ///< Número de nota MIDI asignada (36 = C1 .. 55 = G2).
     juce::String noteName;  ///< Nombre legible de la nota (ej. "C1", "C#1", "D1").
     int startSample = 0;    ///< Índice del sample donde inicia la rodaja.
     int endSample = 0;      ///< Índice del sample donde termina la rodaja.
     float startNorm = 0.0f; ///< Posición normalizada de inicio (0.0 a 1.0) para dibujo en el visor.
     float endNorm = 1.0f;   ///< Posición normalizada de fin (0.0 a 1.0) para dibujo en el visor.
+    bool isReversed = false; ///< true si esta rodaja se reproduce en sentido inverso (Reverse).
+    bool isHalfTime = false; ///< true si esta rodaja se reproduce a mitad de velocidad (Half-Time 0.5x).
 };
 
 /**
@@ -186,6 +189,14 @@ public:
 
     /** Genera y devuelve un archivo .WAV exclusivo con el trozo exacto seleccionado listo para arrastrar al DAW. */
     juce::File getOrCreateSelectedSliceWavFile(int slotIndex);
+
+    /** Alterna o consulta la reproducción en reversa (Reverse) para la rodaja indicada. */
+    bool toggleSliceReverse(int slotIndex, int sliceIndex);
+    bool isSliceReversed(int slotIndex, int sliceIndex) const;
+
+    /** Alterna o consulta la reproducción a mitad de velocidad (Half-Time 0.5x) para la rodaja indicada. */
+    bool toggleSliceHalfTime(int slotIndex, int sliceIndex);
+    bool isSliceHalfTime(int slotIndex, int sliceIndex) const;
 
     //==============================================================================
     // Macro de Efectos (Lo-Fi 12-Bit, Tono en Semitonos, Filtro y Sincronización BPM)
@@ -393,6 +404,7 @@ private:
         bool releasing = false;       ///< true mientras hace fade-out (detenida, NoteOff o reemplazada por otra rodaja).
         double position = 0.0;        ///< Posición fraccionaria de lectura dentro del buffer.
         double notePitchRatio = 1.0;  ///< Ratio de tono de la nota MIDI (1.0 en modo MPC/Play; 2^((nota-60)/12) en modo Cromático).
+        int startSample = 0;          ///< Primer sample de la región a reproducir.
         int endSample = 0;            ///< Último sample (exclusivo) de la región a reproducir.
         int sliceIndex = -1;          ///< Rodaja MPC que suena (-1 = muestra completa).
         int midiNote = -1;            ///< Nota MIDI asociada en modo cromático (-1 = disparo one-shot).
@@ -400,12 +412,16 @@ private:
         float targetGain = 1.0f;      ///< Ganancia final tras el fade-in (velocity MIDI).
         float gainStep = 0.0f;        ///< Incremento de ganancia por sample (positivo = fade-in, negativo = fade-out).
         juce::uint32 order = 0;       ///< Orden de disparo (la voz más reciente define el cabezal visual).
+        bool isReversed = false;      ///< true si reproduce hacia atrás (Reverse).
+        bool isHalfTime = false;      ///< true si reproduce a mitad de velocidad (Half-Time 0.5x).
     };
 
     std::shared_ptr<PlaybackData> acquirePlaybackData() const;
     void publishPlaybackData(std::shared_ptr<PlaybackData> newData);
     void requestPlayRegion(int startSample, int endSample, int sliceIndex);
-    void startVoice(const PlaybackData& data, int startSample, int endSample, int sliceIndex, float velocityGain, double notePitchRatio = 1.0, int midiNote = -1, bool chokeExisting = true);
+    void startVoice(const PlaybackData& data, int startSample, int endSample, int sliceIndex,
+                    float velocityGain, double notePitchRatio = 1.0, int midiNote = -1,
+                    bool chokeExisting = true, bool isReversed = false, bool isHalfTime = false);
     void releaseVoiceForMidiNote(int midiNote);
     void releaseAllVoices();
     void killAllVoices();

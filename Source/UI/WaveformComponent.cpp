@@ -118,11 +118,47 @@ void WaveformComponent::mouseDown(const juce::MouseEvent& event)
 {
     grabKeyboardFocus();
 
-    if (!event.mods.isLeftButtonDown())
-        return;
-
     auto slotFile = processor.getSlotAudioFile(slotIndex);
     if (!slotFile.existsAsFile())
+        return;
+
+    // Clic Secundario / Derecho: Menú contextual rápido para Reverse y Half-Time de la rodaja bajo el cursor
+    if (event.mods.isPopupMenu())
+    {
+        float clickNorm = getNormalizedXFromEvent(event);
+        ChopSlice chosenSlice;
+        if (processor.selectSliceAtNormalizedPosition(slotIndex, clickNorm, chosenSlice))
+        {
+            int sIdx = chosenSlice.sliceIndex;
+            bool isRev = chosenSlice.isReversed;
+            bool isHalf = chosenSlice.isHalfTime;
+
+            juce::PopupMenu menu;
+            menu.addItem(1, juce::String::fromUTF8("◀ Invertir Rodaja [") + chosenSlice.noteName + juce::String::fromUTF8("] (Reverse)"), true, isRev);
+            menu.addItem(2, juce::String::fromUTF8("⏳ Media Velocidad [") + chosenSlice.noteName + juce::String::fromUTF8("] (Half-Time 0.5x)"), true, isHalf);
+
+            menu.showMenuAsync(juce::PopupMenu::Options().withTargetComponent(this),
+                [this, sIdx](int result) {
+                    if (result == 1)
+                    {
+                        processor.toggleSliceReverse(slotIndex, sIdx);
+                        repaint();
+                        if (auto* parent = getParentComponent())
+                            parent->repaint();
+                    }
+                    else if (result == 2)
+                    {
+                        processor.toggleSliceHalfTime(slotIndex, sIdx);
+                        repaint();
+                        if (auto* parent = getParentComponent())
+                            parent->repaint();
+                    }
+                });
+        }
+        return;
+    }
+
+    if (!event.mods.isLeftButtonDown())
         return;
 
     // Si el usuario hace clic cerca de una línea divisoria entre rodajas, activamos el arrastre manual milimétrico
@@ -475,6 +511,10 @@ void WaveformComponent::paint(juce::Graphics& g)
                     juce::String labelTxt = isThisSliceSelected
                         ? (juce::String::fromUTF8("✂") + s.noteName)
                         : s.noteName;
+                    if (s.isReversed)
+                        labelTxt += juce::String::fromUTF8(" ◀");
+                    if (s.isHalfTime)
+                        labelTxt += juce::String::fromUTF8(" ½");
                     g.drawFittedText(labelTxt, padBox.toNearestInt(), juce::Justification::centred, 1, 0.68f);
                 }
             }

@@ -1,6 +1,6 @@
-# 🎹 Manual de Usuario — ClipSampler v2.4
+# 🎹 Manual de Usuario — ClipSampler v2.5
 
-Bienvenido al **Manual Oficial de Usuario de ClipSampler v2.4**, el instrumento virtual (**VST3 / AAX**) diseñado para productores musicales, beatmakers y diseñadores de sonido que desean capturar fragmentos de audio desde **YouTube, TikTok e Instagram**, transformarlos creativamente y convertirlos en samples listos para tocar en MIDI o arrastrar directamente al DAW.
+Bienvenido al **Manual Oficial de Usuario de ClipSampler v2.5**, el instrumento virtual (**VST3 / AAX**) diseñado para productores musicales, beatmakers y diseñadores de sonido que desean capturar fragmentos de audio desde **YouTube, TikTok e Instagram**, transformarlos creativamente y convertirlos en samples listos para tocar en MIDI o arrastrar directamente al DAW.
 
 ---
 
@@ -10,10 +10,10 @@ Bienvenido al **Manual Oficial de Usuario de ClipSampler v2.4**, el instrumento 
 2. [Período de Prueba (3 Días) y Activación de Licencia](#2-período-de-prueba-3-días-y-activación-de-licencia)
 3. [Vista General de la Interfaz (Responsive)](#3-vista-general-de-la-interfaz-responsive)
 4. [Paso 1: Seleccionar Plataforma y Analizar Enlace](#4-paso-1-seleccionar-plataforma-y-analizar-enlace)
-5. [Paso 2: Elegir Tiempo de Inicio y Duración (3s, 10s o 30s)](#5-paso-2-elegir-tiempo-de-inicio-y-duración-3s-10s-o-30s)
-6. [Paso 3: Doble Visor de Onda, Derechos IA y Detector de Derechos](#6-paso-3-doble-visor-de-onda-derechos-ia-y-detector-de-derechos)
+5. [Paso 2: Modo de Extracción (Segundos vs Compases) y Captura](#5-paso-2-modo-de-extracción-segundos-vs-compases-y-captura)
+6. [Paso 3: Doble Visor de Onda, Coloración Analógica, Aire 3D y Derechos IA](#6-paso-3-doble-visor-de-onda-coloración-analógica-aire-3d-y-derechos-ia)
 7. [Paso 4: Modo Auto-Chop (Estilo MPC) y Rack de Efectos Macro](#7-paso-4-modo-auto-chop-estilo-mpc-y-rack-de-efectos-macro)
-8. [Paso 5: Arrastrar Audio (.WAV) y Arrastrar Notas (.MIDI) al DAW](#8-paso-5-arrastrar-audio-wav-y-arrastrar-notas-midi-al-daw)
+8. [Paso 5: Reverse y Half-Time por Pad, Ajuste de Transientes y Exportación](#8-paso-5-reverse-y-half-time-por-pad-ajuste-de-transientes-y-exportación)
 9. [Botón Nueva Extracción y Mantenimiento](#9-botón-nueva-extracción-y-mantenimiento)
 10. [Administración del Generador de Licencias (Para el Propietario)](#10-administración-del-generador-de-licencias-para-el-propietario)
 11. [Solución de Problemas Frecuentes](#11-solución-de-problemas-frecuentes)
@@ -22,7 +22,7 @@ Bienvenido al **Manual Oficial de Usuario de ClipSampler v2.4**, el instrumento 
 
 ## 1. Instalación en tu DAW
 
-1. Ejecuta el instalador **`ClipSampler_Windows_Installer_v2.4.0.exe`** como Administrador.
+1. Ejecuta el instalador **`ClipSampler_Windows_Installer_v2.5.0.exe`** (o `v2.4.0.exe`) como Administrador.
 2. Acepta el acuerdo de licencia y selecciona los formatos que utilices en tu estudio:
    - **VST3 (64-bit):** Compatible con FL Studio, Ableton Live, Cubase, Studio One, Reaper, Bitwig, etc. (Se instala en `C:\Program Files\Common Files\VST3\ClipSampler.vst3`).
    - **AAX (64-bit):** Compatible con Avid Pro Tools.
@@ -33,7 +33,7 @@ Bienvenido al **Manual Oficial de Usuario de ClipSampler v2.4**, el instrumento 
 
 ## 2. Período de Prueba (3 Días) y Activación de Licencia
 
-Al abrir **ClipSampler v2.4** por primera vez:
+Al abrir **ClipSampler v2.5** por primera vez:
 - Contarás automáticamente con **3 días (72 horas) de prueba gratuita** con todas las funciones desbloqueadas.
 - En la esquina superior derecha verás el botón **`⏳ PRUEBA (3 DÍAS)`**.
 - Al hacer clic sobre ese botón (o cuando finalicen los 3 días), se abrirá la ventana de **Activación de Licencia**:
@@ -45,7 +45,7 @@ Al abrir **ClipSampler v2.4** por primera vez:
 
 ## 3. Vista General de la Interfaz (Responsive)
 
-La interfaz de **ClipSampler v2.4** cuenta con un diseño de estudio **Royal Sapphire & Satin Titanium** (azul zafiro profundo con iluminación ambiental) y es **100% adaptable (Responsive)**:
+La interfaz de **ClipSampler v2.5** cuenta con un diseño de estudio **Royal Sapphire & Satin Titanium** (azul zafiro profundo con iluminación ambiental) y es **100% adaptable (Responsive)**:
 - **Redimensionamiento libre:** Puedes arrastrar la esquina inferior derecha del plugin para achicarlo (`680x540`) en pantallas portátiles o expandirlo (`1800x1300`) en monitores de estudio 4K.
 - **Tipografía inteligente:** Todos los botones, etiquetas y encabezados escalan automáticamente su tamaño de letra para que ningún texto se corte ni se superponga.
 
@@ -65,22 +65,27 @@ En la **Fila 1 (Plataforma + URL)**:
 
 ---
 
-## 5. Paso 2: Elegir Tiempo de Inicio y Duración (3s, 10s o 30s)
+## 5. Paso 2: Modo de Extracción (Segundos vs Compases) y Captura
 
-En la **Fila 2 (Tiempo, Duración y Captura)**:
+En la **Fila 2 y Fila 3 (Tiempo, Duración y Captura)**:
 
 1. **Inicio (`MM:SS` o segundos):** Puedes escribir el minuto y segundo exacto donde quieres que empiece la extracción (ej. `01:15` o `75`) o mover la **barra deslizadora de tiempo** que aparece al lado.
-2. **Botones de Duración (`3s`, `10s`, `30s`):**
-   - **`3s`:** Ideal para capturar golpes de batería (one-shots), efectos vocales cortos o tags.
-   - **`10s`:** Ideal para frases melódicas, acordes o loops de 2 a 4 compases.
-   - **`30s`:** Ideal para secciones completas, intros o muestras largas para chopear.
+2. **Selector de Modo (`⏱️ Segundos` / `🎵 Compases`):**
+   - **Modo Segundos (`⏱️ Segundos`):** Muestra los botones clásicos de tiempo fijo:
+     - **`3s`:** Ideal para one-shots, golpes de batería o efectos vocales.
+     - **`10s`:** Frases melódicas y acordes estándar.
+     - **`30s`:** Secciones largas, intros completas para chopear.
+   - **Modo Compases Musicales (`🎵 Compases`):** ¡Exclusivo de ClipSampler v2.5! Sincronizado automáticamente con el tempo (BPM) del DAW o el BPM detectado:
+     - **`1 Bar`:** Recorta exactamente 1 compás (4 tiempos). *Ejemplo: 2.0s a 120 BPM, 1.7s a 140 BPM*.
+     - **`2 Bars`:** Recorta exactamente 2 compases (8 tiempos). *Ejemplo: 4.0s a 120 BPM, 3.4s a 140 BPM*.
+     - **`4 Bars`:** Recorta una progresión completa de 4 compases (16 tiempos) en bucle perfecto.
 3. **Casilla `Norm -1dB`:** Si está activada (recomendado), nivela el volumen del audio extraído a `-1.0 dB` y aplica micro-fundidos de 10 ms al inicio y final para evitar chasquidos (*clicks*).
-4. **Botón `⚡ EXTRAER`:** Inicia la descarga y recorte en alta fidelidad (sincronizado automáticamente con los Hz de tu DAW: 44.1 kHz, 48 kHz, 96 kHz, etc.).
-5. **Botón `🔄 Nueva Extracción`:** Se habilita cuando ya tienes los dos visores con audio y te permite limpiar toda la sesión con un solo clic para pegar un nuevo enlace desde cero.
+4. **Botón `⚡ EXTRAER`:** Inicia la descarga y recorte en alta fidelidad sincronizado a los Hz de tu proyecto.
+5. **Botón `🔄 Nueva Extracción`:** Permite limpiar la sesión con un solo clic para comenzar una nueva captura desde cero.
 
 ---
 
-## 6. Paso 3: Coloración Sutil de Audio (Calor Analógico / Aire 3D), Derechos IA y Doble Visor de Onda
+## 6. Paso 3: Doble Visor de Onda, Coloración Analógica, Aire 3D y Derechos IA
 
 **ClipSampler v2.4** cuenta con una suite de herramientas avanzadas de **Modificación y Coloración de Audio** ubicada en la Fila 4:
 
@@ -137,10 +142,20 @@ En la **Fila 4 (Rack de Efectos Macro + Modo MPC)**:
 
 ---
 
-## 8. Paso 5: Selección por Corte Exacto (`✂ Corte Exacto`), Ajuste Manual de Transientes, Arrastrar Audio (.WAV) y Conversor a MIDI (`🎹 Convertir a MIDI`)
+## 8. Paso 5: Reverse y Half-Time por Pad, Ajuste de Transientes y Exportación
 
-En los **Visores de Onda** y en la **Fila 5 (Barra Inferior de Transporte, Corte Exacto y Exportación)**:
+En los **Visores de Onda** y en la **Fila 5 (Barra Inferior de Transporte, Controles de Pad y Exportación)**:
 
+- **Modificadores Individuales por Pad / Rodaja (Reverse y Half-Time):**
+  - **`◀ Rev` (Invertir Dirección de Audio):**
+    - Reproduce el corte seleccionado en reversa en tiempo real con cero latencia y desvanecimiento anti-chasquidos.
+    - Se activa haciendo clic en el botón **`◀ Rev`** de la barra inferior o haciendo **clic derecho** sobre cualquier rodaja en la onda y seleccionando **`◀ Invertir (Reverse)`**.
+    - El pad reflejará el símbolo **`◀`** en su etiqueta (por ejemplo: `✂C1 ◀`).
+  - **`⏳ 1/2` (Half-Time / Mitad de Velocidad):**
+    - Reproduce el corte al 50% de velocidad (doble de duración) con interpolación suave cúbica tipo cinta vintage (*tape half-speed*).
+    - Se activa con el botón **`⏳ 1/2`** o haciendo **clic derecho** sobre la rodaja y seleccionando **`⏳ Media Velocidad (Half-Time 0.5x)`**.
+    - El pad reflejará el símbolo **`½`** en su etiqueta (por ejemplo: `✂C1 ½` o combinado `✂C1 ◀ ½`).
+  - **Exportación Fiel al DAW:** Al arrastrar la rodaja con Reverse o Half-Time al DAW mediante el botón **`Arrastrar .WAV`** o **`✂ Corte Exacto`**, ClipSampler renderiza automáticamente el audio invertido y/o estirado a media velocidad con calidad PCM de 24-bit.
 - **Ajuste Manual de Transientes (Mover Líneas de Corte con el Cursor):**
   - Pasa el cursor del ratón sobre cualquiera de las líneas divisorias amarillas entre rodajas en el visor.
   - El cursor cambiará automáticamente a la flecha doble de ajuste (`↔`).
@@ -155,7 +170,7 @@ En los **Visores de Onda** y en la **Fila 5 (Barra Inferior de Transporte, Corte
   - Si haces clic en **`✂ Corte Exacto`**, selecciona y reproduce el corte exacto activo (por defecto `C1` si aún no habías hecho doble clic en otro trozo).
   - Mantén presionado el clic izquierdo sobre el botón **`✂ Corte Exacto`** (o directamente sobre la nota iluminada en el visor de onda) y **arrástralo hacia una pista de tu DAW** para pasar únicamente ese trozo de audio y no la muestra completa.
 - **Botón `▶ Reproducir` / `⏹ Detener` (o Barra Espaciadora):** Escucha directamente la muestra activa (o el corte exacto seleccionado) a través del mezclador de tu DAW.
-- **Botón `Arrastrar .WAV`:** Mantén presionado el clic izquierdo sobre este botón (o directamente sobre cualquiera de los dos visores de onda) y arrástralo hacia una pista de audio o sampler de tu DAW. Si tienes un corte exacto seleccionado (ej. `C1`), el botón mostrará `Arrastrar C1 (.WAV)` y arrastrará únicamente ese trozo.
+- **Botón `Arrastrar .WAV`:** Mantén presionado el clic izquierdo sobre este botón (o directamente sobre cualquiera de los dos visores de onda) y arrástralo hacia una pista de audio o sampler de tu DAW. Si tienes un corte exacto seleccionado (ej. `C1`), el botón mostrará `Arrastrar C1 (.WAV)` y arrastrará únicamente ese trozo con sus modificadores de Reverse/Half-time aplicados.
 - **Botón `🎹 Convertir a MIDI`:** Haz clic o mantén presionado el clic izquierdo sobre este botón y arrástralo hacia una pista MIDI o al Piano Roll de tu DAW. **ClipSampler** analiza el audio, transcribe automáticamente sus notas melódicas y transientes, y genera un archivo `.mid` listo para ser interpretado por cualquier sintetizador o instrumento virtual (Serum, Omnisphere, FL Keys, etc.).
 
 ---

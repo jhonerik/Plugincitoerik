@@ -223,7 +223,9 @@ void ClipSamplerAudioProcessor::startVoice(const PlaybackData& data,
                                            float velocityGain,
                                            double notePitchRatio,
                                            int midiNote,
-                                           bool chokeExisting)
+                                           bool chokeExisting,
+                                           bool isReversed,
+                                           bool isHalfTime)
 {
     const int total = data.buffer.getNumSamples();
     if (total <= 2 || data.buffer.getNumChannels() <= 0)
@@ -281,9 +283,12 @@ void ClipSamplerAudioProcessor::startVoice(const PlaybackData& data,
     auto& v = voices[chosenIdx];
     v.active = true;
     v.releasing = false;
-    v.position = (double)safeStart;
-    v.notePitchRatio = juce::jlimit(0.125, 8.0, notePitchRatio);
+    v.startSample = safeStart;
     v.endSample = safeEnd;
+    v.isReversed = isReversed;
+    v.isHalfTime = isHalfTime;
+    v.position = isReversed ? (double)(safeEnd - 1) : (double)safeStart;
+    v.notePitchRatio = juce::jlimit(0.125, 8.0, notePitchRatio);
     v.sliceIndex = sliceIndex;
     v.midiNote = midiNote;
     v.targetGain = juce::jlimit(0.05f, 1.2f, velocityGain);
@@ -347,7 +352,14 @@ void ClipSamplerAudioProcessor::handlePendingTransportCommand(const PlaybackData
         const int startS = pendingStartSample.load(std::memory_order_relaxed);
         const int endS   = pendingEndSample.load(std::memory_order_relaxed);
         const int sliceI = pendingSliceIndex.load(std::memory_order_relaxed);
-        startVoice(data, startS, endS, sliceI, 1.0f, 1.0, -1, true);
+        bool rev = false;
+        bool half = false;
+        if (sliceI >= 0 && sliceI < (int)data.slices.size())
+        {
+            rev = data.slices[(size_t)sliceI].isReversed;
+            half = data.slices[(size_t)sliceI].isHalfTime;
+        }
+        startVoice(data, startS, endS, sliceI, 1.0f, 1.0, -1, true, rev, half);
     }
 }
 
@@ -363,13 +375,13 @@ void ClipSamplerAudioProcessor::triggerNoteFromMidi(const PlaybackData& data, in
             sliceIdx = ((midiNote % numSlices) + numSlices) % numSlices;
 
         const auto& s = data.slices[(size_t)sliceIdx];
-        startVoice(data, s.startSample, s.endSample, sliceIdx, velGain, 1.0, -1, true);
+        startVoice(data, s.startSample, s.endSample, sliceIdx, velGain, 1.0, -1, true, s.isReversed, s.isHalfTime);
     }
     else
     {
         // Modo Cromático Polifónico: C3 (nota 60) es el tono original; permite tocar acordes y melodías fluidas
         const double chromaticRatio = std::pow(2.0, ((double)midiNote - 60.0) / 12.0);
-        startVoice(data, 0, data.buffer.getNumSamples(), -1, velGain, chromaticRatio, midiNote, false);
+        startVoice(data, 0, data.buffer.getNumSamples(), -1, velGain, chromaticRatio, midiNote, false, false, false);
     }
 }
 
@@ -405,10 +417,22 @@ void ClipSamplerAudioProcessor::renderVoices(const PlaybackData& data,
             if (!v.active)
                 continue;
 
-            if (v.position >= (double)v.endSample || v.position >= (double)(total - 1))
+            const bool isRev = v.isReversed;
+            if (isRev)
             {
-                v.active = false;
-                continue;
+                if (v.position < (double)v.startSample || v.position <= 0.0)
+                {
+                    v.active = false;
+                    continue;
+                }
+            }
+            else
+            {
+                if (v.position >= (double)v.endSample || v.position >= (double)(total - 1))
+                {
+                    v.active = false;
+                    continue;
+                }
             }
 
             // Evolución de la envolvente anti-click (fade-in / sustain / fade-out)
@@ -436,9 +460,18 @@ void ClipSamplerAudioProcessor::renderVoices(const PlaybackData& data,
             const float relMs = envelopeReleaseMs.load(std::memory_order_relaxed);
             const int dynamicEndFade = juce::jmax(endFadeSamples, juce::roundToInt((relMs / 1000.0f) * (float)currentSampleRateHz * 0.4f));
             float tailFade = 1.0f;
-            const double samplesLeft = (double)v.endSample - v.position;
-            if (samplesLeft < (double)dynamicEndFade && dynamicEndFade > 0)
-                tailFade = juce::jlimit(0.0f, 1.0f, (float)(samplesLeft / (double)dynamicEndFade));
+            if (isRev)
+            {
+                const double samplesLeft = v.position - (double)v.startSample;
+                if (samplesLeft < (double)dynamicEndFade && dynamicEndFade > 0)
+                    tailFade = juce::jlimit(0.0f, 1.0f, (float)(samplesLeft / (double)dynamicEndFade));
+            }
+            else
+            {
+                const double samplesLeft = (double)v.endSample - v.position;
+                if (samplesLeft < (double)dynamicEndFade && dynamicEndFade > 0)
+                    tailFade = juce::jlimit(0.0f, 1.0f, (float)(samplesLeft / (double)dynamicEndFade));
+            }
 
             const float env = v.gain * tailFade;
             const float sampleL = interpolateHermite4pt(srcL, total, v.position);
@@ -447,7 +480,12 @@ void ClipSamplerAudioProcessor::renderVoices(const PlaybackData& data,
             mixL += sampleL * env;
             mixR += sampleR * env;
 
-            v.position += globalRate * v.notePitchRatio;
+            const double rateMult = v.isHalfTime ? 0.5 : 1.0;
+            const double step = globalRate * v.notePitchRatio * rateMult;
+            if (isRev)
+                v.position -= step;
+            else
+                v.position += step;
         }
 
         dstL[s] += mixL;
@@ -888,7 +926,7 @@ void ClipSamplerAudioProcessor::startSampleExtraction(const juce::String& url, c
 
     lastUrl = url.trim();
     lastStartTime = startTime.trim();
-    const int clampedDuration = (durationSeconds == 3 || durationSeconds == 10 || durationSeconds == 30) ? durationSeconds : 10;
+    const int clampedDuration = juce::jlimit(1, 60, durationSeconds);
     lastSelectedDurationSec.store(clampedDuration, std::memory_order_relaxed);
 
     const SourcePlatform platform = getSelectedPlatform();
@@ -1730,23 +1768,58 @@ juce::File ClipSamplerAudioProcessor::getOrCreateSelectedSliceWavFile(int slotIn
     for (int ch = 0; ch < numCh; ++ch)
         sliceBuf.copyFrom(ch, 0, slotData->buffer, ch, startS, sliceLen);
 
+    // Si la rodaja tiene Reverse activado, invertimos los samples
+    if (chosenSlice.isReversed)
+    {
+        for (int ch = 0; ch < numCh; ++ch)
+        {
+            float* d = sliceBuf.getWritePointer(ch);
+            std::reverse(d, d + sliceLen);
+        }
+    }
+
+    // Si la rodaja tiene Half-Time activado, duplicamos la duración a 0.5x velocidad
+    if (chosenSlice.isHalfTime)
+    {
+        const int halfLen = sliceLen * 2;
+        juce::AudioBuffer<float> halfBuf(numCh, halfLen);
+        for (int ch = 0; ch < numCh; ++ch)
+        {
+            const float* src = sliceBuf.getReadPointer(ch);
+            float* dst = halfBuf.getWritePointer(ch);
+            for (int i = 0; i < halfLen; ++i)
+            {
+                double pos = (double)i * 0.5;
+                dst[i] = interpolateHermite4pt(src, sliceLen, pos);
+            }
+        }
+        sliceBuf = std::move(halfBuf);
+    }
+
+    const int finalSliceLen = sliceBuf.getNumSamples();
+
     // Micro-fade anti-click de 2.5 ms en el inicio y final del corte exacto
     const double sr = loadedFileSampleRate.load(std::memory_order_relaxed) > 8000.0
         ? loadedFileSampleRate.load(std::memory_order_relaxed)
         : 44100.0;
-    const int fadeLen = juce::jmin(sliceLen / 4, juce::jmax(24, (int)std::round(sr * 0.0025)));
+    const int fadeLen = juce::jmin(finalSliceLen / 4, juce::jmax(24, (int)std::round(sr * 0.0025)));
     if (fadeLen > 1)
     {
         for (int ch = 0; ch < numCh; ++ch)
         {
             sliceBuf.applyGainRamp(ch, 0, fadeLen, 0.0f, 1.0f);
-            sliceBuf.applyGainRamp(ch, sliceLen - fadeLen, fadeLen, 1.0f, 0.0f);
+            sliceBuf.applyGainRamp(ch, finalSliceLen - fadeLen, fadeLen, 1.0f, 0.0f);
         }
     }
 
     juce::String safeNote = chosenSlice.noteName.replace("#", "s").retainCharacters("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_");
     if (safeNote.isEmpty())
         safeNote = "Slice" + juce::String(selIdx + 1);
+
+    if (chosenSlice.isReversed)
+        safeNote += "_Rev";
+    if (chosenSlice.isHalfTime)
+        safeNote += "_Half";
 
     juce::File outSliceFile = AudioExtractorWorker::getCacheDirectory().getChildFile(
         "ClipSampler_Audio" + juce::String(targetSlot) + "_CorteExacto_" + safeNote + ".wav");
@@ -1764,7 +1837,7 @@ juce::File ClipSamplerAudioProcessor::getOrCreateSelectedSliceWavFile(int slotIn
             return getSlotAudioFile(targetSlot);
 
         outStream.release();
-        writer->writeFromAudioSampleBuffer(sliceBuf, 0, sliceLen);
+        writer->writeFromAudioSampleBuffer(sliceBuf, 0, finalSliceLen);
     }
 
     {
@@ -1776,6 +1849,106 @@ juce::File ClipSamplerAudioProcessor::getOrCreateSelectedSliceWavFile(int slotIn
     }
 
     return outSliceFile;
+}
+
+bool ClipSamplerAudioProcessor::toggleSliceReverse(int slotIndex, int sliceIndex)
+{
+    const int targetSlot = (slotIndex == 2) ? 2 : 1;
+    const juce::ScopedLock sl(bufferLock);
+    auto& slices = (targetSlot == 2) ? slot2Slices : slot1Slices;
+    if (sliceIndex < 0 || sliceIndex >= (int)slices.size())
+        return false;
+
+    slices[(size_t)sliceIndex].isReversed = !slices[(size_t)sliceIndex].isReversed;
+    const bool nowRev = slices[(size_t)sliceIndex].isReversed;
+
+    if (targetSlot == 2)
+        slot2SelectedSliceWavFile = juce::File();
+    else
+        slot1SelectedSliceWavFile = juce::File();
+
+    auto slotData = (targetSlot == 2) ? slot2PlaybackData : slot1PlaybackData;
+    if (slotData != nullptr)
+    {
+        auto updatedData = std::make_shared<PlaybackData>();
+        updatedData->buffer = slotData->buffer;
+        updatedData->slices = slices;
+        updatedData->slotIndex = targetSlot;
+        updatedData->generation = ++playbackGenerationCounter;
+
+        if (targetSlot == 2)
+            slot2PlaybackData = updatedData;
+        else
+            slot1PlaybackData = updatedData;
+
+        if (activeSlot.load(std::memory_order_relaxed) == targetSlot)
+            publishPlaybackData(updatedData);
+    }
+
+    setStatusMessage(juce::String::fromUTF8("Rodaja [") + slices[(size_t)sliceIndex].noteName
+                     + (nowRev ? juce::String::fromUTF8("]: Reverse (◀ Invertido) ACTIVADO")
+                               : juce::String::fromUTF8("]: Reproducción normal (Adelante)")));
+    return true;
+}
+
+bool ClipSamplerAudioProcessor::isSliceReversed(int slotIndex, int sliceIndex) const
+{
+    const int targetSlot = (slotIndex == 2) ? 2 : 1;
+    const juce::ScopedLock sl(bufferLock);
+    const auto& slices = (targetSlot == 2) ? slot2Slices : slot1Slices;
+    if (sliceIndex >= 0 && sliceIndex < (int)slices.size())
+        return slices[(size_t)sliceIndex].isReversed;
+    return false;
+}
+
+bool ClipSamplerAudioProcessor::toggleSliceHalfTime(int slotIndex, int sliceIndex)
+{
+    const int targetSlot = (slotIndex == 2) ? 2 : 1;
+    const juce::ScopedLock sl(bufferLock);
+    auto& slices = (targetSlot == 2) ? slot2Slices : slot1Slices;
+    if (sliceIndex < 0 || sliceIndex >= (int)slices.size())
+        return false;
+
+    slices[(size_t)sliceIndex].isHalfTime = !slices[(size_t)sliceIndex].isHalfTime;
+    const bool nowHalf = slices[(size_t)sliceIndex].isHalfTime;
+
+    if (targetSlot == 2)
+        slot2SelectedSliceWavFile = juce::File();
+    else
+        slot1SelectedSliceWavFile = juce::File();
+
+    auto slotData = (targetSlot == 2) ? slot2PlaybackData : slot1PlaybackData;
+    if (slotData != nullptr)
+    {
+        auto updatedData = std::make_shared<PlaybackData>();
+        updatedData->buffer = slotData->buffer;
+        updatedData->slices = slices;
+        updatedData->slotIndex = targetSlot;
+        updatedData->generation = ++playbackGenerationCounter;
+
+        if (targetSlot == 2)
+            slot2PlaybackData = updatedData;
+        else
+            slot1PlaybackData = updatedData;
+
+        if (activeSlot.load(std::memory_order_relaxed) == targetSlot)
+            publishPlaybackData(updatedData);
+    }
+
+    setStatusMessage(juce::String::fromUTF8("Rodaja [") + slices[(size_t)sliceIndex].noteName
+                     + (nowHalf ? juce::String::fromUTF8("]: Half-Time (⏳ 0.5x velocidad) ACTIVADO")
+                                : juce::String::fromUTF8("]: Velocidad 1.0x normal")));
+    return true;
+}
+
+bool ClipSamplerAudioProcessor::isSliceHalfTime(int slotIndex, int sliceIndex) const
+{
+    const int targetSlot = (slotIndex == 2) ? 2 : 1;
+    const juce::ScopedLock sl(bufferLock);
+    const auto& slices = (targetSlot == 2) ? slot2Slices : slot1Slices;
+    if (sliceIndex >= 0 && sliceIndex < (int)slices.size())
+        return slices[(size_t)sliceIndex].isHalfTime;
+    return false;
 }
 
 std::vector<ChopSlice> ClipSamplerAudioProcessor::computeTransientSlices(const juce::AudioBuffer<float>& buffer, double sampleRate)
@@ -1874,6 +2047,7 @@ std::vector<ChopSlice> ClipSamplerAudioProcessor::computeTransientSlices(const j
     for (size_t i = 0; i < onsetSamples.size(); ++i)
     {
         ChopSlice s;
+        s.sliceIndex = (int)i;
         s.midiNote = 36 + (int)i; // Mapeo cromático C1 (36) a G2 (55)
         s.noteName = midiNoteToName(s.midiNote);
         s.startSample = onsetSamples[i];

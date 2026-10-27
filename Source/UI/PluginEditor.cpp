@@ -144,7 +144,12 @@ ClipSamplerAudioProcessorEditor::ClipSamplerAudioProcessorEditor(ClipSamplerAudi
     addAndMakeVisible(videoRangeBadgeLabel);
     refreshVideoTimeRangeLabel();
 
-    // Fila 3: Botones de extracción (3s, 10s, 30s) + Botón condicional "Nueva Extracción"
+    // Fila 3: Conmutador de Modo (Segundos vs Compases) + Botones de extracción + "Nueva Extracción"
+    extractModeButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff1e3a5f));
+    extractModeButton.setColour(juce::TextButton::textColourOffId, juce::Colour(0xff7dd3fc));
+    extractModeButton.onClick = [this] { onToggleExtractModeClicked(); };
+    addAndMakeVisible(extractModeButton);
+
     extract3sButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xffd81b60));
     extract3sButton.setColour(juce::TextButton::textColourOffId, juce::Colours::white);
     extract3sButton.onClick = [this] { onExtractDurationClicked(3); };
@@ -356,6 +361,16 @@ ClipSamplerAudioProcessorEditor::ClipSamplerAudioProcessorEditor(ClipSamplerAudi
     exactCutButton.addMouseListener(this, false);
     addAndMakeVisible(exactCutButton);
 
+    padReverseButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff263759));
+    padReverseButton.setColour(juce::TextButton::textColourOffId, juce::Colour(0xffcbd5e1));
+    padReverseButton.onClick = [this] { onPadReverseClicked(); };
+    addAndMakeVisible(padReverseButton);
+
+    padHalfTimeButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff263759));
+    padHalfTimeButton.setColour(juce::TextButton::textColourOffId, juce::Colour(0xffcbd5e1));
+    padHalfTimeButton.onClick = [this] { onPadHalfTimeClicked(); };
+    addAndMakeVisible(padHalfTimeButton);
+
     dragDawButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff6200ea));
     dragDawButton.setColour(juce::TextButton::textColourOffId, juce::Colours::white);
     dragDawButton.onClick = [this] { onDragDawClicked(); };
@@ -532,6 +547,55 @@ void ClipSamplerAudioProcessorEditor::updateFxAndMpcUiState()
         dragDawButton.setButtonText(juce::String::fromUTF8("Arrastrar .WAV"));
     }
 
+    // Actualizar botones de extracción según modo Segundos vs Compases
+    if (isBarsExtractMode)
+    {
+        double bpm = audioProcessor.getHostBpm();
+        if (bpm <= 20.0)
+            bpm = audioProcessor.getDetectedBpm(1);
+        if (bpm <= 20.0)
+            bpm = 120.0;
+
+        double t1 = 1.0 * 4.0 * (60.0 / bpm);
+        double t2 = 2.0 * 4.0 * (60.0 / bpm);
+        double t4 = 4.0 * 4.0 * (60.0 / bpm);
+
+        extract3sButton.setButtonText(juce::String::fromUTF8("1 Bar (") + juce::String(t1, 1) + "s)");
+        extract10sButton.setButtonText(juce::String::fromUTF8("2 Bars (") + juce::String(t2, 1) + "s)");
+        extract30sButton.setButtonText(juce::String::fromUTF8("4 Bars (") + juce::String(t4, 1) + "s)");
+    }
+    else
+    {
+        extract3sButton.setButtonText(juce::String::fromUTF8("Extraer 3 Segundos"));
+        extract10sButton.setButtonText(juce::String::fromUTF8("Extraer 10 Segundos"));
+        extract30sButton.setButtonText(juce::String::fromUTF8("Extraer 30 Segundos"));
+    }
+
+    // Actualizar botones de Reverse y Half-Time para la rodaja seleccionada
+    const int targetSliceForPadFx = (selectedSliceIdx >= 0) ? selectedSliceIdx : audioProcessor.getActivePlayingSlice();
+    if (targetSliceForPadFx >= 0)
+    {
+        const bool isRev = audioProcessor.isSliceReversed(curSlot, targetSliceForPadFx);
+        padReverseButton.setButtonText(isRev ? juce::String::fromUTF8("◀ Rev: SÍ") : juce::String::fromUTF8("◀ Rev"));
+        padReverseButton.setColour(juce::TextButton::buttonColourId, isRev ? juce::Colour(0xffd97706) : juce::Colour(0xff263759));
+        padReverseButton.setColour(juce::TextButton::textColourOffId, isRev ? juce::Colours::white : juce::Colour(0xffcbd5e1));
+
+        const bool isHalf = audioProcessor.isSliceHalfTime(curSlot, targetSliceForPadFx);
+        padHalfTimeButton.setButtonText(isHalf ? juce::String::fromUTF8("⏳ 1/2: SÍ") : juce::String::fromUTF8("⏳ 1/2"));
+        padHalfTimeButton.setColour(juce::TextButton::buttonColourId, isHalf ? juce::Colour(0xff7c3aed) : juce::Colour(0xff263759));
+        padHalfTimeButton.setColour(juce::TextButton::textColourOffId, isHalf ? juce::Colours::white : juce::Colour(0xffcbd5e1));
+    }
+    else
+    {
+        padReverseButton.setButtonText(juce::String::fromUTF8("◀ Rev"));
+        padReverseButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff263759));
+        padReverseButton.setColour(juce::TextButton::textColourOffId, juce::Colour(0xffcbd5e1));
+
+        padHalfTimeButton.setButtonText(juce::String::fromUTF8("⏳ 1/2"));
+        padHalfTimeButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff263759));
+        padHalfTimeButton.setColour(juce::TextButton::textColourOffId, juce::Colour(0xffcbd5e1));
+    }
+
     const double detBpm = audioProcessor.getDetectedBpm(curSlot);
     const juce::String detKey = audioProcessor.getDetectedKey(curSlot);
     const double hostBpm = audioProcessor.getHostBpm();
@@ -667,7 +731,27 @@ void ClipSamplerAudioProcessorEditor::onDetectDurationClicked()
     audioProcessor.detectVideoDuration(url);
 }
 
-void ClipSamplerAudioProcessorEditor::onExtractDurationClicked(int durationSec)
+void ClipSamplerAudioProcessorEditor::onToggleExtractModeClicked()
+{
+    isBarsExtractMode = !isBarsExtractMode;
+    if (isBarsExtractMode)
+    {
+        extractModeButton.setButtonText(juce::String::fromUTF8("🎵 Compases"));
+        extractModeButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff5b21b6));
+        extractModeButton.setColour(juce::TextButton::textColourOffId, juce::Colour(0xffc4b5fd));
+        audioProcessor.setStatusMessage(juce::String::fromUTF8("Modo Compases (Bars) ACTIVADO: Duraciones sincronizadas con el tempo musical (BPM)."));
+    }
+    else
+    {
+        extractModeButton.setButtonText(juce::String::fromUTF8("⏱️ Segundos"));
+        extractModeButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff1e3a5f));
+        extractModeButton.setColour(juce::TextButton::textColourOffId, juce::Colour(0xff7dd3fc));
+        audioProcessor.setStatusMessage(juce::String::fromUTF8("Modo Segundos ACTIVADO: Extracciones fijas de 3s, 10s y 30s."));
+    }
+    updateFxAndMpcUiState();
+}
+
+void ClipSamplerAudioProcessorEditor::onExtractDurationClicked(int opt)
 {
     juce::String url = urlEditor.getText().trim();
     if (url.isEmpty())
@@ -675,6 +759,20 @@ void ClipSamplerAudioProcessorEditor::onExtractDurationClicked(int durationSec)
         audioProcessor.setStatusMessage(juce::String::fromUTF8("Ingresa un enlace válido de YouTube, TikTok o Instagram."));
         statusLabel.setText(audioProcessor.getStatusMessage(), juce::dontSendNotification);
         return;
+    }
+
+    int durationSec = opt;
+    if (isBarsExtractMode)
+    {
+        double bpm = audioProcessor.getHostBpm();
+        if (bpm <= 20.0)
+            bpm = audioProcessor.getDetectedBpm(1);
+        if (bpm <= 20.0)
+            bpm = 120.0;
+
+        int bars = (opt == 3) ? 1 : ((opt == 10) ? 2 : 4);
+        double durDbl = (double)bars * 4.0 * (60.0 / bpm);
+        durationSec = juce::jlimit(1, 60, juce::roundToInt(durDbl));
     }
 
     audioProcessor.startSampleExtraction(url, startTimeEditor.getText(), durationSec);
@@ -889,6 +987,44 @@ void ClipSamplerAudioProcessorEditor::onExactCutClicked()
             juce::String::fromUTF8("✂ CORTE EXACTO ACTIVO [") + sName
             + juce::String::fromUTF8("]: Arrastra este botón '✂ Corte Exacto' o el visor hacia tu DAW para pasar SOLO el trozo ")
             + sName + juce::String::fromUTF8(" (o haz 1 clic en la onda para seleccionar todo el audio)."));
+        originalWaveformComponent.repaint();
+        transformedWaveformComponent.repaint();
+    }
+}
+
+void ClipSamplerAudioProcessorEditor::onPadReverseClicked()
+{
+    const int curSlot = audioProcessor.getActiveSlot();
+    int selSlice = audioProcessor.getSelectedSliceIndex(curSlot);
+    if (selSlice < 0)
+        selSlice = audioProcessor.getActivePlayingSlice();
+    if (selSlice < 0)
+        selSlice = 0; // C1 por defecto
+
+    ChopSlice slice;
+    if (audioProcessor.selectSliceByIndex(curSlot, selSlice, slice))
+    {
+        audioProcessor.toggleSliceReverse(curSlot, selSlice);
+        updateFxAndMpcUiState();
+        originalWaveformComponent.repaint();
+        transformedWaveformComponent.repaint();
+    }
+}
+
+void ClipSamplerAudioProcessorEditor::onPadHalfTimeClicked()
+{
+    const int curSlot = audioProcessor.getActiveSlot();
+    int selSlice = audioProcessor.getSelectedSliceIndex(curSlot);
+    if (selSlice < 0)
+        selSlice = audioProcessor.getActivePlayingSlice();
+    if (selSlice < 0)
+        selSlice = 0; // C1 por defecto
+
+    ChopSlice slice;
+    if (audioProcessor.selectSliceByIndex(curSlot, selSlice, slice))
+    {
+        audioProcessor.toggleSliceHalfTime(curSlot, selSlice);
+        updateFxAndMpcUiState();
         originalWaveformComponent.repaint();
         transformedWaveformComponent.repaint();
     }
@@ -1313,16 +1449,22 @@ void ClipSamplerAudioProcessorEditor::resized()
 
     topInner.removeFromTop(gapY);
 
-    // Fila 3: 4 Botones proporcionales (Extraer 3s, Extraer 10s, Extraer 30s, Nueva Extracción)
+    // Fila 3: Conmutador de Modo (Segundos vs Compases) + 3 Botones de extracción + "Nueva Extracción"
     auto extractRow = topInner.removeFromTop(rowH);
-    const int fourthW = (extractRow.getWidth() - 18) / 4;
-    extract3sButton.setBounds(extractRow.removeFromLeft(fourthW));
+    const int modeBtnW = juce::jlimit(85, 125, juce::roundToInt(extractRow.getWidth() * 0.14f));
+    extractModeButton.setBounds(extractRow.removeFromLeft(modeBtnW));
     extractRow.removeFromLeft(6);
-    extract10sButton.setBounds(extractRow.removeFromLeft(fourthW));
+
+    const int newExtractW = juce::jlimit(135, 210, juce::roundToInt(extractRow.getWidth() * 0.27f));
+    newExtractionButton.setBounds(extractRow.removeFromRight(newExtractW));
+    extractRow.removeFromRight(6);
+
+    const int extractBtnW = (extractRow.getWidth() - 12) / 3;
+    extract3sButton.setBounds(extractRow.removeFromLeft(extractBtnW));
     extractRow.removeFromLeft(6);
-    extract30sButton.setBounds(extractRow.removeFromLeft(fourthW));
+    extract10sButton.setBounds(extractRow.removeFromLeft(extractBtnW));
     extractRow.removeFromLeft(6);
-    newExtractionButton.setBounds(extractRow);
+    extract30sButton.setBounds(extractRow);
 
     topInner.removeFromTop(gapY);
 
@@ -1408,25 +1550,31 @@ void ClipSamplerAudioProcessorEditor::resized()
 
     bottomInner.removeFromTop(5);
 
-    // Barra inferior de transporte, Corte Exacto y exportación (Reproducir, Detener, BPM/Tono, ✂ Corte Exacto, Arrastrar .WAV/.MIDI, Exportar)
+    // Barra inferior de transporte, Corte Exacto, Reverse, Half-Time y exportación
     const int actionRowH = juce::jlimit(26, 36, juce::roundToInt(32.0f * hScale));
     auto actionRow = bottomInner.removeFromBottom(actionRowH);
 
-    playButton.setBounds(actionRow.removeFromLeft(juce::jlimit(72, 108, juce::roundToInt(botW * 0.105f))));
-    actionRow.removeFromLeft(5);
-    stopButton.setBounds(actionRow.removeFromLeft(juce::jlimit(58, 82, juce::roundToInt(botW * 0.078f))));
-    actionRow.removeFromLeft(5);
-    bpmKeyBadgeLabel.setBounds(actionRow.removeFromLeft(juce::jlimit(125, 215, juce::roundToInt(botW * 0.21f))));
-    actionRow.removeFromLeft(5);
+    playButton.setBounds(actionRow.removeFromLeft(juce::jlimit(68, 98, juce::roundToInt(botW * 0.095f))));
+    actionRow.removeFromLeft(4);
+    stopButton.setBounds(actionRow.removeFromLeft(juce::jlimit(52, 76, juce::roundToInt(botW * 0.072f))));
+    actionRow.removeFromLeft(4);
+    bpmKeyBadgeLabel.setBounds(actionRow.removeFromLeft(juce::jlimit(110, 180, juce::roundToInt(botW * 0.175f))));
+    actionRow.removeFromLeft(4);
 
-    exportWavButton.setBounds(actionRow.removeFromRight(juce::jlimit(82, 118, juce::roundToInt(botW * 0.115f))));
-    actionRow.removeFromRight(5);
+    exportWavButton.setBounds(actionRow.removeFromRight(juce::jlimit(78, 110, juce::roundToInt(botW * 0.108f))));
+    actionRow.removeFromRight(4);
 
-    const int middleBtnW = (actionRow.getWidth() - 10) / 3;
+    const int padFxW = juce::jlimit(46, 68, juce::roundToInt(botW * 0.065f));
+    padReverseButton.setBounds(actionRow.removeFromLeft(padFxW));
+    actionRow.removeFromLeft(3);
+    padHalfTimeButton.setBounds(actionRow.removeFromLeft(padFxW));
+    actionRow.removeFromLeft(4);
+
+    const int middleBtnW = (actionRow.getWidth() - 8) / 3;
     exactCutButton.setBounds(actionRow.removeFromLeft(middleBtnW));
-    actionRow.removeFromLeft(5);
+    actionRow.removeFromLeft(4);
     dragDawButton.setBounds(actionRow.removeFromLeft(middleBtnW));
-    actionRow.removeFromLeft(5);
+    actionRow.removeFromLeft(4);
     dragMidiButton.setBounds(actionRow);
 
     bottomInner.removeFromBottom(5);

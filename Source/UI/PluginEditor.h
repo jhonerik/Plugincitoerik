@@ -293,6 +293,7 @@ private:
     void onSelectPlatform(SourcePlatform platform, bool updateStatusMsg = true);
     void onPasteClicked();
     void onDetectDurationClicked();
+    void onToggleExtractModeClicked();
     void onExtractDurationClicked(int durationSec);
     void onNewExtractionClicked();
     void onTapeWarmthClicked();
@@ -307,6 +308,8 @@ private:
     void onPlayClicked();
     void onStopClicked();
     void onExactCutClicked();
+    void onPadReverseClicked();
+    void onPadHalfTimeClicked();
     void onExportWavClicked();
     void onDragDawClicked();
     void onDragMidiClicked();
@@ -356,7 +359,9 @@ private:
     juce::Slider startTimeSlider;
     juce::Label videoRangeBadgeLabel;
 
-    // Fila 3: Botones de extracción (3s, 10s, 30s) + Botón condicional "Nueva Extracción"
+    // Fila 3: Conmutador de Modo (Segundos vs Compases) + Botones de extracción + "Nueva Extracción"
+    bool isBarsExtractMode = false;
+    juce::TextButton extractModeButton   { juce::String::fromUTF8("⏱️ Segundos") };
     juce::TextButton extract3sButton     { juce::String::fromUTF8("Extraer 3 Segundos") };
     juce::TextButton extract10sButton    { juce::String::fromUTF8("Extraer 10 Segundos") };
     juce::TextButton extract30sButton    { juce::String::fromUTF8("Extraer 30 Segundos") };
@@ -418,8 +423,10 @@ private:
     // Controles de transporte inferior, Corte Exacto y exportación Drag & Drop (.WAV y .MIDI)
     juce::TextButton playButton      { juce::String::fromUTF8("▶ Reproducir") };
     juce::TextButton stopButton      { juce::String::fromUTF8("■ Detener") };
-    juce::TextButton exactCutButton  { juce::String::fromUTF8("✂ Corte Exacto") };
-    juce::TextButton dragDawButton   { juce::String::fromUTF8("Arrastrar .WAV") };
+    juce::TextButton exactCutButton   { juce::String::fromUTF8("✂ Corte Exacto") };
+    juce::TextButton padReverseButton { juce::String::fromUTF8("◀ Rev") };
+    juce::TextButton padHalfTimeButton{ juce::String::fromUTF8("⏳ 1/2") };
+    juce::TextButton dragDawButton    { juce::String::fromUTF8("Arrastrar .WAV") };
     juce::TextButton dragMidiButton  { juce::String::fromUTF8("🎹 Convertir a MIDI") };
     juce::TextButton exportWavButton { juce::String::fromUTF8("Exportar .WAV...") };
 
