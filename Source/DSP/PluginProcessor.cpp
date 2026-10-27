@@ -288,8 +288,10 @@ void ClipSamplerAudioProcessor::startVoice(const PlaybackData& data,
     v.midiNote = midiNote;
     v.targetGain = juce::jlimit(0.05f, 1.2f, velocityGain);
 
-    // Si el inicio es el sample 0 (que ya tiene rampa en archivo), el fade-in es ultrarrápido; si es en mitad de onda, aplica fadeInSamples
-    const int attackLen = (safeStart == 0) ? juce::jmax(16, fadeInSamples / 2) : fadeInSamples;
+    // Envolvente de Ataque (Attack): configurable por el usuario (0.5 ms a 500 ms) para suavizar transientes o crear colchones
+    const float atkMs = envelopeAttackMs.load(std::memory_order_relaxed);
+    const int userAttackSamples = juce::jmax(8, juce::roundToInt((atkMs / 1000.0f) * (float)currentSampleRateHz));
+    const int attackLen = (safeStart == 0) ? juce::jmax(16, userAttackSamples / 2) : userAttackSamples;
     v.gain = 0.0f;
     v.gainStep = v.targetGain / (float)juce::jmax(1, attackLen);
     v.order = ++voiceOrderCounter;
@@ -297,7 +299,9 @@ void ClipSamplerAudioProcessor::startVoice(const PlaybackData& data,
 
 void ClipSamplerAudioProcessor::releaseVoiceForMidiNote(int midiNote)
 {
-    const int releaseSamples = juce::jmax(fadeOutSamples, (int)std::round(currentSampleRateHz * 0.025)); // ~25 ms release musical
+    const float relMs = envelopeReleaseMs.load(std::memory_order_relaxed);
+    const int userReleaseSamples = juce::jmax(32, juce::roundToInt((relMs / 1000.0f) * (float)currentSampleRateHz));
+    const int releaseSamples = juce::jmax(fadeOutSamples, userReleaseSamples);
     for (int i = 0; i < kNumPlaybackVoices; ++i)
     {
         auto& v = voices[i];
@@ -311,7 +315,9 @@ void ClipSamplerAudioProcessor::releaseVoiceForMidiNote(int midiNote)
 
 void ClipSamplerAudioProcessor::releaseAllVoices()
 {
-    const int releaseSamples = juce::jmax(64, fadeOutSamples);
+    const float relMs = envelopeReleaseMs.load(std::memory_order_relaxed);
+    const int userReleaseSamples = juce::jmax(32, juce::roundToInt((relMs / 1000.0f) * (float)currentSampleRateHz));
+    const int releaseSamples = juce::jmax(64, juce::jmax(fadeOutSamples, userReleaseSamples));
     for (int i = 0; i < kNumPlaybackVoices; ++i)
     {
         auto& v = voices[i];
@@ -426,11 +432,13 @@ void ClipSamplerAudioProcessor::renderVoices(const PlaybackData& data,
                 }
             }
 
-            // Rampa suave automática al acercarse al final de la rodaja o muestra
+            // Rampa suave automática al acercarse al final de la rodaja o muestra (respetando la Caída/Release configurada)
+            const float relMs = envelopeReleaseMs.load(std::memory_order_relaxed);
+            const int dynamicEndFade = juce::jmax(endFadeSamples, juce::roundToInt((relMs / 1000.0f) * (float)currentSampleRateHz * 0.4f));
             float tailFade = 1.0f;
             const double samplesLeft = (double)v.endSample - v.position;
-            if (samplesLeft < (double)endFadeSamples && endFadeSamples > 0)
-                tailFade = juce::jlimit(0.0f, 1.0f, (float)(samplesLeft / (double)endFadeSamples));
+            if (samplesLeft < (double)dynamicEndFade && dynamicEndFade > 0)
+                tailFade = juce::jlimit(0.0f, 1.0f, (float)(samplesLeft / (double)dynamicEndFade));
 
             const float env = v.gain * tailFade;
             const float sampleL = interpolateHermite4pt(srcL, total, v.position);
@@ -1223,6 +1231,74 @@ void ClipSamplerAudioProcessor::setAutoChopEnabled(bool enabled)
     autoChopEnabled.store(enabled, std::memory_order_relaxed);
 }
 
+bool ClipSamplerAudioProcessor::moveSliceDividerPosition(int slotIndex, int dividerIndex, float newNormalizedPos)
+{
+    const int targetSlot = (slotIndex == 2) ? 2 : 1;
+    const juce::ScopedLock sl(bufferLock);
+
+    auto& slices = (targetSlot == 2) ? slot2Slices : slot1Slices;
+    if (dividerIndex < 1 || dividerIndex >= (int)slices.size())
+        return false;
+
+    auto slotData = (targetSlot == 2) ? slot2PlaybackData : slot1PlaybackData;
+    int totalSamples = (slotData != nullptr && slotData->buffer.getNumSamples() > 0)
+        ? slotData->buffer.getNumSamples()
+        : totalSampleCount.load(std::memory_order_relaxed);
+
+    if (totalSamples <= 10)
+        return false;
+
+    // Límite mínimo de separación para que una rodaja no colapse a 0
+    const float minSeparation = juce::jmax(0.004f, 256.0f / (float)totalSamples);
+    const float minPos = slices[(size_t)(dividerIndex - 1)].startNorm + minSeparation;
+    const float maxPos = slices[(size_t)dividerIndex].endNorm - minSeparation;
+
+    if (minPos >= maxPos)
+        return false;
+
+    const float clampedNorm = juce::jlimit(minPos, maxPos, newNormalizedPos);
+    const int newSample = juce::jlimit(slices[(size_t)(dividerIndex - 1)].startSample + 128,
+                                       slices[(size_t)dividerIndex].endSample - 128,
+                                       juce::roundToInt(clampedNorm * (float)totalSamples));
+
+    // Ajustamos el final de la rodaja izquierda y el inicio de la rodaja derecha
+    slices[(size_t)(dividerIndex - 1)].endNorm = clampedNorm;
+    slices[(size_t)(dividerIndex - 1)].endSample = newSample;
+
+    slices[(size_t)dividerIndex].startNorm = clampedNorm;
+    slices[(size_t)dividerIndex].startSample = newSample;
+
+    // Si la rodaja actualmente seleccionada es una de las modificadas, invalidamos el .wav en caché
+    const int selIdx = (targetSlot == 2) ? slot2SelectedSlice.load(std::memory_order_relaxed) : slot1SelectedSlice.load(std::memory_order_relaxed);
+    if (selIdx == dividerIndex - 1 || selIdx == dividerIndex)
+    {
+        if (targetSlot == 2)
+            slot2SelectedSliceWavFile = juce::File();
+        else
+            slot1SelectedSliceWavFile = juce::File();
+    }
+
+    // Publicamos los nuevos límites de rodaja en el paquete de audio en RAM para que suenen de inmediato
+    if (slotData != nullptr)
+    {
+        auto updatedData = std::make_shared<PlaybackData>();
+        updatedData->buffer = slotData->buffer;
+        updatedData->slices = slices;
+        updatedData->slotIndex = targetSlot;
+        updatedData->generation = ++playbackGenerationCounter;
+
+        if (targetSlot == 2)
+            slot2PlaybackData = updatedData;
+        else
+            slot1PlaybackData = updatedData;
+
+        if (activeSlot.load(std::memory_order_relaxed) == targetSlot)
+            publishPlaybackData(std::move(updatedData));
+    }
+
+    return true;
+}
+
 std::vector<ChopSlice> ClipSamplerAudioProcessor::getChopSlices(int slotIndex) const
 {
     const juce::ScopedLock sl(bufferLock);
@@ -1786,6 +1862,16 @@ void ClipSamplerAudioProcessor::setFxPitchSemitones(float semitones)
 void ClipSamplerAudioProcessor::setFxToneFilter(float tone0to1)
 {
     fxToneFilter.store(juce::jlimit(0.1f, 1.0f, tone0to1), std::memory_order_relaxed);
+}
+
+void ClipSamplerAudioProcessor::setEnvelopeAttackMs(float ms)
+{
+    envelopeAttackMs.store(juce::jlimit(0.5f, 500.0f, ms), std::memory_order_relaxed);
+}
+
+void ClipSamplerAudioProcessor::setEnvelopeReleaseMs(float ms)
+{
+    envelopeReleaseMs.store(juce::jlimit(5.0f, 2000.0f, ms), std::memory_order_relaxed);
 }
 
 void ClipSamplerAudioProcessor::setAutoSyncEnabled(bool enabled)

@@ -109,19 +109,31 @@ En la **Fila 4 (Rack de Efectos Macro + Modo MPC)**:
 2. **Botón `🥁 Modo Auto-Chop (MPC)`:**
    - **Desactivado (Modo Cromático):** Puedes tocar el sample melódicamente en todo tu teclado MIDI (como un instrumento tradicional donde `C3` es la nota original).
    - **Activado (Modo Auto-Chop MPC):** El plugin detecta automáticamente los golpes de ritmo (transientes) de la muestra, dibuja líneas divisorias amarillas (`C1`, `C#1`, `D1`... hasta `D#2`) sobre la forma de onda y asigna cada pedacito a una tecla de tu controlador MIDI o Piano Roll para que puedas reordenar el sample y armar un beat al instante.
-3. **Perilla `📻 Lo-Fi 12-Bit (0% - 100%)`:**
+3. **Perilla `📻 Lo-Fi (0% - 100%)`:**
    - Añade reducción de resolución y calidez vintage estilo sampler clásico de 12 bits (SP-1200 / MPC60).
 4. **Perilla `🌀 Pitch (-12 st a +12 st)`:**
    - Sube o baja la afinación del sample hasta una octava completa en semitonos.
-5. **Botón `🔗 Sync BPM DAW`:**
+5. **Perilla `🎚️ Filtro (15% a 100%)`:**
+   - Filtro paso-bajo cálido para suavizar agudos o crear ambientes envolventes.
+6. **Perilla `⚡ Atk (Ataque: 0.5 ms a 500 ms)`:**
+   - Envolvente de ataque anti-chasquidos. Suaviza el inicio del golpe para eliminar cualquier "pop/click" al sonar, o permite crear efectos de colchón/violín (*pad swell*).
+7. **Perilla `⏳ Rel (Caída / Release: 5 ms a 2000 ms)`:**
+   - Determina cómo termina el sonido al soltar la tecla o pad MIDI: en corte seco inmediato o desvaneciéndose con una cola suave y musical.
+8. **Botón `🔗 Sync BPM DAW`:**
    - Sincroniza automáticamente la velocidad de reproducción del sample con el tempo (BPM) actual de tu proyecto en el DAW.
 
 ---
 
-## 8. Paso 5: Selección por Corte Exacto (`✂ Corte Exacto`), Arrastrar Audio (.WAV) y Conversor a MIDI (`🎹 Convertir a MIDI`)
+## 8. Paso 5: Selección por Corte Exacto (`✂ Corte Exacto`), Ajuste Manual de Transientes, Arrastrar Audio (.WAV) y Conversor a MIDI (`🎹 Convertir a MIDI`)
 
 En los **Visores de Onda** y en la **Fila 5 (Barra Inferior de Transporte, Corte Exacto y Exportación)**:
 
+- **Ajuste Manual de Transientes (Mover Líneas de Corte con el Cursor):**
+  - Pasa el cursor del ratón sobre cualquiera de las líneas divisorias amarillas entre rodajas en el visor.
+  - El cursor cambiará automáticamente a la flecha doble de ajuste (`↔`).
+  - **Haz clic y arrastra hacia la izquierda o derecha** para mover el inicio o final del corte con precisión milimétrica. La onda se actualiza en tiempo real y el audio respetará el nuevo corte al instante al tocarlo en MIDI o arrastrarlo al DAW.
+- **Atajo de Teclado (Barra Espaciadora / Spacebar):**
+  - Presiona la **Barra Espaciadora** en tu teclado para **reproducir o detener** el audio del plugin en cualquier momento sin necesidad de mover el ratón hasta el botón de play.
 - **Selección de Audio Completo (1 Clic):** Haz **1 solo clic** sobre el visor de onda (Audio 1 o Audio 2) para seleccionar y reproducir **el audio completo**. Al arrastrar hacia el DAW se enviará la muestra completa.
 - **Selección de Corte Exacto por Nota (2 Clics Seguidos / Doble Clic):** Haz **2 clics seguidos (doble clic)** sobre cualquier nota o división del visor (`C1`, `C#1`, `D1`, `D#1`, `E1`, `F1`, `F#1`, etc.):
   - Se iluminará únicamente ese trozo exacto en color cian/dorado con el indicador **`[✂ CORTE EXACTO: C1]`** y se reproducirá solo ese fragmento.
@@ -129,7 +141,7 @@ En los **Visores de Onda** y en la **Fila 5 (Barra Inferior de Transporte, Corte
 - **Botón `✂ Corte Exacto`:**
   - Si haces clic en **`✂ Corte Exacto`**, selecciona y reproduce el corte exacto activo (por defecto `C1` si aún no habías hecho doble clic en otro trozo).
   - Mantén presionado el clic izquierdo sobre el botón **`✂ Corte Exacto`** (o directamente sobre la nota iluminada en el visor de onda) y **arrástralo hacia una pista de tu DAW** para pasar únicamente ese trozo de audio y no la muestra completa.
-- **Botón `▶ Reproducir` / `⏹ Detener`:** Escucha directamente la muestra activa (o el corte exacto seleccionado) a través del mezclador de tu DAW.
+- **Botón `▶ Reproducir` / `⏹ Detener` (o Barra Espaciadora):** Escucha directamente la muestra activa (o el corte exacto seleccionado) a través del mezclador de tu DAW.
 - **Botón `Arrastrar .WAV`:** Mantén presionado el clic izquierdo sobre este botón (o directamente sobre cualquiera de los dos visores de onda) y arrástralo hacia una pista de audio o sampler de tu DAW. Si tienes un corte exacto seleccionado (ej. `C1`), el botón mostrará `Arrastrar C1 (.WAV)` y arrastrará únicamente ese trozo.
 - **Botón `🎹 Convertir a MIDI`:** Haz clic o mantén presionado el clic izquierdo sobre este botón y arrástralo hacia una pista MIDI o al Piano Roll de tu DAW. **ClipSampler** analiza el audio, transcribe automáticamente sus notas melódicas y transientes, y genera un archivo `.mid` listo para ser interpretado por cualquier sintetizador o instrumento virtual (Serum, Omnisphere, FL Keys, etc.).
 

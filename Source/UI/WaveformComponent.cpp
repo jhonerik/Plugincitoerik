@@ -8,6 +8,7 @@ WaveformComponent::WaveformComponent(ClipSamplerAudioProcessor& processorToUse, 
       slotIndex((slotIndexToUse == 2) ? 2 : 1),
       viewerTitle(titleText)
 {
+    setWantsKeyboardFocus(true);
     // Nos suscribimos a las notificaciones del generador de miniaturas de onda (AudioThumbnail)
     processor.getThumbnail(slotIndex).addChangeListener(this);
 }
@@ -36,19 +37,106 @@ float WaveformComponent::getNormalizedXFromEvent(const juce::MouseEvent& event) 
     return juce::jlimit(0.0f, 0.9999f, (event.position.x - waveBounds.getX()) / waveBounds.getWidth());
 }
 
+int WaveformComponent::getDividerIndexNearX(float mouseX) const
+{
+    auto waveBounds = getLocalBounds().toFloat();
+    const float headerH = juce::jlimit(18.0f, 24.0f, waveBounds.getHeight() * 0.22f);
+    waveBounds.removeFromTop(headerH);
+    auto waveformArea = waveBounds.reduced(8.0f, 4.0f);
+    if (waveformArea.getWidth() <= 4.0f)
+        return -1;
+
+    auto slices = processor.getChopSlices(slotIndex);
+    if (slices.size() < 2)
+        return -1;
+
+    for (size_t i = 1; i < slices.size(); ++i)
+    {
+        float lineX = waveformArea.getX() + slices[i].startNorm * waveformArea.getWidth();
+        if (std::abs(mouseX - lineX) <= 6.5f)
+            return (int)i;
+    }
+    return -1;
+}
+
+void WaveformComponent::mouseMove(const juce::MouseEvent& event)
+{
+    if (!processor.hasSlotAudio(slotIndex))
+    {
+        if (hoveredDividerIndex != -1)
+        {
+            hoveredDividerIndex = -1;
+            repaint();
+        }
+        setMouseCursor(juce::MouseCursor::NormalCursor);
+        return;
+    }
+
+    int dIdx = getDividerIndexNearX(event.position.x);
+    if (dIdx != hoveredDividerIndex)
+    {
+        hoveredDividerIndex = dIdx;
+        repaint();
+    }
+
+    if (hoveredDividerIndex >= 1)
+        setMouseCursor(juce::MouseCursor::LeftRightResizeCursor);
+    else
+        setMouseCursor(juce::MouseCursor::NormalCursor);
+}
+
+void WaveformComponent::mouseExit(const juce::MouseEvent& /*event*/)
+{
+    if (hoveredDividerIndex != -1)
+    {
+        hoveredDividerIndex = -1;
+        repaint();
+    }
+    setMouseCursor(juce::MouseCursor::NormalCursor);
+}
+
+bool WaveformComponent::keyPressed(const juce::KeyPress& key)
+{
+    if (key == juce::KeyPress::spaceKey)
+    {
+        if (processor.isAudioPlaying())
+            processor.stopPlayback();
+        else
+            processor.startPlayback();
+        return true;
+    }
+    return false;
+}
+
 // ==============================================================================
 // Interacción con el Ratón:
+// - Arrastre sobre línea divisoria: ajusta la posición milimétrica del corte.
 // - 1 Clic: Selecciona TODO el audio completo.
 // - 2 Clics seguidos (Doble Clic): Selecciona el CORTE EXACTO (C1, C#1, D1...) bajo el cursor.
 // ==============================================================================
 void WaveformComponent::mouseDown(const juce::MouseEvent& event)
 {
+    grabKeyboardFocus();
+
     if (!event.mods.isLeftButtonDown())
         return;
 
     auto slotFile = processor.getSlotAudioFile(slotIndex);
     if (!slotFile.existsAsFile())
         return;
+
+    // Si el usuario hace clic cerca de una línea divisoria entre rodajas, activamos el arrastre manual milimétrico
+    int nearDivider = getDividerIndexNearX(event.position.x);
+    if (nearDivider >= 1)
+    {
+        isDraggingDivider = true;
+        draggedDividerIndex = nearDivider;
+        processor.setActiveSlot(slotIndex);
+        processor.setStatusMessage(juce::String::fromUTF8("Ajustando manualmente transiente / corte ")
+                                   + juce::String(draggedDividerIndex) + juce::String::fromUTF8(" con precisión milimétrica..."));
+        repaint();
+        return;
+    }
 
     // Si es el segundo clic de un doble clic, dejamos que mouseDoubleClick seleccione el corte exacto
     if (event.getNumberOfClicks() >= 2)
@@ -73,7 +161,7 @@ void WaveformComponent::mouseDown(const juce::MouseEvent& event)
     processor.selectFullAudioInSlot(slotIndex);
     processor.startPlayback();
     processor.setStatusMessage(juce::String::fromUTF8("Audio ") + juce::String(slotIndex)
-                               + juce::String::fromUTF8(" completo seleccionado (1 clic). Da 2 clics seguidos sobre una nota (C1, C#1, D1...) para seleccionar solo ese Corte Exacto."));
+                               + juce::String::fromUTF8(" completo seleccionado (1 clic). Da 2 clics seguidos sobre una nota para seleccionar ese corte, o arrastra las líneas divisorias para ajustar transientes."));
 
     if (auto* parent = getParentComponent())
         parent->repaint();
@@ -83,13 +171,24 @@ void WaveformComponent::mouseDown(const juce::MouseEvent& event)
 
 void WaveformComponent::mouseUp(const juce::MouseEvent& event)
 {
+    if (isDraggingDivider)
+    {
+        isDraggingDivider = false;
+        int finishedDivider = draggedDividerIndex;
+        draggedDividerIndex = -1;
+        processor.setStatusMessage(juce::String::fromUTF8("¡Línea divisoria ") + juce::String(finishedDivider)
+                                   + juce::String::fromUTF8(" fijada con precisión milimétrica!"));
+        repaint();
+        return;
+    }
+
     if (pendingSelectFullOnMouseUp && !isDragging && event.getNumberOfClicks() == 1)
     {
         pendingSelectFullOnMouseUp = false;
         processor.selectFullAudioInSlot(slotIndex);
         processor.startPlayback();
         processor.setStatusMessage(juce::String::fromUTF8("Audio ") + juce::String(slotIndex)
-                                   + juce::String::fromUTF8(" completo seleccionado (1 clic). Da 2 clics seguidos sobre una nota (C1, C#1, D1...) para seleccionar solo ese Corte Exacto."));
+                                   + juce::String::fromUTF8(" completo seleccionado (1 clic). Da 2 clics seguidos sobre una nota para seleccionar ese corte."));
 
         if (auto* parent = getParentComponent())
             parent->repaint();
@@ -132,6 +231,19 @@ void WaveformComponent::mouseDoubleClick(const juce::MouseEvent& event)
 // ==============================================================================
 void WaveformComponent::mouseDrag(const juce::MouseEvent& event)
 {
+    // Si el usuario está arrastrando una línea divisoria de transiente, la movemos en tiempo real
+    if (isDraggingDivider && draggedDividerIndex >= 1)
+    {
+        float normX = getNormalizedXFromEvent(event);
+        if (processor.moveSliceDividerPosition(slotIndex, draggedDividerIndex, normX))
+        {
+            processor.setStatusMessage(juce::String::fromUTF8("Ajustando manualmente línea de corte ")
+                                       + juce::String(draggedDividerIndex) + juce::String::fromUTF8(" con precisión milimétrica..."));
+            repaint();
+        }
+        return;
+    }
+
     if (isDragging)
         return;
 
@@ -317,10 +429,26 @@ void WaveformComponent::paint(juce::Graphics& g)
 
                 if (i > 0)
                 {
-                    g.setColour(juce::Colour(0xd8ffca28));
-                    const float dashLengths[2] = { 4.0f, 3.0f };
-                    g.drawDashedLine(juce::Line<float>(xStart, mpcNoteBar.getY(), xStart, waveformArea.getBottom()),
-                                     dashLengths, 2, 1.3f);
+                    const bool isDividerHighlighted = (hoveredDividerIndex == (int)i || draggedDividerIndex == (int)i);
+                    if (isDividerHighlighted)
+                    {
+                        // Resplandor cian brillante al pasar el cursor o arrastrar la línea de corte
+                        g.setColour(juce::Colour(0xff00e5ff));
+                        g.drawLine(xStart, mpcNoteBar.getY(), xStart, waveformArea.getBottom(), 2.4f);
+
+                        // Tirador / Rombo de ajuste en la barra superior de notas
+                        g.setColour(juce::Colour(0xffffca28));
+                        g.fillEllipse(xStart - 4.5f, mpcNoteBar.getBottom() - 4.5f, 9.0f, 9.0f);
+                        g.setColour(juce::Colours::black);
+                        g.drawEllipse(xStart - 4.5f, mpcNoteBar.getBottom() - 4.5f, 9.0f, 9.0f, 1.2f);
+                    }
+                    else
+                    {
+                        g.setColour(juce::Colour(0xd8ffca28));
+                        const float dashLengths[2] = { 4.0f, 3.0f };
+                        g.drawDashedLine(juce::Line<float>(xStart, mpcNoteBar.getY(), xStart, waveformArea.getBottom()),
+                                         dashLengths, 2, 1.3f);
+                    }
                 }
 
                 juce::Rectangle<float> padBox(xStart, mpcNoteBar.getY(), sliceW, mpcNoteBar.getHeight());

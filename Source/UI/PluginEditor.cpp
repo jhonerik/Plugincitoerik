@@ -16,6 +16,7 @@ ClipSamplerAudioProcessorEditor::ClipSamplerAudioProcessorEditor(ClipSamplerAudi
     setResizable(true, true);
     setResizeLimits(680, 540, 1800, 1300);
     setSize(980, 760);
+    setWantsKeyboardFocus(true);
 
     // =========================================================================
     // Controles del Encabezado Superior (Licencia / Prueba de 3 Días y Mantenimiento)
@@ -270,6 +271,44 @@ ClipSamplerAudioProcessorEditor::ClipSamplerAudioProcessorEditor(ClipSamplerAudi
     toneLabel.setJustificationType(juce::Justification::centredLeft);
     toneLabel.setMinimumHorizontalScale(0.68f);
     addAndMakeVisible(toneLabel);
+
+    // Perilla 4: Envolvente de Ataque (Attack) Anti-Chasquidos (0.5 ms a 500 ms)
+    attackKnob.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
+    attackKnob.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
+    attackKnob.setRange(0.5, 500.0, 0.5);
+    attackKnob.setSkewFactorFromMidPoint(25.0);
+    attackKnob.setValue(audioProcessor.getEnvelopeAttackMs(), juce::dontSendNotification);
+    attackKnob.setColour(juce::Slider::rotarySliderFillColourId, juce::Colour(0xffff9100));
+    attackKnob.onValueChange = [this] {
+        float ms = (float)attackKnob.getValue();
+        audioProcessor.setEnvelopeAttackMs(ms);
+        attackLabel.setText(juce::String::fromUTF8("Atk: ") + juce::String(ms, ms < 10.0f ? 1 : 0) + " ms", juce::dontSendNotification);
+    };
+    addAndMakeVisible(attackKnob);
+
+    attackLabel.setColour(juce::Label::textColourId, juce::Colour(0xffffb74d));
+    attackLabel.setJustificationType(juce::Justification::centredLeft);
+    attackLabel.setMinimumHorizontalScale(0.68f);
+    addAndMakeVisible(attackLabel);
+
+    // Perilla 5: Envolvente de Caída (Release) Suave (5 ms a 2000 ms)
+    releaseKnob.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
+    releaseKnob.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
+    releaseKnob.setRange(5.0, 2000.0, 1.0);
+    releaseKnob.setSkewFactorFromMidPoint(120.0);
+    releaseKnob.setValue(audioProcessor.getEnvelopeReleaseMs(), juce::dontSendNotification);
+    releaseKnob.setColour(juce::Slider::rotarySliderFillColourId, juce::Colour(0xffff4081));
+    releaseKnob.onValueChange = [this] {
+        float ms = (float)releaseKnob.getValue();
+        audioProcessor.setEnvelopeReleaseMs(ms);
+        releaseLabel.setText(juce::String::fromUTF8("Rel: ") + juce::String(juce::roundToInt(ms)) + " ms", juce::dontSendNotification);
+    };
+    addAndMakeVisible(releaseKnob);
+
+    releaseLabel.setColour(juce::Label::textColourId, juce::Colour(0xffff80ab));
+    releaseLabel.setJustificationType(juce::Justification::centredLeft);
+    releaseLabel.setMinimumHorizontalScale(0.68f);
+    addAndMakeVisible(releaseLabel);
 
     // Botones de Sincronización BPM, Rebanador MPC, Aplicar Efectos e Indicador BPM/Tono
     autoSyncButton.onClick = [this] { onToggleAutoSyncClicked(); };
@@ -625,11 +664,15 @@ void ClipSamplerAudioProcessorEditor::onNewExtractionClicked()
     refreshVideoTimeRangeLabel();
 
     lofiKnob.setValue(0.0, juce::dontSendNotification);
-    lofiLabel.setText(juce::String::fromUTF8("Lo-Fi 12b: 0%"), juce::dontSendNotification);
+    lofiLabel.setText(juce::String::fromUTF8("Lo-Fi: 0%"), juce::dontSendNotification);
     pitchKnob.setValue(0.0, juce::dontSendNotification);
     pitchLabel.setText(juce::String::fromUTF8("Tono: 0 st"), juce::dontSendNotification);
     toneKnob.setValue(100.0, juce::dontSendNotification);
     toneLabel.setText(juce::String::fromUTF8("Filtro: 100%"), juce::dontSendNotification);
+    attackKnob.setValue(2.0, juce::dontSendNotification);
+    attackLabel.setText(juce::String::fromUTF8("Atk: 2 ms"), juce::dontSendNotification);
+    releaseKnob.setValue(50.0, juce::dontSendNotification);
+    releaseLabel.setText(juce::String::fromUTF8("Rel: 50 ms"), juce::dontSendNotification);
 
     currentProgressValue = 0.0;
     progressBar.repaint();
@@ -894,6 +937,24 @@ void ClipSamplerAudioProcessorEditor::mouseDrag(const juce::MouseEvent& event)
     }
 }
 
+bool ClipSamplerAudioProcessorEditor::keyPressed(const juce::KeyPress& key)
+{
+    if (key == juce::KeyPress::spaceKey)
+    {
+        // Si el usuario está escribiendo un enlace o tiempo en una caja de texto, no interferimos
+        if (urlEditor.hasKeyboardFocus(true) || startTimeEditor.hasKeyboardFocus(true))
+            return false;
+
+        if (audioProcessor.isAudioPlaying())
+            onStopClicked();
+        else
+            onPlayClicked();
+
+        return true; // Evento consumido
+    }
+    return false;
+}
+
 void ClipSamplerAudioProcessorEditor::onUpdateExtractorClicked()
 {
     audioProcessor.startExtractorUpdate();
@@ -1102,6 +1163,8 @@ void ClipSamplerAudioProcessorEditor::resized()
     lofiLabel.setFont(juce::Font(juce::jlimit(9.5f, 14.0f, 11.2f * uiScale), juce::Font::bold));
     pitchLabel.setFont(juce::Font(juce::jlimit(9.5f, 14.0f, 11.2f * uiScale), juce::Font::bold));
     toneLabel.setFont(juce::Font(juce::jlimit(9.5f, 14.0f, 11.2f * uiScale), juce::Font::bold));
+    attackLabel.setFont(juce::Font(juce::jlimit(9.0f, 13.5f, 10.8f * uiScale), juce::Font::bold));
+    releaseLabel.setFont(juce::Font(juce::jlimit(9.0f, 13.5f, 10.8f * uiScale), juce::Font::bold));
     bpmKeyBadgeLabel.setFont(juce::Font(juce::jlimit(9.5f, 14.0f, 11.2f * uiScale), juce::Font::bold));
 
     // -------------------------------------------------------------------------
@@ -1242,9 +1305,9 @@ void ClipSamplerAudioProcessorEditor::resized()
     autoSyncButton.setBounds(fxRow.removeFromRight(syncBtnW).reduced(0, 3));
     fxRow.removeFromRight(6);
 
-    // Espacio central dividido en 3 bloques iguales para las 3 perillas (Lo-Fi, Tono, Filtro)
-    const int singleKnobBlockW = fxRow.getWidth() / 3;
-    const int knobDia = juce::jmin(fxRowH - 2, juce::jmax(24, singleKnobBlockW / 3));
+    // Espacio central dividido en 5 bloques iguales para las 5 perillas (Lo-Fi, Tono, Filtro, Ataque, Caída)
+    const int singleKnobBlockW = fxRow.getWidth() / 5;
+    const int knobDia = juce::jmin(fxRowH - 2, juce::jmax(22, singleKnobBlockW / 3));
 
     auto k1Area = fxRow.removeFromLeft(singleKnobBlockW);
     lofiKnob.setBounds(k1Area.removeFromLeft(knobDia));
@@ -1254,9 +1317,17 @@ void ClipSamplerAudioProcessorEditor::resized()
     pitchKnob.setBounds(k2Area.removeFromLeft(knobDia));
     pitchLabel.setBounds(k2Area);
 
-    auto k3Area = fxRow;
+    auto k3Area = fxRow.removeFromLeft(singleKnobBlockW);
     toneKnob.setBounds(k3Area.removeFromLeft(knobDia));
     toneLabel.setBounds(k3Area);
+
+    auto k4Area = fxRow.removeFromLeft(singleKnobBlockW);
+    attackKnob.setBounds(k4Area.removeFromLeft(knobDia));
+    attackLabel.setBounds(k4Area);
+
+    auto k5Area = fxRow;
+    releaseKnob.setBounds(k5Area.removeFromLeft(knobDia));
+    releaseLabel.setBounds(k5Area);
 
     bottomInner.removeFromTop(5);
 

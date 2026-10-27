@@ -129,6 +129,9 @@ public:
     void setAutoChopEnabled(bool enabled);
     bool isAutoChopEnabled() const { return autoChopEnabled.load(std::memory_order_relaxed); }
 
+    /** Mueve con precisión milimétrica la línea divisoria entre rodajas adyacentes en la ranura indicada. */
+    bool moveSliceDividerPosition(int slotIndex, int dividerIndex, float newNormalizedPos);
+
     /** Ejecuta el detector de transientes, BPM y Tonalidad sobre la ranura indicada (1 o 2). */
     void analyzeAutoChopAndMusicData(int slotIndex);
 
@@ -179,6 +182,15 @@ public:
 
     void setFxToneFilter(float tone0to1);
     float getFxToneFilter() const { return fxToneFilter.load(std::memory_order_relaxed); }
+
+    //==============================================================================
+    // Envolvente Básica (Ataque y Caída / Attack & Release Anti-Chasquidos)
+    //==============================================================================
+    void setEnvelopeAttackMs(float ms);
+    float getEnvelopeAttackMs() const { return envelopeAttackMs.load(std::memory_order_relaxed); }
+
+    void setEnvelopeReleaseMs(float ms);
+    float getEnvelopeReleaseMs() const { return envelopeReleaseMs.load(std::memory_order_relaxed); }
 
     void setAutoSyncEnabled(bool enabled);
     bool isAutoSyncEnabled() const { return autoSyncEnabled.load(std::memory_order_relaxed); }
@@ -293,11 +305,13 @@ private:
     juce::String slot2Key { "--" };
     std::atomic<double> currentHostBpm { 120.0 };
 
-    // Estado de las Perillas de Efectos Macro
+    // Estado de las Perillas de Efectos Macro y Envolvente (Attack/Release)
     std::atomic<int> fxTargetSlot { 1 };
     std::atomic<float> fxLofiAmount { 0.0f };       // 0.0 a 1.0 (Reducción de bits Lo-Fi 12-Bit)
     std::atomic<float> fxPitchSemitones { 0.0f };   // -12.0 a +12.0 semitonos
     std::atomic<float> fxToneFilter { 1.0f };       // 0.1 a 1.0 (Filtro paso-bajo cálido)
+    std::atomic<float> envelopeAttackMs { 2.0f };   // 0.5 ms a 500.0 ms (Ataque anti-chasquidos)
+    std::atomic<float> envelopeReleaseMs { 50.0f }; // 5.0 ms a 2000.0 ms (Caída suave al soltar pad/nota)
     std::atomic<bool> autoSyncEnabled { false };
     float lofiFilterStateL = 0.0f;
     float lofiFilterStateR = 0.0f;

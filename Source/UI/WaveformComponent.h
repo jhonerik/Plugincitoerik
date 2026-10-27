@@ -40,14 +40,25 @@ public:
     /** Arrastra hacia el DAW el Corte Exacto seleccionado (si hay uno) o el archivo .WAV completo. */
     void mouseDrag(const juce::MouseEvent& event) override;
 
+    /** Detecta cuando el cursor se aproxima a una línea divisoria para mostrar el cursor de ajuste (<->). */
+    void mouseMove(const juce::MouseEvent& event) override;
+    void mouseExit(const juce::MouseEvent& event) override;
+
+    /** Permite usar la barra espaciadora para reproducir/detener el audio. */
+    bool keyPressed(const juce::KeyPress& key) override;
+
 private:
     float getNormalizedXFromEvent(const juce::MouseEvent& event) const;
+    int getDividerIndexNearX(float mouseX) const;
 
     ClipSamplerAudioProcessor& processor;
     int slotIndex = 1;
     juce::String viewerTitle;
     bool isDragging = false;
     bool pendingSelectFullOnMouseUp = false;
+    int hoveredDividerIndex = -1;
+    int draggedDividerIndex = -1;
+    bool isDraggingDivider = false;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(WaveformComponent)
 };

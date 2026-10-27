@@ -284,6 +284,7 @@ public:
     void paint(juce::Graphics&) override;
     void resized() override;
     void mouseDrag(const juce::MouseEvent& event) override;
+    bool keyPressed(const juce::KeyPress& key) override;
 
 private:
     void timerCallback() override;
@@ -384,15 +385,21 @@ private:
     juce::TextButton fxTargetAudio1Btn { juce::String::fromUTF8("Audio 1") };
     juce::TextButton fxTargetAudio2Btn { juce::String::fromUTF8("Audio 2") };
 
-    // 3 Perillas rotatorias principales de efectos
+    // 5 Perillas rotatorias principales de efectos y envolvente (Lo-Fi, Tono, Filtro, Ataque, Caída)
     juce::Slider lofiKnob;
-    juce::Label  lofiLabel  { {}, juce::String::fromUTF8("Lo-Fi 12b: 0%") };
+    juce::Label  lofiLabel  { {}, juce::String::fromUTF8("Lo-Fi: 0%") };
 
     juce::Slider pitchKnob;
     juce::Label  pitchLabel { {}, juce::String::fromUTF8("Tono: 0 st") };
 
     juce::Slider toneKnob;
     juce::Label  toneLabel  { {}, juce::String::fromUTF8("Filtro: 100%") };
+
+    juce::Slider attackKnob;
+    juce::Label  attackLabel { {}, juce::String::fromUTF8("Atk: 2 ms") };
+
+    juce::Slider releaseKnob;
+    juce::Label  releaseLabel { {}, juce::String::fromUTF8("Rel: 50 ms") };
 
     // Botones de Sincronización BPM, Impresión de Efectos y Rebanador MPC
     juce::TextButton autoSyncButton { juce::String::fromUTF8("Sinc. BPM: NO") };
