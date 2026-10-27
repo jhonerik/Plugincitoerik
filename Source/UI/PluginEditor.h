@@ -409,7 +409,7 @@ private:
     juce::TextButton stopButton      { juce::String::fromUTF8("■ Detener") };
     juce::TextButton exactCutButton  { juce::String::fromUTF8("✂ Corte Exacto") };
     juce::TextButton dragDawButton   { juce::String::fromUTF8("Arrastrar .WAV") };
-    juce::TextButton dragMidiButton  { juce::String::fromUTF8("Arrastrar .MIDI") };
+    juce::TextButton dragMidiButton  { juce::String::fromUTF8("🎹 Convertir a MIDI") };
     juce::TextButton exportWavButton { juce::String::fromUTF8("Exportar .WAV...") };
 
     std::unique_ptr<juce::FileChooser> fileChooser;

@@ -802,17 +802,17 @@ void ClipSamplerAudioProcessorEditor::onDragDawClicked()
 
 void ClipSamplerAudioProcessorEditor::onDragMidiClicked()
 {
-    auto loadedFile = audioProcessor.getCurrentAudioFile();
-    if (!loadedFile.existsAsFile())
+    const int curSlot = audioProcessor.getActiveSlot();
+    if (!audioProcessor.hasSlotAudio(curSlot))
     {
-        audioProcessor.setStatusMessage(juce::String::fromUTF8("Primero debes extraer una muestra para convertir y arrastrar su .MIDI al Piano Roll."));
+        audioProcessor.setStatusMessage(juce::String::fromUTF8("Primero debes extraer una muestra de audio para convertirla y arrastrar sus notas MIDI al Piano Roll."));
         return;
     }
 
-    auto midiFile = audioProcessor.generateMidiFileForSlot(audioProcessor.getActiveSlot());
+    auto midiFile = audioProcessor.generateMidiFileForSlot(curSlot);
     if (midiFile.existsAsFile())
     {
-        audioProcessor.setStatusMessage(juce::String::fromUTF8("¡Archivo MIDI generado! Mantén presionado 'Arrastrar .MIDI' y suéltalo en el Piano Roll de cualquier sintetizador."));
+        audioProcessor.setStatusMessage(juce::String::fromUTF8("¡Audio convertido a MIDI! Mantén presionado '🎹 Convertir a MIDI' y arrástralo al Piano Roll de cualquier sintetizador."));
     }
 }
 
@@ -880,7 +880,11 @@ void ClipSamplerAudioProcessorEditor::mouseDrag(const juce::MouseEvent& event)
     }
     else if (event.eventComponent == &dragMidiButton && event.getDistanceFromDragStart() > 4)
     {
-        auto midiFile = audioProcessor.getCurrentMidiFile();
+        const int curSlot = audioProcessor.getActiveSlot();
+        if (!audioProcessor.hasSlotAudio(curSlot))
+            return;
+
+        auto midiFile = audioProcessor.generateMidiFileForSlot(curSlot);
         if (midiFile.existsAsFile())
         {
             juce::StringArray files;

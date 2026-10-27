@@ -118,7 +118,7 @@ En la **Fila 4 (Rack de Efectos Macro + Modo MPC)**:
 
 ---
 
-## 8. Paso 5: Selección por Corte Exacto (`✂ Corte Exacto`), Arrastrar Audio (.WAV) y Arrastrar Notas (.MIDI) al DAW
+## 8. Paso 5: Selección por Corte Exacto (`✂ Corte Exacto`), Arrastrar Audio (.WAV) y Conversor a MIDI (`🎹 Convertir a MIDI`)
 
 En los **Visores de Onda** y en la **Fila 5 (Barra Inferior de Transporte, Corte Exacto y Exportación)**:
 
@@ -131,7 +131,7 @@ En los **Visores de Onda** y en la **Fila 5 (Barra Inferior de Transporte, Corte
   - Mantén presionado el clic izquierdo sobre el botón **`✂ Corte Exacto`** (o directamente sobre la nota iluminada en el visor de onda) y **arrástralo hacia una pista de tu DAW** para pasar únicamente ese trozo de audio y no la muestra completa.
 - **Botón `▶ Reproducir` / `⏹ Detener`:** Escucha directamente la muestra activa (o el corte exacto seleccionado) a través del mezclador de tu DAW.
 - **Botón `Arrastrar .WAV`:** Mantén presionado el clic izquierdo sobre este botón (o directamente sobre cualquiera de los dos visores de onda) y arrástralo hacia una pista de audio o sampler de tu DAW. Si tienes un corte exacto seleccionado (ej. `C1`), el botón mostrará `Arrastrar C1 (.WAV)` y arrastrará únicamente ese trozo.
-- **Botón `Arrastrar .MIDI`:** Mantén presionado el clic izquierdo sobre este botón y arrástralo hacia una pista MIDI o al Piano Roll de tu DAW. **ClipSampler** transcribe automáticamente las notas melódicas detectadas en el audio y genera un archivo `.mid` listo para usar con cualquier sintetizador o piano virtual.
+- **Botón `🎹 Convertir a MIDI`:** Haz clic o mantén presionado el clic izquierdo sobre este botón y arrástralo hacia una pista MIDI o al Piano Roll de tu DAW. **ClipSampler** analiza el audio, transcribe automáticamente sus notas melódicas y transientes, y genera un archivo `.mid` listo para ser interpretado por cualquier sintetizador o instrumento virtual (Serum, Omnisphere, FL Keys, etc.).
 
 ---
 
