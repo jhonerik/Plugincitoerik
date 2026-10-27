@@ -16,11 +16,18 @@
  *   únicamente la nota/trozo donde está el cursor (C1, C#1, D1...) para arrastrar solo ese Corte Exacto al DAW.
  */
 class WaveformComponent : public juce::Component,
-                          public juce::ChangeListener
+                          public juce::ChangeListener,
+                          public juce::FileDragAndDropTarget
 {
 public:
     WaveformComponent(ClipSamplerAudioProcessor& processorToUse, int slotIndexToUse, const juce::String& titleText);
     ~WaveformComponent() override;
+
+    /** Soporte para arrastrar archivos WAV/MP3 directamente desde el disco duro o navegador del DAW. */
+    bool isInterestedInFileDrag(const juce::StringArray& files) override;
+    void fileDragEnter(const juce::StringArray& files, int x, int y) override;
+    void fileDragExit(const juce::StringArray& files) override;
+    void filesDropped(const juce::StringArray& files, int x, int y) override;
 
     /** Dibuja el contenedor elegante azul zafiro, la onda, las divisiones MPC, el corte seleccionado y el cabezal. */
     void paint(juce::Graphics& g) override;
@@ -59,6 +66,7 @@ private:
     int hoveredDividerIndex = -1;
     int draggedDividerIndex = -1;
     bool isDraggingDivider = false;
+    bool isHoveringFileDrag = false;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(WaveformComponent)
 };

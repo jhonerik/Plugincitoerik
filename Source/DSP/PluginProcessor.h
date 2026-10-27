@@ -272,6 +272,9 @@ public:
     bool isUpdateRunning() const { return updateInProgress.load(std::memory_order_relaxed); }
     bool isMetadataFetchRunning() const { return metadataInProgress.load(std::memory_order_relaxed); }
     float getExtractionProgress() const { return extractionProgress.load(std::memory_order_relaxed); }
+    bool isWebExtractionUnlocked() const { return webExtractionUnlocked.load(std::memory_order_relaxed); }
+    void setWebExtractionUnlocked(bool unlocked) { webExtractionUnlocked.store(unlocked, std::memory_order_relaxed); }
+
     int getDetectedVideoDurationSeconds() const { return detectedVideoDurationSec.load(std::memory_order_relaxed); }
     int getLastSelectedDurationSeconds() const { return lastSelectedDurationSec.load(std::memory_order_relaxed); }
     int getLastAppliedSemitones() const { return lastAppliedSemitones.load(std::memory_order_relaxed); }
@@ -351,6 +354,7 @@ private:
     float lofiFilterStateR = 0.0f;
 
     // Parámetros de sesión almacenados
+    std::atomic<bool> webExtractionUnlocked { false }; // false = Modo Sampler Local (Seguro) | true = Extracción Web Desbloqueada
     std::atomic<int> selectedPlatform { 0 }; // 0 = YouTube, 1 = TikTok, 2 = Instagram
     juce::String lastUrl;
     juce::String lastStartTime = "00:00";

@@ -24,6 +24,52 @@ void WaveformComponent::changeListenerCallback(juce::ChangeBroadcaster* source)
         repaint();
 }
 
+bool WaveformComponent::isInterestedInFileDrag(const juce::StringArray& files)
+{
+    for (const auto& f : files)
+    {
+        auto ext = juce::File(f).getFileExtension().toLowerCase();
+        if (ext == ".wav" || ext == ".mp3" || ext == ".aiff" || ext == ".aif" || ext == ".flac" || ext == ".ogg")
+            return true;
+    }
+    return false;
+}
+
+void WaveformComponent::fileDragEnter(const juce::StringArray&, int, int)
+{
+    isHoveringFileDrag = true;
+    repaint();
+}
+
+void WaveformComponent::fileDragExit(const juce::StringArray&)
+{
+    isHoveringFileDrag = false;
+    repaint();
+}
+
+void WaveformComponent::filesDropped(const juce::StringArray& files, int, int)
+{
+    isHoveringFileDrag = false;
+    for (const auto& f : files)
+    {
+        juce::File file(f);
+        auto ext = file.getFileExtension().toLowerCase();
+        if (ext == ".wav" || ext == ".mp3" || ext == ".aiff" || ext == ".aif" || ext == ".flac" || ext == ".ogg")
+        {
+            if (processor.loadAudioFileIntoSlot(file, slotIndex))
+            {
+                processor.setStatusMessage(juce::String::fromUTF8("¡Audio local cargado en Visor ")
+                                           + juce::String(slotIndex) + ": " + file.getFileName());
+                repaint();
+                if (auto* parent = getParentComponent())
+                    parent->repaint();
+            }
+            break;
+        }
+    }
+    repaint();
+}
+
 float WaveformComponent::getNormalizedXFromEvent(const juce::MouseEvent& event) const
 {
     auto waveBounds = getLocalBounds().toFloat();
@@ -362,6 +408,12 @@ void WaveformComponent::paint(juce::Graphics& g)
     g.setColour(borderCol);
     g.drawRoundedRectangle(bounds.reduced(0.75f), 9.0f, isActiveSlot ? 1.8f : 1.1f);
 
+    if (isHoveringFileDrag)
+    {
+        g.setColour(juce::Colour(0xff00e5ff));
+        g.drawRoundedRectangle(bounds.reduced(1.5f), 9.0f, 2.5f);
+    }
+
     // Barra superior de título adaptable (usa drawFittedText para no cortar texto cuando la ventana es pequeña)
     const float headerH = juce::jlimit(18.0f, 24.0f, bounds.getHeight() * 0.22f);
     auto headerBar = bounds.removeFromTop(headerH).reduced(10.0f, 1.0f);
@@ -563,8 +615,10 @@ void WaveformComponent::paint(juce::Graphics& g)
         g.setColour(juce::Colour(0xff9cb0cf));
         g.setFont(juce::Font(juce::jlimit(10.5f, 13.0f, waveformArea.getHeight() * 0.16f), juce::Font::italic));
         juce::String placeholder = (slotIndex == 1)
-            ? juce::String::fromUTF8("1. Aquí aparecerá el Audio 1 (1 clic = Todo el audio | 2 clics = Seleccionar y arrastrar Corte Exacto C1..G2)...")
-            : juce::String::fromUTF8("2. Aquí aparecerá el Audio 2 modificado al pulsar '2. Derechos IA (±3 Semitonos)'...");
+            ? juce::String::fromUTF8("📂 SAMPLER LOCAL: Arrastra un archivo de audio (WAV, MP3, AIFF, FLAC) aquí\n"
+                                     "o pulsa 'Cargar Audio Local' para procesar tus propios samples...\n"
+                                     "(1 clic = Reproducir todo | 2 clics = Corte Exacto C1..G2 | Arrastrar al DAW)")
+            : juce::String::fromUTF8("📂 Arrastra un segundo archivo de audio aquí, o pulsa 'Calor Analógico' / 'Alterar Tonos'...");
         g.drawFittedText(placeholder, waveformArea.reduced(12.0f, 4.0f).toNearestInt(), juce::Justification::centred, 2, 0.72f);
     }
 }

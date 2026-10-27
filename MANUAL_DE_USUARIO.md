@@ -1,6 +1,19 @@
 # 🎹 Manual de Usuario — ClipSampler v2.5
+### Sampler de Transformación Local, Resintetizador y Rebanador MPC
 
-Bienvenido al **Manual Oficial de Usuario de ClipSampler v2.5**, el instrumento virtual (**VST3 / AAX**) diseñado para productores musicales, beatmakers y diseñadores de sonido que desean capturar fragmentos de audio desde **YouTube, TikTok e Instagram**, transformarlos creativamente y convertirlos en samples listos para tocar en MIDI o arrastrar directamente al DAW.
+Bienvenido al **Manual Oficial de Usuario de ClipSampler v2.5**, el instrumento virtual y procesador DSP (**VST3 / AAX**) concebido comercialmente bajo el modelo de **Sampler de Transformación Local**. 
+
+ClipSampler está diseñado para productores musicales, beatmakers y diseñadores de sonido que desean importar, trocear (slice MPC), transformar acústicamente, granularizar o convertir en notas MIDI sus **propios archivos de audio (WAV, MP3, AIFF, FLAC, OGG)** desde su disco duro con total privacidad y procesamiento local sin depender de servidores externos, incluyendo además un módulo opcional de **Uso Libre** para análisis de enlaces web bajo exclusiva responsabilidad del usuario.
+
+---
+
+## ⚖️ Marco Legal, Modelo Comercial y Responsabilidad del Usuario
+
+> [!IMPORTANT]
+> **DESCARGO DE RESPONSABILIDAD LEGAL Y USO ÉTICO DEL SOFTWARE:**
+> 1. **Instrumento DSP de Procesamiento Local:** ClipSampler es comercializado exclusivamente como una herramienta de ingeniería de sonido, rebanado rítmico y síntesis para audio provisto por el usuario.
+> 2. **Responsabilidad 100% del Usuario:** La procedencia, legalidad y derechos de autor de cualquier muestra, archivo o audio cargado o capturado en el software recaen **única y exclusivamente en el usuario final**.
+> 3. **Función Opcional de Uso Libre (Web):** El acceso a la lectura de URLs de internet (YouTube, TikTok, Instagram) permanece **bloqueado por defecto** y requiere la pulsación del botón **`⚖️ Uso Libre (Web)`** donde el usuario acepta explícitamente los términos de uso antes de su habilitación, eximiendo a los desarrolladores de cualquier responsabilidad civil, mercantil o penal derivada del uso ilícito de contenidos protegidos.
 
 ---
 
@@ -9,8 +22,8 @@ Bienvenido al **Manual Oficial de Usuario de ClipSampler v2.5**, el instrumento 
 1. [Instalación en tu DAW](#1-instalación-en-tu-daw)
 2. [Período de Prueba (3 Días) y Activación de Licencia](#2-período-de-prueba-3-días-y-activación-de-licencia)
 3. [Vista General de la Interfaz (Responsive)](#3-vista-general-de-la-interfaz-responsive)
-4. [Paso 1: Seleccionar Plataforma y Analizar Enlace](#4-paso-1-seleccionar-plataforma-y-analizar-enlace)
-5. [Paso 2: Modo de Extracción (Segundos vs Compases) y Captura](#5-paso-2-modo-de-extracción-segundos-vs-compases-y-captura)
+4. [Paso 1: Modelo Sampler Local (Arrastrar WAV/MP3 o Cargar Archivo)](#4-paso-1-modelo-sampler-local-arrastrar-wavmp3-o-cargar-archivo)
+5. [Paso 2: Función Opcional 'Uso Libre' (Lectura de URLs Web)](#5-paso-2-función-opcional-uso-libre-lectura-de-urls-web)
 6. [Paso 3: Doble Visor de Onda, Coloración Analógica y Suite de Derechos IA](#6-paso-3-doble-visor-de-onda-coloración-analógica-y-suite-de-derechos-ia)
 7. [Paso 4: Modo Auto-Chop (Estilo MPC) y Rack de Efectos Macro](#7-paso-4-modo-auto-chop-estilo-mpc-y-rack-de-efectos-macro)
 8. [Paso 5: Reverse y Half-Time por Pad, Ajuste de Transientes y Exportación](#8-paso-5-reverse-y-half-time-por-pad-ajuste-de-transientes-y-exportación)
@@ -22,11 +35,11 @@ Bienvenido al **Manual Oficial de Usuario de ClipSampler v2.5**, el instrumento 
 
 ## 1. Instalación en tu DAW
 
-1. Ejecuta el instalador **`ClipSampler_Windows_Installer_v2.5.0.exe`** (o `v2.4.0.exe`) como Administrador.
+1. Ejecuta el instalador **`ClipSampler_Windows_Installer_v2.5.0.exe`** como Administrador.
 2. Acepta el acuerdo de licencia y selecciona los formatos que utilices en tu estudio:
    - **VST3 (64-bit):** Compatible con FL Studio, Ableton Live, Cubase, Studio One, Reaper, Bitwig, etc. (Se instala en `C:\Program Files\Common Files\VST3\ClipSampler.vst3`).
    - **AAX (64-bit):** Compatible con Avid Pro Tools.
-3. El instalador copiará automáticamente las herramientas de extracción (`yt-dlp.exe` y `ffmpeg.exe`) en `C:\ProgramData\ClipSampler\tools` para que el plugin funcione de inmediato sin configuraciones adicionales.
+3. El instalador copiará automáticamente las herramientas auxiliares en `C:\ProgramData\ClipSampler\tools` para que el plugin funcione de inmediato sin configuraciones adicionales.
 4. Abre tu DAW, actualiza tu lista de plugins y carga **ClipSampler** en una pista de **Instrumento MIDI / Instrument Track**.
 
 ---
@@ -51,37 +64,33 @@ La interfaz de **ClipSampler v2.5** cuenta con un diseño de estudio **Royal Sap
 
 ---
 
-## 4. Paso 1: Seleccionar Plataforma y Analizar Enlace
+## 4. Paso 1: Modelo Sampler Local (Arrastrar WAV/MP3 o Cargar Archivo)
 
-En la **Fila 1 (Plataforma + URL)**:
+**ClipSampler v2.5** funciona de forma nativa e inmediata como un **Sampler de Transformación Local**:
 
-1. **Selector de Plataforma:** Elige el origen de tu enlace:
-   - **🌐 Auto:** Detecta automáticamente a qué red pertenece el link.
-   - **▶️ YouTube:** Optimizado para videos, canciones y Shorts de YouTube.
-   - **🎵 TikTok:** Optimizado para videos públicos de TikTok.
-   - **📸 Instagram:** Optimizado para Reels y publicaciones de video de Instagram.
-2. **Campo de Enlace:** Pega la URL del video. Notarás que el selector de plataforma cambia automáticamente según el enlace pegado.
-3. **Botón `🔍 Analizar`:** Haz clic aquí si deseas que el plugin lea el título y la duración total del video antes de descargar nada. El deslizador de tiempo se ajustará automáticamente a la duración exacta del video (por ejemplo, `00:00 / 03:45`).
+1. **Arrastrar y Soltar desde el DAW o Windows (Drag & Drop Directo):**
+   - Arrastra cualquier archivo de audio en formato **WAV, MP3, AIFF, FLAC u OGG** directamente desde el explorador de Windows o desde el browser de muestras de tu DAW (FL Studio, Ableton, Reaper, etc.) y suéltalo sobre la ventana del plugin o sobre cualquiera de los visores de onda.
+   - El visor se iluminará con un halo cian reactivo al pasar el archivo por encima y se cargará en memoria RAM instantáneamente.
+2. **Botón `📂 Cargar Audio Local`:**
+   - Haz clic en este botón (ubicado a la izquierda en la Fila 0) para abrir el explorador de archivos nativo y elegir cualquier sample o grabación de tu librería.
+3. **Procesamiento Inmediato:**
+   - Al cargar el archivo local, ClipSampler calcula automáticamente su **BPM**, detecta su **Tonalidad Musical (Key)**, ajusta la frecuencia de muestreo al proyecto de tu DAW y genera las rebanadas automáticas para tocar en pads MIDI (**C1 a G2**).
 
 ---
 
-## 5. Paso 2: Modo de Extracción (Segundos vs Compases) y Captura
+## 5. Paso 2: Función Opcional 'Uso Libre' (Lectura de URLs Web)
 
-En la **Fila 2 y Fila 3 (Tiempo, Duración y Captura)**:
+Para habilitar la captura opcional desde plataformas de internet:
 
-1. **Inicio (`MM:SS` o segundos):** Puedes escribir el minuto y segundo exacto donde quieres que empiece la extracción (ej. `01:15` o `75`) o mover la **barra deslizadora de tiempo** que aparece al lado.
-2. **Selector de Modo (`⏱️ Segundos` / `🎵 Compases`):**
-   - **Modo Segundos (`⏱️ Segundos`):** Muestra los botones clásicos de tiempo fijo:
-     - **`3s`:** Ideal para one-shots, golpes de batería o efectos vocales.
-     - **`10s`:** Frases melódicas y acordes estándar.
-     - **`30s`:** Secciones largas, intros completas para chopear.
-   - **Modo Compases Musicales (`🎵 Compases`):** ¡Exclusivo de ClipSampler v2.5! Sincronizado automáticamente con el tempo (BPM) del DAW o el BPM detectado:
-     - **`1 Bar`:** Recorta exactamente 1 compás (4 tiempos). *Ejemplo: 2.0s a 120 BPM, 1.7s a 140 BPM*.
-     - **`2 Bars`:** Recorta exactamente 2 compases (8 tiempos). *Ejemplo: 4.0s a 120 BPM, 3.4s a 140 BPM*.
-     - **`4 Bars`:** Recorta una progresión completa de 4 compases (16 tiempos) en bucle perfecto.
-3. **Casilla `Norm -1dB`:** Si está activada (recomendado), nivela el volumen del audio extraído a `-1.0 dB` y aplica micro-fundidos de 10 ms al inicio y final para evitar chasquidos (*clicks*).
-4. **Botón `⚡ EXTRAER`:** Inicia la descarga y recorte en alta fidelidad sincronizado a los Hz de tu proyecto.
-5. **Botón `🔄 Nueva Extracción`:** Se habilita inmediatamente apenas se extrae el primer corte de audio en el Visor 1 (o al tener ambos audios), permitiendo reiniciar y limpiar toda la sesión con un solo clic para comenzar una nueva captura desde cero.
+1. **Botón `⚖️ Uso Libre (Web)`:**
+   - Por defecto, las cajas de texto y botones de extracción web permanecen desactivados para garantizar la operación local.
+   - Haz clic en **`⚖️ Uso Libre (Web)`**. Aparecerá una ventana modal con el **Aviso Legal y Descargo de Responsabilidad**.
+   - Al pulsar **`Aceptar y Activar`**, el botón cambiará a **`✅ Uso Libre (Web Activo)`** en color verde esmeralda, desbloqueando el campo de URL y los selectores de **YouTube, TikTok e Instagram**.
+2. **Extracción y Recorte (Segundos o Compases):**
+   - **Pegar Enlace:** Pega la URL del video. El selector de plataforma se auto-configurará.
+   - **`⏱️ Segundos` / `🎵 Compases`:** Elige si deseas recortar por tiempo fijo (`3s`, `10s`, `30s`) o por compases musicales exactos (`1 Bar`, `2 Bars`, `4 Bars`) sincronizados al tempo de tu DAW.
+   - **`⚡ EXTRAER`:** Inicia el recorte en alta resolución sincronizado a la tasa de muestreo del DAW.
+   - **`🔄 Nueva Extracción`:** Se habilita inmediatamente tras el primer audio para limpiar ambos visores y permitir una nueva sesión con un solo clic.
 
 ---
 

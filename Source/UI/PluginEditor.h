@@ -275,11 +275,15 @@ private:
  */
 class ClipSamplerAudioProcessorEditor : public juce::AudioProcessorEditor,
                                         public juce::DragAndDropContainer,
+                                        public juce::FileDragAndDropTarget,
                                         private juce::Timer
 {
 public:
     explicit ClipSamplerAudioProcessorEditor(ClipSamplerAudioProcessor&);
     ~ClipSamplerAudioProcessorEditor() override;
+
+    bool isInterestedInFileDrag(const juce::StringArray& files) override;
+    void filesDropped(const juce::StringArray& files, int x, int y) override;
 
     void paint(juce::Graphics&) override;
     void resized() override;
@@ -290,6 +294,9 @@ private:
     void timerCallback() override;
 
     // Manejadores de eventos de usuario
+    void onLoadLocalFileClicked();
+    void onUsoLibreClicked();
+    void loadLocalAudioFile(const juce::File& file);
     void onSelectPlatform(SourcePlatform platform, bool updateStatusMsg = true);
     void onPasteClicked();
     void onDetectDurationClicked();
@@ -331,19 +338,22 @@ private:
     juce::TextButton cleanCacheButton      { juce::String::fromUTF8("Limpiar Caché") };
 
     // =========================================================================
-    // Panel Superior: Plataforma (YouTube / TikTok / Instagram), URL, Duración y Coloración de Audio
+    // Panel Superior: Sampler de Transformación Local y Extracción Web (Uso Libre)
     // =========================================================================
     juce::GroupComponent topSectionGroup {
         "topGroup",
-        juce::String::fromUTF8("1. PLATAFORMA (YOUTUBE / TIKTOK / INSTAGRAM), EXTRACCIÓN Y COLORACIÓN DE AUDIO")
+        juce::String::fromUTF8("1. SAMPLER DE TRANSFORMACIÓN LOCAL Y EXTRACCIÓN (USO LIBRE)")
     };
 
-    // Fila 0: Selector de Plataforma
-    juce::Label platformLabel          { {}, juce::String::fromUTF8("Plataforma:") };
+    // Fila 0: Cargar Audio Local + Activar Uso Libre (Web) + Selector de Plataforma Web
+    juce::TextButton loadLocalFileButton  { juce::String::fromUTF8("📂 Cargar Audio Local") };
+    juce::TextButton usoLibreButton       { juce::String::fromUTF8("⚖️ Uso Libre (Web)") };
     juce::TextButton platformYoutubeBtn   { juce::String::fromUTF8("▶ YouTube") };
     juce::TextButton platformTiktokBtn    { juce::String::fromUTF8("♪ TikTok") };
     juce::TextButton platformInstagramBtn { juce::String::fromUTF8("◉ Instagram") };
+    juce::Label platformLabel             { {}, juce::String::fromUTF8("Plataforma:") };
     juce::Label platformHintLabel;
+    std::unique_ptr<juce::FileChooser> fileChooser;
 
     // Fila 1: Enlace URL + Pegar + Detectar Duración
     juce::Label urlLabel               { {}, juce::String::fromUTF8("Enlace (URL):") };
@@ -428,7 +438,6 @@ private:
     juce::TextButton dragMidiButton  { juce::String::fromUTF8("🎹 Convertir a MIDI") };
     juce::TextButton exportWavButton { juce::String::fromUTF8("Exportar .WAV...") };
 
-    std::unique_ptr<juce::FileChooser> fileChooser;
     LicenseOverlayComponent licenseOverlay;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ClipSamplerAudioProcessorEditor)

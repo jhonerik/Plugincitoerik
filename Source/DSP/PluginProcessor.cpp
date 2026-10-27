@@ -41,7 +41,7 @@ ClipSamplerAudioProcessor::ClipSamplerAudioProcessor()
       currentStatusMessage(juce::String::fromUTF8("Listo. Elige plataforma (YouTube, TikTok o Instagram), pega el enlace y extrae 3s, 10s o 30s.")),
       currentCopyrightBadge(juce::String::fromUTF8("DERECHOS: Pendiente de análisis"))
 {
-    // Registramos formatos básicos de audio (WAV, AIFF)
+    // Registramos formatos de audio estándar (WAV, AIFF, FLAC, OGG, MP3/WMA en Windows)
     formatManager.registerBasicFormats();
 
     // Inicializamos las 8 voces polifónicas del sampler MIDI
@@ -729,6 +729,7 @@ void ClipSamplerAudioProcessor::getStateInformation(juce::MemoryBlock& destData)
     state.setProperty("fxPitchSemitones", fxPitchSemitones.load(), nullptr);
     state.setProperty("fxToneFilter", fxToneFilter.load(), nullptr);
     state.setProperty("autoSyncEnabled", autoSyncEnabled.load(), nullptr);
+    state.setProperty("webExtractionUnlocked", webExtractionUnlocked.load(), nullptr);
 
     auto origFile = getSlotAudioFile(1);
     auto transFile = getSlotAudioFile(2);
@@ -763,6 +764,8 @@ void ClipSamplerAudioProcessor::setStateInformation(const void* data, int sizeIn
         fxPitchSemitones.store(static_cast<float>(state.getProperty("fxPitchSemitones", 0.0f)));
         fxToneFilter.store(static_cast<float>(state.getProperty("fxToneFilter", 1.0f)));
         autoSyncEnabled.store(static_cast<bool>(state.getProperty("autoSyncEnabled", false)));
+        if (state.hasProperty("webExtractionUnlocked"))
+            webExtractionUnlocked.store(static_cast<bool>(state.getProperty("webExtractionUnlocked", false)));
 
         juce::String path = state.getProperty("lastWavPath", "").toString();
         juce::String fileName = state.getProperty("lastWavFileName", "").toString();

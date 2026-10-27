@@ -40,10 +40,16 @@ ClipSamplerAudioProcessorEditor::ClipSamplerAudioProcessorEditor(ClipSamplerAudi
     topSectionGroup.setTextLabelPosition(juce::Justification::centredLeft);
     addAndMakeVisible(topSectionGroup);
 
-    // Fila 0: Selector de Plataforma (YouTube / TikTok / Instagram)
-    platformLabel.setColour(juce::Label::textColourId, juce::Colour(0xffe2e8f0));
-    platformLabel.setMinimumHorizontalScale(0.68f);
-    addAndMakeVisible(platformLabel);
+    // Fila 0: Cargar Audio Local + Activar Uso Libre (Web) + Selector de Plataforma
+    loadLocalFileButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff0f766e)); // Teal/Cyan elegante
+    loadLocalFileButton.setColour(juce::TextButton::textColourOffId, juce::Colours::white);
+    loadLocalFileButton.onClick = [this] { onLoadLocalFileClicked(); };
+    addAndMakeVisible(loadLocalFileButton);
+
+    usoLibreButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff334155)); // Slate oscuro
+    usoLibreButton.setColour(juce::TextButton::textColourOffId, juce::Colour(0xffcbd5e1));
+    usoLibreButton.onClick = [this] { onUsoLibreClicked(); };
+    addAndMakeVisible(usoLibreButton);
 
     platformYoutubeBtn.onClick   = [this] { onSelectPlatform(SourcePlatform::YouTube, true); };
     platformTiktokBtn.onClick    = [this] { onSelectPlatform(SourcePlatform::TikTok, true); };
@@ -51,11 +57,6 @@ ClipSamplerAudioProcessorEditor::ClipSamplerAudioProcessorEditor(ClipSamplerAudi
     addAndMakeVisible(platformYoutubeBtn);
     addAndMakeVisible(platformTiktokBtn);
     addAndMakeVisible(platformInstagramBtn);
-
-    platformHintLabel.setJustificationType(juce::Justification::centredRight);
-    platformHintLabel.setColour(juce::Label::textColourId, juce::Colour(0xffcbd5e1));
-    platformHintLabel.setMinimumHorizontalScale(0.65f);
-    addAndMakeVisible(platformHintLabel);
 
     // Fila 1: Campo de Enlace (URL) con autodetección de plataforma al pegar o escribir
     urlLabel.setColour(juce::Label::textColourId, juce::Colour(0xffe2e8f0));
@@ -427,26 +428,36 @@ void ClipSamplerAudioProcessorEditor::onSelectPlatform(SourcePlatform platform, 
 void ClipSamplerAudioProcessorEditor::updatePlatformUiState()
 {
     const SourcePlatform plat = audioProcessor.getSelectedPlatform();
+    const bool webUnlocked = audioProcessor.isWebExtractionUnlocked();
 
     juce::Colour accentCol(0xff38bdf8);
     if (plat == SourcePlatform::YouTube)
     {
         accentCol = juce::Colour(0xffff2a55);
-        urlEditor.setTextToShowWhenEmpty("https://www.youtube.com/watch?v=...  o  https://youtu.be/...", juce::Colour(0xff94a3b8));
+        urlEditor.setTextToShowWhenEmpty(webUnlocked
+            ? "https://www.youtube.com/watch?v=...  o  https://youtu.be/..."
+            : juce::String::fromUTF8("Pulsa [⚖️ Uso Libre (Web)] para activar extracción de enlaces..."),
+            juce::Colour(0xff94a3b8));
         platformHintLabel.setText(juce::String::fromUTF8("Motor Activo: YouTube / Shorts (Alta Precisión)"), juce::dontSendNotification);
         platformHintLabel.setColour(juce::Label::textColourId, juce::Colour(0xffff8a9f));
     }
     else if (plat == SourcePlatform::TikTok)
     {
         accentCol = juce::Colour(0xff00f2fe);
-        urlEditor.setTextToShowWhenEmpty("https://www.tiktok.com/@usuario/video/...  o  https://vm.tiktok.com/...", juce::Colour(0xff94a3b8));
+        urlEditor.setTextToShowWhenEmpty(webUnlocked
+            ? "https://www.tiktok.com/@usuario/video/...  o  https://vm.tiktok.com/..."
+            : juce::String::fromUTF8("Pulsa [⚖️ Uso Libre (Web)] para activar extracción de enlaces..."),
+            juce::Colour(0xff94a3b8));
         platformHintLabel.setText(juce::String::fromUTF8("Motor Activo: TikTok Audio + Cabeceras Anti-Bloqueo"), juce::dontSendNotification);
         platformHintLabel.setColour(juce::Label::textColourId, juce::Colour(0xff7dd3fc));
     }
     else
     {
         accentCol = juce::Colour(0xffe040fb);
-        urlEditor.setTextToShowWhenEmpty("https://www.instagram.com/reel/...  o  https://www.instagram.com/p/...", juce::Colour(0xff94a3b8));
+        urlEditor.setTextToShowWhenEmpty(webUnlocked
+            ? "https://www.instagram.com/reel/...  o  https://www.instagram.com/p/..."
+            : juce::String::fromUTF8("Pulsa [⚖️ Uso Libre (Web)] para activar extracción de enlaces..."),
+            juce::Colour(0xff94a3b8));
         platformHintLabel.setText(juce::String::fromUTF8("Motor Activo: Instagram Reels / Publicaciones"), juce::dontSendNotification);
         platformHintLabel.setColour(juce::Label::textColourId, juce::Colour(0xfff0abfc));
     }
@@ -632,10 +643,36 @@ void ClipSamplerAudioProcessorEditor::timerCallback()
     const bool fetchingMeta = audioProcessor.isMetadataFetchRunning();
     const bool bothAudiosReady = audioProcessor.hasBothAudiosReady();
 
-    extract3sButton.setEnabled(unlocked && !extracting);
-    extract10sButton.setEnabled(unlocked && !extracting);
-    extract30sButton.setEnabled(unlocked && !extracting);
-    detectDurationButton.setEnabled(unlocked && !fetchingMeta);
+    const bool webUnlocked = audioProcessor.isWebExtractionUnlocked();
+
+    loadLocalFileButton.setEnabled(unlocked);
+    usoLibreButton.setEnabled(unlocked);
+
+    if (webUnlocked)
+    {
+        usoLibreButton.setButtonText(juce::String::fromUTF8("✅ Uso Libre (Web Activo)"));
+        usoLibreButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff065f46));
+        usoLibreButton.setColour(juce::TextButton::textColourOffId, juce::Colour(0xff6ee7b7));
+    }
+    else
+    {
+        usoLibreButton.setButtonText(juce::String::fromUTF8("⚖️ Uso Libre (Web)"));
+        usoLibreButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff334155));
+        usoLibreButton.setColour(juce::TextButton::textColourOffId, juce::Colour(0xffcbd5e1));
+    }
+
+    platformYoutubeBtn.setEnabled(unlocked && webUnlocked);
+    platformTiktokBtn.setEnabled(unlocked && webUnlocked);
+    platformInstagramBtn.setEnabled(unlocked && webUnlocked);
+    urlEditor.setEnabled(unlocked && webUnlocked);
+    pasteButton.setEnabled(unlocked && webUnlocked);
+    detectDurationButton.setEnabled(unlocked && webUnlocked && !fetchingMeta);
+    startTimeSlider.setEnabled(unlocked && webUnlocked);
+    startTimeEditor.setEnabled(unlocked && webUnlocked);
+    extractModeButton.setEnabled(unlocked && webUnlocked);
+    extract3sButton.setEnabled(unlocked && webUnlocked && !extracting);
+    extract10sButton.setEnabled(unlocked && webUnlocked && !extracting);
+    extract30sButton.setEnabled(unlocked && webUnlocked && !extracting);
     updateExtractorButton.setEnabled(unlocked && !updating);
 
     const bool hasAudio1 = audioProcessor.hasSlotAudio(1);
@@ -709,6 +746,107 @@ void ClipSamplerAudioProcessorEditor::timerCallback()
 // ==============================================================================
 // Acciones de Botones de Extracción, Derechos IA, Efectos y Exportación
 // ==============================================================================
+bool ClipSamplerAudioProcessorEditor::isInterestedInFileDrag(const juce::StringArray& files)
+{
+    for (const auto& f : files)
+    {
+        auto ext = juce::File(f).getFileExtension().toLowerCase();
+        if (ext == ".wav" || ext == ".mp3" || ext == ".aiff" || ext == ".aif" || ext == ".flac" || ext == ".ogg")
+            return true;
+    }
+    return false;
+}
+
+void ClipSamplerAudioProcessorEditor::filesDropped(const juce::StringArray& files, int, int)
+{
+    for (const auto& f : files)
+    {
+        juce::File file(f);
+        auto ext = file.getFileExtension().toLowerCase();
+        if (ext == ".wav" || ext == ".mp3" || ext == ".aiff" || ext == ".aif" || ext == ".flac" || ext == ".ogg")
+        {
+            loadLocalAudioFile(file);
+            break;
+        }
+    }
+}
+
+void ClipSamplerAudioProcessorEditor::loadLocalAudioFile(const juce::File& file)
+{
+    if (!file.existsAsFile())
+        return;
+
+    if (audioProcessor.loadAudioFileIntoSlot(file, 1))
+    {
+        audioProcessor.setStatusMessage(juce::String::fromUTF8("¡Audio local cargado con éxito en Visor 1!: ") + file.getFileName());
+        originalWaveformComponent.repaint();
+        transformedWaveformComponent.repaint();
+        updateFxAndMpcUiState();
+        timerCallback();
+    }
+    else
+    {
+        audioProcessor.setStatusMessage(juce::String::fromUTF8("Error al leer el archivo de audio. Formatos soportados: WAV, MP3, AIFF, FLAC, OGG."));
+    }
+}
+
+void ClipSamplerAudioProcessorEditor::onLoadLocalFileClicked()
+{
+    fileChooser = std::make_unique<juce::FileChooser>(
+        juce::String::fromUTF8("Selecciona un archivo de audio (WAV, MP3, AIFF, FLAC, OGG)..."),
+        juce::File::getSpecialLocation(juce::File::userMusicDirectory),
+        "*.wav;*.mp3;*.aiff;*.aif;*.flac;*.ogg");
+
+    auto chooserFlags = juce::FileBrowserComponent::openMode | juce::FileBrowserComponent::canSelectFiles;
+    fileChooser->launchAsync(chooserFlags, [this](const juce::FileChooser& fc) {
+        auto result = fc.getResult();
+        if (result.existsAsFile())
+            loadLocalAudioFile(result);
+    });
+}
+
+void ClipSamplerAudioProcessorEditor::onUsoLibreClicked()
+{
+    if (audioProcessor.isWebExtractionUnlocked())
+    {
+        audioProcessor.setWebExtractionUnlocked(false);
+        audioProcessor.setStatusMessage(juce::String::fromUTF8("Modo Sampler Local activado. Extracción Web bloqueada."));
+        timerCallback();
+        return;
+    }
+
+    auto options = juce::MessageBoxOptions()
+        .withIconType(juce::MessageBoxIconType::WarningIcon)
+        .withTitle(juce::String::fromUTF8("⚖️ CONDICIONES DE USO LIBRE Y DESCARGO LEGAL"))
+        .withMessage(juce::String::fromUTF8(
+            "CLIPSAMPLER es un Instrumento Musical y Sampler de Transformación de Audio Local.\n\n"
+            "La función de extracción y lectura de URLs (YouTube, TikTok, Instagram) es una "
+            "herramienta opcional de USO LIBRE destinada exclusivamente a contenido de Dominio Público, "
+            "licencias Creative Commons (CC) o material con expresa autorización de su titular.\n\n"
+            "AL ACTIVAR ESTA FUNCIÓN DECLARAS Y ACEPTAS:\n"
+            "1. Que el uso de cualquier audio obtenido de internet es bajo TU TOTAL Y EXCLUSIVA RESPONSABILIDAD LEGAL.\n"
+            "2. Que ClipSampler, AudioInnovations y sus creadores quedan 100% exentos de responsabilidad civil o penal "
+            "por el uso indebido o ilegal que el usuario haga de este software.\n\n"
+            "¿Deseas aceptar los términos y activar la extracción web de Uso Libre?"))
+        .withButton(juce::String::fromUTF8("Aceptar y Activar"))
+        .withButton(juce::String::fromUTF8("Cancelar (Modo Local Seguro)"))
+        .withAssociatedComponent(this);
+
+    juce::AlertWindow::showAsync(options, [this](int result) {
+        if (result == 1) // Aceptar
+        {
+            audioProcessor.setWebExtractionUnlocked(true);
+            audioProcessor.setStatusMessage(juce::String::fromUTF8("✅ Modo Uso Libre (Web) activado bajo tu total responsabilidad."));
+        }
+        else
+        {
+            audioProcessor.setWebExtractionUnlocked(false);
+            audioProcessor.setStatusMessage(juce::String::fromUTF8("Permaneciendo en Modo Sampler de Transformación Local Seguro."));
+        }
+        timerCallback();
+    });
+}
+
 void ClipSamplerAudioProcessorEditor::onPasteClicked()
 {
     juce::String clip = juce::SystemClipboard::getTextFromClipboard().trim();
@@ -1393,17 +1531,23 @@ void ClipSamplerAudioProcessorEditor::resized()
     const int rowH = juce::jmax(22, (topInner.getHeight() - (gapY * 5) - juce::roundToInt(32.0f * hScale)) / 5);
     const int labelColW = juce::jlimit(78, 120, juce::roundToInt(innerW * 0.115f));
 
-    // Fila 0: Plataforma (YouTube / TikTok / Instagram) + Indicador de motor activo
+    // Fila 0: Cargar Audio Local + Activar Uso Libre (Web) + Plataformas Web
     auto platRow = topInner.removeFromTop(rowH);
-    platformLabel.setBounds(platRow.removeFromLeft(labelColW));
-    const int platBtnW = juce::jlimit(78, 145, juce::roundToInt(platRow.getWidth() * 0.19f));
-    platformYoutubeBtn.setBounds(platRow.removeFromLeft(platBtnW));
+    const int totalPlatRowW = platRow.getWidth() - (4 * 6); // 4 separadores de 6px
+    const int localBtnW = juce::jlimit(145, 250, juce::roundToInt(totalPlatRowW * 0.26f));
+    const int usoLibreW = juce::jlimit(140, 240, juce::roundToInt(totalPlatRowW * 0.24f));
+    const int remainW   = totalPlatRowW - localBtnW - usoLibreW;
+    const int eachPlatW = remainW / 3;
+
+    loadLocalFileButton.setBounds(platRow.removeFromLeft(localBtnW));
     platRow.removeFromLeft(6);
-    platformTiktokBtn.setBounds(platRow.removeFromLeft(platBtnW));
+    usoLibreButton.setBounds(platRow.removeFromLeft(usoLibreW));
     platRow.removeFromLeft(6);
-    platformInstagramBtn.setBounds(platRow.removeFromLeft(platBtnW));
-    platRow.removeFromLeft(8);
-    platformHintLabel.setBounds(platRow);
+    platformYoutubeBtn.setBounds(platRow.removeFromLeft(eachPlatW));
+    platRow.removeFromLeft(6);
+    platformTiktokBtn.setBounds(platRow.removeFromLeft(eachPlatW));
+    platRow.removeFromLeft(6);
+    platformInstagramBtn.setBounds(platRow);
 
     topInner.removeFromTop(gapY);
 
