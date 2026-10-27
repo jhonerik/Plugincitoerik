@@ -80,19 +80,24 @@ En la **Fila 2 (Tiempo, Duración y Captura)**:
 
 ---
 
-## 6. Paso 3: Separador de Stems por IA (Vocales / Beat), Derechos IA y Doble Visor de Onda
+## 6. Paso 3: Coloración Sutil de Audio (Calor Analógico / Aire 3D), Derechos IA y Doble Visor de Onda
 
-**ClipSampler v2.4** cuenta con un motor avanzado de **Separación de Pistas (Stems) por Inteligencia Artificial y DSP Espectral** ubicado en la Fila 4:
+**ClipSampler v2.4** cuenta con una suite de herramientas avanzadas de **Modificación y Coloración de Audio** ubicada en la Fila 4:
 
-### 🎤 Botón `🎤 Vocales IA (Acapella)`
-- **¿Qué hace?** Analiza el audio de origen y extrae **únicamente la voz humana (acapella limpia)**, suprimiendo los golpes de batería, el bombo, el bajo y los instrumentos estéreo secundarios mediante filtrado de formantes y cancelación de fase central.
-- El resultado se carga automáticamente en el **Visor 2 (`VISOR 2: VOCALES IA (ACAPELLA)`)**.
-- **Usos creativos:** Tocar frases vocales cortadas con el teclado MIDI (`C1` a `G2`), ajustar las líneas de corte con precisión milimétrica, o arrastrar la acapella limpia (`.WAV`) directamente a tu DAW.
+### 📼 Botón `📼 Calor Analógico`
+- **¿Qué hace?** Aplica una coloración analógica vintage inspirada en grabadoras de cinta de carrete abierto (*tape machines*) y previos a válvulas:
+  - Genera saturación armónica asimétrica suave (2º y 3º armónicos musicales) que añade grosor y pegada.
+  - Realza sutilmente el cuerpo en graves (~160 Hz estilo Pultec EQ) y suaviza los agudos extremos (> 15.5 kHz) eliminando la aspereza digital de videos de internet.
+- El resultado se carga automáticamente en el **Visor 2 (`VISOR 2: CALOR ANALÓGICO (TAPE WARMTH)`)**.
+- **Usos creativos:** Dar calidez, cohesión y pegada a samples fríos o delgados sin distorsión áspera.
 
-### 🥁 Botón `🥁 Beat IA (Instrumental)`
-- **¿Qué hace?** Elimina la voz del cantante o diálogo del video y **aísla la base instrumental completa (batería, percusiones, 808 sub-bass, melodías y sintetizadores)** manteniendo intacta la pegada de las frecuencias graves (< 140 Hz).
-- El resultado se carga en el **Visor 2 (`VISOR 2: BEAT IA (INSTRUMENTAL)`)**.
-- **Usos creativos:** Crear un beat nuevo a partir de una base sin voces molestas, o samplear bucles de batería (*drum breaks*).
+### ✨ Botón `✨ Aire y Espacio 3D`
+- **¿Qué hace?** Abre el campo estéreo dimensional y aporta brillo cristalino sedoso:
+  - Separa la señal en componentes *Mid/Side* (centro y laterales). El centro monofónico se mantiene 100% puro para preservar total compatibilidad mono sin desfases.
+  - Expande la imagen espacial estéreo (+2.2 dB) con micro-decorrelación de fase envolvente.
+  - Aplica un excitador armónico en la banda de aire (*Air Band* > 10.5 kHz) aportando brillo moderno y presencia.
+- El resultado se carga en el **Visor 2 (`VISOR 2: AIRE Y ESPACIO 3D`)**.
+- **Usos creativos:** Abrir sintetizadores, guitarras, pianos y bucles para que tengan profundidad 3D y brillo profesional en la mezcla.
 
 ### 🤖 Botón `🤖 Derechos IA (±3 st)`
 - Aplica procesamiento DSP transformativo (desplazamiento de tono de ±3 semitonos con preservación de formantes, micro-estiramiento temporal y dispersión de fase all-pass) para alterar la huella acústica de la muestra original y evadir sistemas de Content ID.
@@ -101,7 +106,7 @@ En la **Fila 2 (Tiempo, Duración y Captura)**:
 ### 🛡️ Botón `🛡️ Verificar Derechos`
 - Analiza matemáticamente la correlación espectral y la divergencia entre el Audio 1 y el Audio 2:
   - Si estás en el **Visor 1**, evalúa el riesgo de huella acústica del audio original.
-  - Si estás en el **Visor 2**, confirma la divergencia matemática confirmando que el stem o audio procesado es apto para uso seguro (`✅ LIBRE DE DERECHOS`).
+  - Si estás en el **Visor 2**, confirma la divergencia matemática confirmando que el audio procesado es apto para uso seguro (`✅ LIBRE DE DERECHOS`).
 
 ---
 
@@ -126,6 +131,9 @@ En la **Fila 4 (Rack de Efectos Macro + Modo MPC)**:
    - Determina cómo termina el sonido al soltar la tecla o pad MIDI: en corte seco inmediato o desvaneciéndose con una cola suave y musical.
 8. **Botón `🔗 Sync BPM DAW`:**
    - Sincroniza automáticamente la velocidad de reproducción del sample con el tempo (BPM) actual de tu proyecto en el DAW.
+9. **Botón `⚡ Aplicar FX / ✓ Efectos Activados`:**
+   - Imprime de forma permanente e instantánea los ajustes de efectos (Lo-Fi, Tono, Filtro) en el archivo WAV del Audio seleccionado.
+   - **Indicador Dinámico de Estado:** Al hacer clic, el botón cambia inmediatamente a **`✓ Efectos Activados`** en color verde neón brillante, confirmando con total claridad que el audio tiene los efectos aplicados y activos. Si vuelves a mover las perillas para un nuevo ajuste, el botón volverá a mostrar `Aplicar FX` para que puedas volver a imprimir la nueva versión.
 
 ---
 

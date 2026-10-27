@@ -105,22 +105,21 @@ public:
     bool applyDerechosTransformation(int semitoneShift, juce::String& outReport);
 
     //==============================================================================
-    // Separador de Stems por IA (Vocales / Beat)
+    // Coloración Sutil de Audio (Calor Analógico / Aire y Espacio 3D)
     //==============================================================================
-    enum class StemType
+    enum class SubtleColorType
     {
-        Vocals = 0, ///< Aislar Vocales (Acapella / Voz limpia)
-        Beat = 1    ///< Aislar Beat / Instrumental (Drums, Bass y Acompañamiento)
+        TapeWarmth = 1, ///< Calor Analógico (Saturación de cinta, cuerpo Pultec y suavizado de agudos)
+        SpatialAir = 2  ///< Aire y Espacio 3D (Apertura estéreo Mid/Side y brillo Air Band > 10.5 kHz)
     };
 
     /**
-     * Separa el audio activo en Vocales (Acapella) o Beat (Instrumental)
-     * mediante separación espectral de formantes y cancelación de fase central,
-     * cargando el resultado en la Ranura 2.
+     * Aplica una coloración acústica sutil y musical al Audio 1,
+     * cargando el resultado en la Ranura 2 con calidad de 24 bits.
      */
-    bool separateAndLoadStem(StemType type, juce::String& outReport);
+    bool applySubtleColor(SubtleColorType type, juce::String& outReport);
 
-    /** Devuelve el tipo de contenido cargado en la Ranura 2 ("DERECHOS ±3 ST IA", "VOCALES IA (ACAPELLA)" o "BEAT IA (INSTRUMENTAL)"). */
+    /** Devuelve el tipo de contenido cargado en la Ranura 2 ("CALOR ANALÓGICO (TAPE WARMTH)", "AIRE Y ESPACIO 3D" o "DERECHOS ±3 ST IA"). */
     juce::String getSlot2ContentTypeString() const;
     int getSlot2ContentType() const { return slot2ContentType.load(std::memory_order_relaxed); }
 
@@ -217,6 +216,10 @@ public:
 
     /** Imprime de forma permanente los efectos actuales en el archivo WAV de la ranura seleccionada (1 o 2). */
     bool applyFxMacroToTargetSlot(juce::String& outReport);
+
+    /** Consulta o establece si la ranura indicada (1 o 2) tiene efectos impresos/activados. */
+    bool isFxActiveForSlot(int slotIndex) const;
+    void setFxActiveForSlot(int slotIndex, bool active);
 
     //==============================================================================
     // Detector Automático de Tempo (BPM) y Tonalidad Musical (Tono)
@@ -348,7 +351,9 @@ private:
     std::atomic<int> lastAppliedSemitones { 3 };
     std::atomic<double> lastDivergencePercent { 0.0 };
     std::atomic<int> copyrightVerifyState { 0 };
-    std::atomic<int> slot2ContentType { 0 }; // 0 = Derechos IA, 1 = Vocales IA, 2 = Beat IA
+    std::atomic<int> slot2ContentType { 0 }; // 0 = Derechos IA, 1 = Calor Analógico, 2 = Aire y Espacio 3D
+    std::atomic<bool> slot1FxActive { false };
+    std::atomic<bool> slot2FxActive { false };
 
     // Estado sincronizado entre hilos para los mensajes de la UI
     mutable juce::CriticalSection statusLock;

@@ -295,8 +295,8 @@ private:
     void onDetectDurationClicked();
     void onExtractDurationClicked(int durationSec);
     void onNewExtractionClicked();
-    void onIsolateVocalsClicked();
-    void onIsolateBeatClicked();
+    void onTapeWarmthClicked();
+    void onSpatialAirClicked();
     void onCheckCopyrightOriginalClicked();
     void onApplyDerechosClicked();
     void onVerifyDerechosFreeClicked();
@@ -330,11 +330,11 @@ private:
     juce::TextButton cleanCacheButton      { juce::String::fromUTF8("Limpiar Caché") };
 
     // =========================================================================
-    // Panel Superior: Plataforma (YouTube / TikTok / Instagram), URL, Duración y Derechos IA
+    // Panel Superior: Plataforma (YouTube / TikTok / Instagram), URL, Duración y Coloración de Audio
     // =========================================================================
     juce::GroupComponent topSectionGroup {
         "topGroup",
-        juce::String::fromUTF8("1. PLATAFORMA (YOUTUBE / TIKTOK / INSTAGRAM), EXTRACCIÓN Y STEMS IA (VOCALES / BEAT)")
+        juce::String::fromUTF8("1. PLATAFORMA (YOUTUBE / TIKTOK / INSTAGRAM), EXTRACCIÓN Y COLORACIÓN DE AUDIO")
     };
 
     // Fila 0: Selector de Plataforma
@@ -362,9 +362,9 @@ private:
     juce::TextButton extract30sButton    { juce::String::fromUTF8("Extraer 30 Segundos") };
     juce::TextButton newExtractionButton { juce::String::fromUTF8("Nueva Extracción (2 Audios)") };
 
-    // Fila 4: Suite de 4 botones de Inteligencia Artificial (Vocales, Beat, Derechos IA, Verificar)
-    juce::TextButton isolateVocalsBtn   { juce::String::fromUTF8("🎤 Vocales IA") };
-    juce::TextButton isolateBeatBtn     { juce::String::fromUTF8("🥁 Beat IA") };
+    // Fila 4: Suite de 4 botones de Coloración y Derechos IA (Calor Analógico, Aire 3D, Derechos IA, Verificar)
+    juce::TextButton tapeWarmthBtn      { juce::String::fromUTF8("📼 Calor Analógico") };
+    juce::TextButton spatialAirBtn      { juce::String::fromUTF8("✨ Aire y Espacio 3D") };
     juce::TextButton derechosAiBtn      { juce::String::fromUTF8("🤖 Derechos IA (±3 st)") };
     juce::TextButton detectCopyrightBtn { juce::String::fromUTF8("🛡️ Verificar Derechos") };
     juce::TextButton verifyFreeBtn      { juce::String::fromUTF8("Verificar Audio 2") };

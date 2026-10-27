@@ -165,16 +165,16 @@ ClipSamplerAudioProcessorEditor::ClipSamplerAudioProcessorEditor(ClipSamplerAudi
     newExtractionButton.onClick = [this] { onNewExtractionClicked(); };
     addAndMakeVisible(newExtractionButton);
 
-    // Fila 4: Suite de 4 Botones de Inteligencia Artificial (Vocales IA, Beat IA, Derechos IA, Verificar)
-    isolateVocalsBtn.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff8e24aa));
-    isolateVocalsBtn.setColour(juce::TextButton::textColourOffId, juce::Colours::white);
-    isolateVocalsBtn.onClick = [this] { onIsolateVocalsClicked(); };
-    addAndMakeVisible(isolateVocalsBtn);
+    // Fila 4: Suite de 4 Botones (Calor Analógico, Aire 3D, Derechos IA, Verificar)
+    tapeWarmthBtn.setColour(juce::TextButton::buttonColourId, juce::Colour(0xffd97706));
+    tapeWarmthBtn.setColour(juce::TextButton::textColourOffId, juce::Colours::white);
+    tapeWarmthBtn.onClick = [this] { onTapeWarmthClicked(); };
+    addAndMakeVisible(tapeWarmthBtn);
 
-    isolateBeatBtn.setColour(juce::TextButton::buttonColourId, juce::Colour(0xffe65100));
-    isolateBeatBtn.setColour(juce::TextButton::textColourOffId, juce::Colours::white);
-    isolateBeatBtn.onClick = [this] { onIsolateBeatClicked(); };
-    addAndMakeVisible(isolateBeatBtn);
+    spatialAirBtn.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff0891b2));
+    spatialAirBtn.setColour(juce::TextButton::textColourOffId, juce::Colours::white);
+    spatialAirBtn.onClick = [this] { onSpatialAirClicked(); };
+    addAndMakeVisible(spatialAirBtn);
 
     derechosAiBtn.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff4a148c));
     derechosAiBtn.setColour(juce::TextButton::textColourOffId, juce::Colours::white);
@@ -232,6 +232,7 @@ ClipSamplerAudioProcessorEditor::ClipSamplerAudioProcessorEditor(ClipSamplerAudi
         int pct = juce::roundToInt(lofiKnob.getValue());
         audioProcessor.setLofiAmount((float)pct / 100.0f);
         lofiLabel.setText(juce::String::fromUTF8("Lo-Fi 12b: ") + juce::String(pct) + "%", juce::dontSendNotification);
+        updateFxAndMpcUiState();
     };
     addAndMakeVisible(lofiKnob);
 
@@ -251,6 +252,7 @@ ClipSamplerAudioProcessorEditor::ClipSamplerAudioProcessorEditor(ClipSamplerAudi
         audioProcessor.setFxPitchSemitones((float)st);
         juce::String sign = (st > 0) ? "+" : "";
         pitchLabel.setText(juce::String::fromUTF8("Tono: ") + sign + juce::String(st) + " st", juce::dontSendNotification);
+        updateFxAndMpcUiState();
     };
     addAndMakeVisible(pitchKnob);
 
@@ -269,6 +271,7 @@ ClipSamplerAudioProcessorEditor::ClipSamplerAudioProcessorEditor(ClipSamplerAudi
         int pct = juce::roundToInt(toneKnob.getValue());
         audioProcessor.setFxToneFilter((float)pct / 100.0f);
         toneLabel.setText(juce::String::fromUTF8("Filtro: ") + juce::String(pct) + "%", juce::dontSendNotification);
+        updateFxAndMpcUiState();
     };
     addAndMakeVisible(toneKnob);
 
@@ -481,6 +484,24 @@ void ClipSamplerAudioProcessorEditor::updateFxAndMpcUiState()
     fxTargetAudio2Btn.setColour(juce::TextButton::buttonColourId, (targetSlot == 2) ? juce::Colour(0xff00e676) : juce::Colour(0xff263759));
     fxTargetAudio2Btn.setColour(juce::TextButton::textColourOffId, (targetSlot == 2) ? juce::Colours::black : juce::Colour(0xffcbd5e1));
 
+    const bool isFxBaked = audioProcessor.isFxActiveForSlot(targetSlot);
+    const bool hasPendingTweaks = (audioProcessor.getLofiAmount() > 0.005f
+                                   || std::abs(audioProcessor.getFxPitchSemitones()) > 0.1f
+                                   || audioProcessor.getFxToneFilter() < 0.98f);
+
+    if (isFxBaked && !hasPendingTweaks)
+    {
+        bakeFxButton.setButtonText(juce::String::fromUTF8("✓ Efectos Activados"));
+        bakeFxButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff00e676));
+        bakeFxButton.setColour(juce::TextButton::textColourOffId, juce::Colour(0xff0a192f));
+    }
+    else
+    {
+        bakeFxButton.setButtonText(juce::String::fromUTF8("Aplicar FX"));
+        bakeFxButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff334b73));
+        bakeFxButton.setColour(juce::TextButton::textColourOffId, juce::Colour(0xffffd54f));
+    }
+
     const bool syncOn = audioProcessor.isAutoSyncEnabled();
     autoSyncButton.setButtonText(syncOn ? juce::String::fromUTF8("Sinc. BPM: SÍ") : juce::String::fromUTF8("Sinc. BPM: NO"));
     autoSyncButton.setColour(juce::TextButton::buttonColourId, syncOn ? juce::Colour(0xff00c853) : juce::Colour(0xff283a5e));
@@ -554,8 +575,8 @@ void ClipSamplerAudioProcessorEditor::timerCallback()
     updateExtractorButton.setEnabled(unlocked && !updating);
 
     const bool hasAudio1 = audioProcessor.hasSlotAudio(1);
-    isolateVocalsBtn.setEnabled(unlocked && !extracting && hasAudio1);
-    isolateBeatBtn.setEnabled(unlocked && !extracting && hasAudio1);
+    tapeWarmthBtn.setEnabled(unlocked && !extracting && hasAudio1);
+    spatialAirBtn.setEnabled(unlocked && !extracting && hasAudio1);
     derechosAiBtn.setEnabled(unlocked && !extracting && hasAudio1);
     detectCopyrightBtn.setEnabled(unlocked && !extracting && hasAudio1);
 
@@ -692,10 +713,10 @@ void ClipSamplerAudioProcessorEditor::onNewExtractionClicked()
     timerCallback();
 }
 
-void ClipSamplerAudioProcessorEditor::onIsolateVocalsClicked()
+void ClipSamplerAudioProcessorEditor::onTapeWarmthClicked()
 {
     juce::String report;
-    if (audioProcessor.separateAndLoadStem(ClipSamplerAudioProcessor::StemType::Vocals, report))
+    if (audioProcessor.applySubtleColor(ClipSamplerAudioProcessor::SubtleColorType::TapeWarmth, report))
     {
         updateFxAndMpcUiState();
         originalWaveformComponent.repaint();
@@ -704,10 +725,10 @@ void ClipSamplerAudioProcessorEditor::onIsolateVocalsClicked()
     timerCallback();
 }
 
-void ClipSamplerAudioProcessorEditor::onIsolateBeatClicked()
+void ClipSamplerAudioProcessorEditor::onSpatialAirClicked()
 {
     juce::String report;
-    if (audioProcessor.separateAndLoadStem(ClipSamplerAudioProcessor::StemType::Beat, report))
+    if (audioProcessor.applySubtleColor(ClipSamplerAudioProcessor::SubtleColorType::SpatialAir, report))
     {
         updateFxAndMpcUiState();
         originalWaveformComponent.repaint();
@@ -789,6 +810,19 @@ void ClipSamplerAudioProcessorEditor::onToggleAutoSyncClicked()
 
 void ClipSamplerAudioProcessorEditor::onBakeFxClicked()
 {
+    const int targetSlot = audioProcessor.getFxTargetSlot();
+    const bool isFxBaked = audioProcessor.isFxActiveForSlot(targetSlot);
+    const bool hasPendingTweaks = (audioProcessor.getLofiAmount() > 0.005f
+                                   || std::abs(audioProcessor.getFxPitchSemitones()) > 0.1f
+                                   || audioProcessor.getFxToneFilter() < 0.98f);
+
+    if (isFxBaked && !hasPendingTweaks)
+    {
+        audioProcessor.setStatusMessage(juce::String::fromUTF8("✓ Los Efectos ya se encuentran ACTIVADOS e impresos en el Audio ")
+                                        + juce::String(targetSlot) + ".");
+        return;
+    }
+
     juce::String report;
     if (audioProcessor.applyFxMacroToTargetSlot(report))
     {
@@ -798,6 +832,8 @@ void ClipSamplerAudioProcessorEditor::onBakeFxClicked()
         pitchLabel.setText(juce::String::fromUTF8("Tono: 0 st"), juce::dontSendNotification);
         toneKnob.setValue(100.0, juce::dontSendNotification);
         toneLabel.setText(juce::String::fromUTF8("Filtro: 100%"), juce::dontSendNotification);
+
+        updateFxAndMpcUiState();
         originalWaveformComponent.repaint();
         transformedWaveformComponent.repaint();
     }
@@ -1290,12 +1326,12 @@ void ClipSamplerAudioProcessorEditor::resized()
 
     topInner.removeFromTop(gapY);
 
-    // Fila 4: 4 Botones proporcionales de Inteligencia Artificial (Vocales IA, Beat IA, Derechos ±3st, Verificar)
+    // Fila 4: 4 Botones proporcionales de Coloración y Derechos IA (Calor Analógico, Aire 3D, Derechos ±3st, Verificar)
     auto rightsRow = topInner.removeFromTop(rowH);
     const int fourthRightsW = (rightsRow.getWidth() - 18) / 4;
-    isolateVocalsBtn.setBounds(rightsRow.removeFromLeft(fourthRightsW));
+    tapeWarmthBtn.setBounds(rightsRow.removeFromLeft(fourthRightsW));
     rightsRow.removeFromLeft(6);
-    isolateBeatBtn.setBounds(rightsRow.removeFromLeft(fourthRightsW));
+    spatialAirBtn.setBounds(rightsRow.removeFromLeft(fourthRightsW));
     rightsRow.removeFromLeft(6);
     derechosAiBtn.setBounds(rightsRow.removeFromLeft(fourthRightsW));
     rightsRow.removeFromLeft(6);
@@ -1335,9 +1371,9 @@ void ClipSamplerAudioProcessorEditor::resized()
     fxRow.removeFromLeft(6);
 
     // Botones del lado derecho de la fila de efectos
-    const int chopBtnW = juce::jlimit(95, 145, juce::roundToInt(botW * 0.145f));
-    const int bakeBtnW = juce::jlimit(68, 98,  juce::roundToInt(botW * 0.095f));
-    const int syncBtnW = juce::jlimit(76, 112, juce::roundToInt(botW * 0.108f));
+    const int chopBtnW = juce::jlimit(95, 140, juce::roundToInt(botW * 0.140f));
+    const int bakeBtnW = juce::jlimit(118, 168, juce::roundToInt(botW * 0.165f));
+    const int syncBtnW = juce::jlimit(74, 108, juce::roundToInt(botW * 0.102f));
 
     autoChopButton.setBounds(fxRow.removeFromRight(chopBtnW).reduced(0, 3));
     fxRow.removeFromRight(4);
