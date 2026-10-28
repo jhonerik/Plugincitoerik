@@ -91,8 +91,8 @@ La interfaz de **ClipSampler v2.5** cuenta con un diseño de estudio **Royal Sap
 4. Pulsa el botón **`📋 Pegar`** y haz clic en **`🔓 Conectar y Cargar Buscador`**.
 5. Tu API Key se guardará de forma segura y persistente en `%APPDATA%\ClipSampler\freesound_api_key.txt`, por lo que no necesitarás volver a introducirla en futuras sesiones. Si deseas actualizarla o cambiarla más adelante, dispones del botón **`🔑 Cambiar API Key`**.
 
-### 🔍 Buscador y Filtros Avanzados
-Una vez conectada la API Key, se desplegará el panel del buscador:
+### 🔍 Buscador, Filtros y Descriptores de Audio Avanzados
+Una vez conectada la API Key, se desplegará el panel del buscador conectado al endpoint canónico `/apiv2/search/`:
 - **Caja de Búsqueda:** Escribe cualquier término (ej. *snare, kick, vinyl scratch, synth pad, vocal chop, hi-hat, ambient rain*) y pulsa Enter o haz clic en **`🔍 Buscar Sonidos`**.
 - **Filtro de Duración:**
   - *Cualquiera:* Sin límite de duración.
@@ -101,17 +101,27 @@ Una vez conectada la API Key, se desplegará el panel del buscador:
   - *Frases (6 a 15s):* Riffs melódicos, líneas vocales y secuencias.
   - *Muestras Largas (15s a 5m):* Texturas ambientales, grabaciones de campo y pistas completas.
 - **Filtro de Ordenación:**
-  - *Más Relevantes:* Coincidencia semántica con tu búsqueda.
+  - *Más Relevantes (Score):* Coincidencia semántica con tu búsqueda.
   - *Más Descargados:* Las muestras más populares y probadas de la comunidad.
-  - *Mejor Valorados:* Los sonidos con mayor puntuación de usuarios.
+  - *Mejor Calificados:* Los sonidos con mayor puntuación de usuarios.
   - *Más Recientes:* Novedades y samples recién subidos.
+  - *Más Cortos:* Orden ascendente por longitud de muestra.
 - **Filtro de Licencia:**
   - *Todas las Licencias:* Acceso a todo el catálogo.
   - *Creative Commons 0 (Dominio Público):* 100% libre para cualquier uso comercial o privado sin necesidad de atribución.
   - *Creative Commons Attribution (CC-BY):* Libre para producciones dando crédito al autor original.
+- **Filtro de Formato de Audio Original:**
+  - *Cualquier Formato:* Muestra todo tipo de archivos.
+  - *Solo WAV:* Filtra exclusivamente grabaciones subidas en formato WAV sin compresión.
+  - *Solo FLAC:* Muestras en compresión sin pérdida (Lossless).
+  - *WAV o FLAC:* Lo mejor de ambos formatos de estudio.
+  - *Solo AIFF:* Grabaciones en estándar Apple AIFF.
 
-### 🎧 Preescucha y Carga Instantánea en Pads
-- **`▶ Escuchar` / `⏹ Detener`:** Cada resultado de la lista incluye un botón de preescucha instantánea con barra de volumen para audicionar el sonido antes de decidir cargarlo.
+### 🎧 Preescucha, Sonidos Similares, Paginación y Carga en Pads
+- **Insignias y Descriptores en la Lista:** Cada elemento muestra su nombre, autor, licencia, tipo de canal (Stereo/Mono), frecuencia de muestreo (kHz) y etiquetas (#tags). Si Freesound detectó el tempo de la muestra, se resalta la insignia de tempo (ej. `[124 BPM]`).
+- **`▶ Escuchar` / `⏹ Detener`:** Audición inmediata de la muestra con control de transporte para escuchar antes de cargar.
+- **`🔗 Similares` (Descubrimiento Acústico Inteligente):** Al pulsar este botón en cualquier sonido, ClipSampler consulta el endpoint `/apiv2/sounds/<id>/similar/` y te devuelve al instante una lista de samples acústicamente parecidos analizados espectralmente por Freesound. Puedes regresar a tu búsqueda original pulsando **`✕ Volver a la Búsqueda`**.
+- **Barra de Paginación (`◀ Anterior` / `Siguiente ▶`):** Navega cómodamente entre páginas viendo el número total de sonidos encontrados (ej. *Página 1 de 24 (480 sonidos encontrados)*).
 - **`⚡ Cargar en Pad`:** Al pulsar este botón, ClipSampler descarga la muestra en alta fidelidad a la caché local, la carga automáticamente en el **Visor 1**, calcula su **BPM y Tono**, activa el **Rebanador MPC (C1 a G2)** y deja el sample listo para tocar, aplicar efectos o arrastrar a tu DAW.
 - Pulsa **`✕ Volver a ClipSampler`** en cualquier momento para regresar a la vista principal.
 

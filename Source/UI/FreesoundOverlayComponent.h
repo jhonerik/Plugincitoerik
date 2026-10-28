@@ -9,7 +9,8 @@
 
 /**
  * @struct FreesoundItem
- * @brief Representa un archivo de sonido individual devuelto por la API de Freesound.org.
+ * @brief Representa un archivo de sonido individual devuelto por la API de Freesound.org
+ *        con descriptores de audio avanzados (BPM, formato, frecuencia de muestreo y tags).
  */
 struct FreesoundItem
 {
@@ -20,12 +21,18 @@ struct FreesoundItem
     juce::String license;
     juce::String previewHqMp3;
     juce::String previewLqMp3;
+    double bpm = 0.0;
+    juce::String type;
+    int samplerate = 0;
+    int channels = 0;
+    juce::StringArray tags;
 };
 
 /**
  * @class FreesoundOverlayComponent
- * @brief Ventana modal / overlay integrada para buscar, preescuchar y cargar sonidos
- *        directamente desde la biblioteca abierta de Freesound.org mediante su API oficial v2.
+ * @brief Ventana modal / overlay integrada para buscar, filtrar por formato/duración,
+ *        preescuchar, explorar sonidos similares y cargar muestras directamente desde
+ *        Freesound.org mediante su API oficial v2 canónica (/apiv2/search/).
  */
 class FreesoundOverlayComponent : public juce::Component,
                                   private juce::ListBoxModel,
@@ -59,9 +66,12 @@ private:
     void onChangeApiKeyClicked();
     void onOpenApiKeyWebClicked();
 
-    // Búsqueda en segundo plano
-    void triggerSearch();
-    void performSearchAsync(const juce::String& query, const juce::String& filter, const juce::String& sort);
+    // Búsqueda y descubrimiento de sonidos
+    void triggerSearch(int page = 1);
+    void performSearchAsync(const juce::String& query, const juce::String& filter, const juce::String& sort, int page);
+    void searchSimilarSounds(const FreesoundItem& targetSound, int page = 1);
+    void updatePaginationUi();
+
     void downloadAndLoadSample(const FreesoundItem& sound);
     void previewSound(const FreesoundItem& sound);
     void stopPreview();
@@ -70,6 +80,16 @@ private:
 
     bool hasValidApiKey = false;
     juce::String currentApiKey;
+
+    // Paginación y estado de búsqueda
+    int currentPage = 1;
+    int totalPages = 1;
+    int totalResultCount = 0;
+    bool isViewingSimilar = false;
+    FreesoundItem similarTargetItem;
+    juce::String lastExecutedQuery;
+    juce::String lastExecutedFilter;
+    juce::String lastExecutedSort;
 
     // =========================================================================
     // Estado A: Cuadro inicial "Pega tu API Key de Freesound aquí"
@@ -84,10 +104,11 @@ private:
     juce::Label introStatusLabel;
 
     // =========================================================================
-    // Estado B: Buscador con opciones de filtro y lista de resultados
+    // Estado B: Buscador con opciones de filtro, lista y paginación
     // =========================================================================
     juce::Label searchHeaderTitleLabel;
     juce::Label searchStatusBadge;
+    juce::TextButton exitSimilarButton    { juce::String::fromUTF8("✕ Volver a la Búsqueda") };
     juce::TextButton changeKeyButton      { juce::String::fromUTF8("🔑 Cambiar API Key") };
     juce::TextButton closeOverlayButton   { juce::String::fromUTF8("✕ Volver a ClipSampler") };
 
@@ -98,10 +119,12 @@ private:
     // Opciones de filtro
     juce::Label durationFilterLabel       { {}, juce::String::fromUTF8("Duración:") };
     juce::ComboBox durationFilterBox;
-    juce::Label sortFilterLabel           { {}, juce::String::fromUTF8("Ordenar por:") };
+    juce::Label sortFilterLabel           { {}, juce::String::fromUTF8("Ordenar:") };
     juce::ComboBox sortFilterBox;
     juce::Label licenseFilterLabel        { {}, juce::String::fromUTF8("Licencia:") };
     juce::ComboBox licenseFilterBox;
+    juce::Label typeFilterLabel           { {}, juce::String::fromUTF8("Formato:") };
+    juce::ComboBox typeFilterBox;
 
     // Lista de resultados
     juce::ListBox resultsListBox;
@@ -109,6 +132,11 @@ private:
     juce::Label resultsFeedbackLabel;
     std::atomic<bool> isSearching { false };
     std::atomic<bool> isDownloading { false };
+
+    // Barra inferior de paginación
+    juce::TextButton prevPageButton       { juce::String::fromUTF8("◀ Anterior") };
+    juce::Label pageInfoLabel;
+    juce::TextButton nextPageButton       { juce::String::fromUTF8("Siguiente ▶") };
 
     // Preescucha de audio
     juce::AudioFormatManager previewFormatManager;

@@ -7,9 +7,17 @@ class FreesoundItemRowComponent : public juce::Component
 {
 public:
     FreesoundItemRowComponent(std::function<void(const FreesoundItem&)> onPreviewCb,
-                              std::function<void(const FreesoundItem&)> onLoadCb)
-        : onPreview(std::move(onPreviewCb)), onLoad(std::move(onLoadCb))
+                              std::function<void(const FreesoundItem&)> onLoadCb,
+                              std::function<void(const FreesoundItem&)> onSimilarCb)
+        : onPreview(std::move(onPreviewCb)),
+          onLoad(std::move(onLoadCb)),
+          onSimilar(std::move(onSimilarCb))
     {
+        similarBtn.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff4a1d96)); // Púrpura sofisticado
+        similarBtn.setColour(juce::TextButton::textColourOffId, juce::Colour(0xffe9d5ff));
+        similarBtn.onClick = [this] { if (onSimilar) onSimilar(item); };
+        addAndMakeVisible(similarBtn);
+
         previewBtn.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff1e3a5f));
         previewBtn.setColour(juce::TextButton::textColourOffId, juce::Colour(0xff7dd3fc));
         previewBtn.onClick = [this] { if (onPreview) onPreview(item); };
@@ -37,35 +45,63 @@ public:
         g.setColour(juce::Colour(0xff2a3f65));
         g.drawRoundedRectangle(bounds, 6.0f, 1.0f);
 
-        // Nombre del sonido
+        // Área reservada para textos a la izquierda de los 3 botones
         auto textArea = bounds.reduced(10.0f, 4.0f);
-        auto leftArea = textArea.removeFromLeft(textArea.getWidth() - 250);
+        auto leftArea = textArea.removeFromLeft(textArea.getWidth() - 315);
+
+        // Línea 1: Nombre + Badges (BPM nativo + Formato original)
+        auto topRow = leftArea.removeFromTop(leftArea.getHeight() * 0.52f);
+
+        juce::String titleWithBadges = item.name;
+        if (item.bpm > 10.0)
+            titleWithBadges += "  [" + juce::String(juce::roundToInt(item.bpm)) + " BPM]";
+        if (item.type.isNotEmpty())
+            titleWithBadges += "  (" + item.type.toUpperCase() + ")";
 
         g.setColour(juce::Colour(0xfff8fafc));
-        g.setFont(juce::Font(13.0f, juce::Font::bold));
-        g.drawFittedText(item.name, leftArea.removeFromTop(leftArea.getHeight() * 0.55f).toNearestInt(),
-                         juce::Justification::centredLeft, 1, 0.75f);
+        g.setFont(juce::Font(12.8f, juce::Font::bold));
+        g.drawFittedText(titleWithBadges, topRow.toNearestInt(), juce::Justification::centredLeft, 1, 0.75f);
 
-        // Subtítulo con metadata (duración, usuario, licencia)
-        juce::String licBadge = item.license.containsIgnoreCase("zero") ? "CC0 (Dominio Público)" : "CC-BY";
+        // Línea 2: Subtítulo con metadata enriquecida (duración, usuario, licencia, specs y tags)
+        juce::String licBadge = item.license.containsIgnoreCase("zero") ? "CC0" : "CC-BY";
+        juce::String formatSpec;
+        if (item.channels > 0)
+            formatSpec += (item.channels == 2 ? "Stereo" : "Mono");
+        if (item.samplerate > 0)
+            formatSpec += " " + juce::String(item.samplerate / 1000) + "kHz";
+
+        juce::String tagsStr;
+        int maxTags = juce::jmin(3, item.tags.size());
+        for (int i = 0; i < maxTags; ++i)
+            tagsStr += " #" + item.tags[i];
+
         juce::String metaStr = juce::String(item.duration, 1) + "s  |  @" + item.username + "  |  " + licBadge;
+        if (formatSpec.isNotEmpty())
+            metaStr += "  |  " + formatSpec;
+        if (tagsStr.isNotEmpty())
+            metaStr += "  | " + tagsStr;
+
         g.setColour(juce::Colour(0xff94a3b8));
-        g.setFont(juce::Font(11.0f, juce::Font::plain));
+        g.setFont(juce::Font(10.8f, juce::Font::plain));
         g.drawFittedText(metaStr, leftArea.toNearestInt(), juce::Justification::centredLeft, 1, 0.70f);
     }
 
     void resized() override
     {
         auto area = getLocalBounds().reduced(8, 6);
-        loadBtn.setBounds(area.removeFromRight(145));
-        area.removeFromRight(6);
-        previewBtn.setBounds(area.removeFromRight(95));
+        loadBtn.setBounds(area.removeFromRight(120));
+        area.removeFromRight(5);
+        previewBtn.setBounds(area.removeFromRight(88));
+        area.removeFromRight(5);
+        similarBtn.setBounds(area.removeFromRight(85));
     }
 
 private:
     FreesoundItem item;
     std::function<void(const FreesoundItem&)> onPreview;
     std::function<void(const FreesoundItem&)> onLoad;
+    std::function<void(const FreesoundItem&)> onSimilar;
+    juce::TextButton similarBtn { juce::String::fromUTF8("🔗 Similares") };
     juce::TextButton previewBtn { juce::String::fromUTF8("▶ Escuchar") };
     juce::TextButton loadBtn    { juce::String::fromUTF8("⚡ Cargar en Pad") };
 };
@@ -133,16 +169,25 @@ FreesoundOverlayComponent::FreesoundOverlayComponent(ClipSamplerAudioProcessor& 
     addAndMakeVisible(introStatusLabel);
 
     // =========================================================================
-    // Estado B: Buscador de Sonidos y Filtros
+    // Estado B: Buscador de Sonidos, Filtros y Paginación
     // =========================================================================
-    searchHeaderTitleLabel.setText(juce::String::fromUTF8("🎵 EXPLORADOR DE SAMPLES FREESOUND"), juce::dontSendNotification);
+    searchHeaderTitleLabel.setText(juce::String::fromUTF8("🎵 EXPLORADOR DE SAMPLES FREESOUND (API v2)"), juce::dontSendNotification);
     searchHeaderTitleLabel.setColour(juce::Label::textColourId, juce::Colour(0xff38bdf8));
-    searchHeaderTitleLabel.setFont(juce::Font(16.0f, juce::Font::bold));
+    searchHeaderTitleLabel.setFont(juce::Font(15.5f, juce::Font::bold));
     addChildComponent(searchHeaderTitleLabel);
 
     searchStatusBadge.setColour(juce::Label::textColourId, juce::Colour(0xff34d399));
     searchStatusBadge.setFont(juce::Font(11.5f, juce::Font::bold));
     addChildComponent(searchStatusBadge);
+
+    exitSimilarButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff581c87));
+    exitSimilarButton.setColour(juce::TextButton::textColourOffId, juce::Colour(0xfff3e8ff));
+    exitSimilarButton.onClick = [this] {
+        isViewingSimilar = false;
+        exitSimilarButton.setVisible(false);
+        triggerSearch(1);
+    };
+    addChildComponent(exitSimilarButton);
 
     changeKeyButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff334155));
     changeKeyButton.setColour(juce::TextButton::textColourOffId, juce::Colour(0xffcbd5e1));
@@ -162,30 +207,30 @@ FreesoundOverlayComponent::FreesoundOverlayComponent(ClipSamplerAudioProcessor& 
     searchBox.setColour(juce::TextEditor::textColourId, juce::Colours::white);
     searchBox.setColour(juce::TextEditor::outlineColourId, juce::Colour(0xff3b527d));
     searchBox.setTextToShowWhenEmpty(juce::String::fromUTF8("Escribe un término (ej. kick, 808, snare, vinyl loop, vocal, piano, riser)..."), juce::Colour(0xff64748b));
-    searchBox.onReturnKey = [this] { triggerSearch(); };
+    searchBox.onReturnKey = [this] { triggerSearch(1); };
     addChildComponent(searchBox);
 
     searchButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff0284c7));
     searchButton.setColour(juce::TextButton::textColourOffId, juce::Colours::white);
-    searchButton.onClick = [this] { triggerSearch(); };
+    searchButton.onClick = [this] { triggerSearch(1); };
     addChildComponent(searchButton);
 
-    // Filtros
+    // Filtros: Duración, Orden, Licencia, Formato
     durationFilterLabel.setColour(juce::Label::textColourId, juce::Colour(0xffcbd5e1));
-    durationFilterLabel.setFont(juce::Font(11.5f, juce::Font::bold));
+    durationFilterLabel.setFont(juce::Font(11.2f, juce::Font::bold));
     addChildComponent(durationFilterLabel);
 
     durationFilterBox.addItem(juce::String::fromUTF8("Cualquier Duración"), 1);
     durationFilterBox.addItem(juce::String::fromUTF8("One-Shots (< 2s)"), 2);
     durationFilterBox.addItem(juce::String::fromUTF8("Loops Cortos (2s - 6s)"), 3);
-    durationFilterBox.addItem(juce::String::fromUTF8("Frases Musicales (6s - 15s)"), 4);
+    durationFilterBox.addItem(juce::String::fromUTF8("Frases (6s - 15s)"), 4);
     durationFilterBox.addItem(juce::String::fromUTF8("Muestras Largas (> 15s)"), 5);
     durationFilterBox.setSelectedId(1, juce::dontSendNotification);
-    durationFilterBox.onChange = [this] { triggerSearch(); };
+    durationFilterBox.onChange = [this] { triggerSearch(1); };
     addChildComponent(durationFilterBox);
 
     sortFilterLabel.setColour(juce::Label::textColourId, juce::Colour(0xffcbd5e1));
-    sortFilterLabel.setFont(juce::Font(11.5f, juce::Font::bold));
+    sortFilterLabel.setFont(juce::Font(11.2f, juce::Font::bold));
     addChildComponent(sortFilterLabel);
 
     sortFilterBox.addItem(juce::String::fromUTF8("Relevancia (Score)"), 1);
@@ -194,23 +239,36 @@ FreesoundOverlayComponent::FreesoundOverlayComponent(ClipSamplerAudioProcessor& 
     sortFilterBox.addItem(juce::String::fromUTF8("Más Recientes"), 4);
     sortFilterBox.addItem(juce::String::fromUTF8("Más Cortos"), 5);
     sortFilterBox.setSelectedId(1, juce::dontSendNotification);
-    sortFilterBox.onChange = [this] { triggerSearch(); };
+    sortFilterBox.onChange = [this] { triggerSearch(1); };
     addChildComponent(sortFilterBox);
 
     licenseFilterLabel.setColour(juce::Label::textColourId, juce::Colour(0xffcbd5e1));
-    licenseFilterLabel.setFont(juce::Font(11.5f, juce::Font::bold));
+    licenseFilterLabel.setFont(juce::Font(11.2f, juce::Font::bold));
     addChildComponent(licenseFilterLabel);
 
     licenseFilterBox.addItem(juce::String::fromUTF8("Todas las Licencias"), 1);
-    licenseFilterBox.addItem(juce::String::fromUTF8("Creative Commons 0 (Dominio Público)"), 2);
+    licenseFilterBox.addItem(juce::String::fromUTF8("Creative Commons 0 (CC0)"), 2);
     licenseFilterBox.addItem(juce::String::fromUTF8("Attribution (CC-BY)"), 3);
     licenseFilterBox.setSelectedId(1, juce::dontSendNotification);
-    licenseFilterBox.onChange = [this] { triggerSearch(); };
+    licenseFilterBox.onChange = [this] { triggerSearch(1); };
     addChildComponent(licenseFilterBox);
+
+    typeFilterLabel.setColour(juce::Label::textColourId, juce::Colour(0xffcbd5e1));
+    typeFilterLabel.setFont(juce::Font(11.2f, juce::Font::bold));
+    addChildComponent(typeFilterLabel);
+
+    typeFilterBox.addItem(juce::String::fromUTF8("Cualquier Formato"), 1);
+    typeFilterBox.addItem(juce::String::fromUTF8("Solo WAV"), 2);
+    typeFilterBox.addItem(juce::String::fromUTF8("Solo FLAC"), 3);
+    typeFilterBox.addItem(juce::String::fromUTF8("WAV o FLAC"), 4);
+    typeFilterBox.addItem(juce::String::fromUTF8("Solo AIFF"), 5);
+    typeFilterBox.setSelectedId(1, juce::dontSendNotification);
+    typeFilterBox.onChange = [this] { triggerSearch(1); };
+    addChildComponent(typeFilterBox);
 
     // ListBox de resultados
     resultsListBox.setModel(this);
-    resultsListBox.setRowHeight(52);
+    resultsListBox.setRowHeight(58);
     resultsListBox.setColour(juce::ListBox::backgroundColourId, juce::Colour(0xff131c2e));
     resultsListBox.setColour(juce::ListBox::outlineColourId, juce::Colour(0xff2a3f65));
     addChildComponent(resultsListBox);
@@ -220,6 +278,38 @@ FreesoundOverlayComponent::FreesoundOverlayComponent(ClipSamplerAudioProcessor& 
     resultsFeedbackLabel.setFont(juce::Font(13.0f, juce::Font::italic));
     resultsFeedbackLabel.setText(juce::String::fromUTF8("Ingresa un término arriba y pulsa 'Buscar Sonidos'."), juce::dontSendNotification);
     addChildComponent(resultsFeedbackLabel);
+
+    // Barra de Paginación Inferior
+    prevPageButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff1e293b));
+    prevPageButton.setColour(juce::TextButton::textColourOffId, juce::Colour(0xff94a3b8));
+    prevPageButton.onClick = [this] {
+        if (currentPage > 1)
+        {
+            if (isViewingSimilar)
+                searchSimilarSounds(similarTargetItem, currentPage - 1);
+            else
+                performSearchAsync(lastExecutedQuery, lastExecutedFilter, lastExecutedSort, currentPage - 1);
+        }
+    };
+    addChildComponent(prevPageButton);
+
+    nextPageButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff1e293b));
+    nextPageButton.setColour(juce::TextButton::textColourOffId, juce::Colour(0xff94a3b8));
+    nextPageButton.onClick = [this] {
+        if (currentPage < totalPages)
+        {
+            if (isViewingSimilar)
+                searchSimilarSounds(similarTargetItem, currentPage + 1);
+            else
+                performSearchAsync(lastExecutedQuery, lastExecutedFilter, lastExecutedSort, currentPage + 1);
+        }
+    };
+    addChildComponent(nextPageButton);
+
+    pageInfoLabel.setJustificationType(juce::Justification::centred);
+    pageInfoLabel.setColour(juce::Label::textColourId, juce::Colour(0xffcbd5e1));
+    pageInfoLabel.setFont(juce::Font(12.0f, juce::Font::bold));
+    addChildComponent(pageInfoLabel);
 
     loadStoredApiKey();
 }
@@ -280,11 +370,12 @@ void FreesoundOverlayComponent::refreshView()
     getApiKeyHelpButton.setVisible(!showSearch);
     introStatusLabel.setVisible(!showSearch);
 
-    // Componentes del Estado B (Buscador y Filtros)
+    // Componentes del Estado B (Buscador, Filtros y Paginación)
     searchHeaderTitleLabel.setVisible(showSearch);
     searchStatusBadge.setVisible(showSearch);
+    exitSimilarButton.setVisible(showSearch && isViewingSimilar);
     changeKeyButton.setVisible(showSearch);
-    closeOverlayButton.setVisible(true); // Siempre accesible para cerrar
+    closeOverlayButton.setVisible(true);
     searchBox.setVisible(showSearch);
     searchButton.setVisible(showSearch);
     durationFilterLabel.setVisible(showSearch);
@@ -293,8 +384,13 @@ void FreesoundOverlayComponent::refreshView()
     sortFilterBox.setVisible(showSearch);
     licenseFilterLabel.setVisible(showSearch);
     licenseFilterBox.setVisible(showSearch);
+    typeFilterLabel.setVisible(showSearch);
+    typeFilterBox.setVisible(showSearch);
     resultsListBox.setVisible(showSearch);
     resultsFeedbackLabel.setVisible(showSearch && soundResults.empty());
+    prevPageButton.setVisible(showSearch);
+    nextPageButton.setVisible(showSearch);
+    pageInfoLabel.setVisible(showSearch);
 
     if (showSearch)
     {
@@ -328,7 +424,7 @@ void FreesoundOverlayComponent::onConnectApiKeyClicked()
     }
 
     saveApiKey(key);
-    triggerSearch(); // Búsqueda inicial automática
+    triggerSearch(1); // Búsqueda inicial automática
 }
 
 void FreesoundOverlayComponent::onChangeApiKeyClicked()
@@ -344,20 +440,22 @@ void FreesoundOverlayComponent::onOpenApiKeyWebClicked()
 }
 
 // ==============================================================================
-// Búsqueda Asíncrona en Freesound API v2
+// Búsqueda Asíncrona en Freesound API v2 (Endpoint Canónico /apiv2/search/)
 // ==============================================================================
-void FreesoundOverlayComponent::triggerSearch()
+void FreesoundOverlayComponent::triggerSearch(int page)
 {
     if (!hasValidApiKey)
         return;
 
     stopPreview();
+    isViewingSimilar = false;
+    exitSimilarButton.setVisible(false);
 
     juce::String query = searchBox.getText().trim();
     if (query.isEmpty())
         query = "sound"; // Término por defecto para explorar
 
-    // Construcción de filtros
+    // Construcción de filtros Solr combinados
     juce::String filter;
     int durId = durationFilterBox.getSelectedId();
     if (durId == 2) filter = "duration:[0.0 TO 2.0]";
@@ -377,6 +475,28 @@ void FreesoundOverlayComponent::triggerSearch()
         filter += "license:\"Attribution\"";
     }
 
+    int typeId = typeFilterBox.getSelectedId();
+    if (typeId == 2)
+    {
+        if (filter.isNotEmpty()) filter += " ";
+        filter += "type:wav";
+    }
+    else if (typeId == 3)
+    {
+        if (filter.isNotEmpty()) filter += " ";
+        filter += "type:flac";
+    }
+    else if (typeId == 4)
+    {
+        if (filter.isNotEmpty()) filter += " ";
+        filter += "(type:wav OR type:flac)";
+    }
+    else if (typeId == 5)
+    {
+        if (filter.isNotEmpty()) filter += " ";
+        filter += "type:aiff";
+    }
+
     // Ordenamiento
     juce::String sort = "score";
     int sortId = sortFilterBox.getSelectedId();
@@ -385,22 +505,27 @@ void FreesoundOverlayComponent::triggerSearch()
     else if (sortId == 4) sort = "created_desc";
     else if (sortId == 5) sort = "duration_asc";
 
-    resultsFeedbackLabel.setText(juce::String::fromUTF8("Conectando con Freesound y buscando samples..."), juce::dontSendNotification);
+    resultsFeedbackLabel.setText(juce::String::fromUTF8("Conectando con Freesound API v2 (/search/)..."), juce::dontSendNotification);
     resultsFeedbackLabel.setVisible(true);
 
-    performSearchAsync(query, filter, sort);
+    performSearchAsync(query, filter, sort, page);
 }
 
-void FreesoundOverlayComponent::performSearchAsync(const juce::String& query, const juce::String& filter, const juce::String& sort)
+void FreesoundOverlayComponent::performSearchAsync(const juce::String& query, const juce::String& filter, const juce::String& sort, int page)
 {
     isSearching.store(true);
+    lastExecutedQuery = query;
+    lastExecutedFilter = filter;
+    lastExecutedSort = sort;
 
     auto safeKey = currentApiKey;
-    std::thread([this, safeKey, query, filter, sort]() {
-        juce::String endpoint = "https://freesound.org/apiv2/search/text/?token=" + juce::URL::addEscapeChars(safeKey, true)
+    std::thread([this, safeKey, query, filter, sort, page]() {
+        // Endpoint canónico de Freesound API v2 con descriptores de audio avanzados
+        juce::String endpoint = "https://freesound.org/apiv2/search/?token=" + juce::URL::addEscapeChars(safeKey, true)
                               + "&query=" + juce::URL::addEscapeChars(query, true)
-                              + "&fields=id,name,username,duration,license,previews"
-                              + "&page_size=20";
+                              + "&fields=id,name,username,duration,license,previews,bpm,type,samplerate,channels,tags"
+                              + "&page_size=20"
+                              + "&page=" + juce::String(page);
 
         if (filter.isNotEmpty())
             endpoint += "&filter=" + juce::URL::addEscapeChars(filter, true);
@@ -414,6 +539,7 @@ void FreesoundOverlayComponent::performSearchAsync(const juce::String& query, co
 
         std::vector<FreesoundItem> newResults;
         juce::String errorMsg;
+        int parsedTotalCount = 0;
 
         if (stream != nullptr)
         {
@@ -426,25 +552,44 @@ void FreesoundOverlayComponent::performSearchAsync(const juce::String& query, co
                 {
                     errorMsg = "Freesound API: " + rootObj->getProperty("detail").toString();
                 }
-                else if (auto* resArr = rootObj->getProperty("results").getArray())
+                else
                 {
-                    for (const auto& itemVar : *resArr)
+                    parsedTotalCount = static_cast<int>(rootObj->getProperty("count"));
+                    if (auto* resArr = rootObj->getProperty("results").getArray())
                     {
-                        if (auto* itemObj = itemVar.getDynamicObject())
+                        for (const auto& itemVar : *resArr)
                         {
-                            FreesoundItem item;
-                            item.id = itemObj->getProperty("id").toString();
-                            item.name = itemObj->getProperty("name").toString();
-                            item.username = itemObj->getProperty("username").toString();
-                            item.duration = static_cast<double>(itemObj->getProperty("duration"));
-                            item.license = itemObj->getProperty("license").toString();
-
-                            if (auto* prevObj = itemObj->getProperty("previews").getDynamicObject())
+                            if (auto* itemObj = itemVar.getDynamicObject())
                             {
-                                item.previewHqMp3 = prevObj->getProperty("preview-hq-mp3").toString();
-                                item.previewLqMp3 = prevObj->getProperty("preview-lq-mp3").toString();
+                                FreesoundItem item;
+                                item.id = itemObj->getProperty("id").toString();
+                                item.name = itemObj->getProperty("name").toString();
+                                item.username = itemObj->getProperty("username").toString();
+                                item.duration = static_cast<double>(itemObj->getProperty("duration"));
+                                item.license = itemObj->getProperty("license").toString();
+
+                                if (itemObj->hasProperty("bpm"))
+                                    item.bpm = static_cast<double>(itemObj->getProperty("bpm"));
+                                if (itemObj->hasProperty("type"))
+                                    item.type = itemObj->getProperty("type").toString();
+                                if (itemObj->hasProperty("samplerate"))
+                                    item.samplerate = static_cast<int>(itemObj->getProperty("samplerate"));
+                                if (itemObj->hasProperty("channels"))
+                                    item.channels = static_cast<int>(itemObj->getProperty("channels"));
+
+                                if (auto* tagsArr = itemObj->getProperty("tags").getArray())
+                                {
+                                    for (const auto& tagVar : *tagsArr)
+                                        item.tags.add(tagVar.toString());
+                                }
+
+                                if (auto* prevObj = itemObj->getProperty("previews").getDynamicObject())
+                                {
+                                    item.previewHqMp3 = prevObj->getProperty("preview-hq-mp3").toString();
+                                    item.previewLqMp3 = prevObj->getProperty("preview-lq-mp3").toString();
+                                }
+                                newResults.push_back(item);
                             }
-                            newResults.push_back(item);
                         }
                     }
                 }
@@ -459,9 +604,14 @@ void FreesoundOverlayComponent::performSearchAsync(const juce::String& query, co
             errorMsg = juce::String::fromUTF8("No se pudo conectar con freesound.org. Verifica tu conexión a internet o tu API Key.");
         }
 
-        juce::MessageManager::callAsync([this, newResults, errorMsg]() {
+        juce::MessageManager::callAsync([this, newResults, errorMsg, parsedTotalCount, page]() {
             isSearching.store(false);
             soundResults = newResults;
+            currentPage = page;
+            totalResultCount = parsedTotalCount;
+            totalPages = juce::jmax(1, (parsedTotalCount + 19) / 20);
+
+            updatePaginationUi();
             resultsListBox.updateContent();
             resultsListBox.repaint();
 
@@ -481,6 +631,153 @@ void FreesoundOverlayComponent::performSearchAsync(const juce::String& query, co
             }
         });
     }).detach();
+}
+
+// ==============================================================================
+// Búsqueda de Sonidos Acústicamente Similares (/apiv2/sounds/<id>/similar/)
+// ==============================================================================
+void FreesoundOverlayComponent::searchSimilarSounds(const FreesoundItem& targetSound, int page)
+{
+    if (!hasValidApiKey)
+        return;
+
+    stopPreview();
+    isViewingSimilar = true;
+    similarTargetItem = targetSound;
+    exitSimilarButton.setVisible(true);
+
+    resultsFeedbackLabel.setText(juce::String::fromUTF8("Buscando sonidos similares a '") + targetSound.name + "'...", juce::dontSendNotification);
+    resultsFeedbackLabel.setVisible(true);
+
+    isSearching.store(true);
+    auto safeKey = currentApiKey;
+
+    std::thread([this, safeKey, targetSound, page]() {
+        juce::String endpoint = "https://freesound.org/apiv2/sounds/" + targetSound.id + "/similar/?token=" + juce::URL::addEscapeChars(safeKey, true)
+                              + "&fields=id,name,username,duration,license,previews,bpm,type,samplerate,channels,tags"
+                              + "&page_size=20"
+                              + "&page=" + juce::String(page);
+
+        juce::URL url(endpoint);
+        auto stream = url.createInputStream(juce::URL::InputStreamOptions(juce::URL::ParameterHandling::inAddress)
+                                                .withConnectionTimeoutMs(10000)
+                                                .withNumRedirectsToFollow(5));
+
+        std::vector<FreesoundItem> newResults;
+        juce::String errorMsg;
+        int parsedTotalCount = 0;
+
+        if (stream != nullptr)
+        {
+            juce::String jsonText = stream->readEntireStreamAsString();
+            auto parsedJson = juce::JSON::parse(jsonText);
+
+            if (auto* rootObj = parsedJson.getDynamicObject())
+            {
+                if (rootObj->hasProperty("detail"))
+                {
+                    errorMsg = "Freesound API: " + rootObj->getProperty("detail").toString();
+                }
+                else
+                {
+                    parsedTotalCount = static_cast<int>(rootObj->getProperty("count"));
+                    if (auto* resArr = rootObj->getProperty("results").getArray())
+                    {
+                        for (const auto& itemVar : *resArr)
+                        {
+                            if (auto* itemObj = itemVar.getDynamicObject())
+                            {
+                                FreesoundItem item;
+                                item.id = itemObj->getProperty("id").toString();
+                                item.name = itemObj->getProperty("name").toString();
+                                item.username = itemObj->getProperty("username").toString();
+                                item.duration = static_cast<double>(itemObj->getProperty("duration"));
+                                item.license = itemObj->getProperty("license").toString();
+
+                                if (itemObj->hasProperty("bpm"))
+                                    item.bpm = static_cast<double>(itemObj->getProperty("bpm"));
+                                if (itemObj->hasProperty("type"))
+                                    item.type = itemObj->getProperty("type").toString();
+                                if (itemObj->hasProperty("samplerate"))
+                                    item.samplerate = static_cast<int>(itemObj->getProperty("samplerate"));
+                                if (itemObj->hasProperty("channels"))
+                                    item.channels = static_cast<int>(itemObj->getProperty("channels"));
+
+                                if (auto* tagsArr = itemObj->getProperty("tags").getArray())
+                                {
+                                    for (const auto& tagVar : *tagsArr)
+                                        item.tags.add(tagVar.toString());
+                                }
+
+                                if (auto* prevObj = itemObj->getProperty("previews").getDynamicObject())
+                                {
+                                    item.previewHqMp3 = prevObj->getProperty("preview-hq-mp3").toString();
+                                    item.previewLqMp3 = prevObj->getProperty("preview-lq-mp3").toString();
+                                }
+                                newResults.push_back(item);
+                            }
+                        }
+                    }
+                }
+            }
+            else
+            {
+                errorMsg = juce::String::fromUTF8("Respuesta no válida al buscar sonidos similares.");
+            }
+        }
+        else
+        {
+            errorMsg = juce::String::fromUTF8("Error de conexión al buscar sonidos similares.");
+        }
+
+        juce::MessageManager::callAsync([this, newResults, errorMsg, parsedTotalCount, page]() {
+            isSearching.store(false);
+            soundResults = newResults;
+            currentPage = page;
+            totalResultCount = parsedTotalCount;
+            totalPages = juce::jmax(1, (parsedTotalCount + 19) / 20);
+
+            updatePaginationUi();
+            resultsListBox.updateContent();
+            resultsListBox.repaint();
+
+            if (errorMsg.isNotEmpty())
+            {
+                resultsFeedbackLabel.setText(errorMsg, juce::dontSendNotification);
+                resultsFeedbackLabel.setVisible(true);
+            }
+            else if (soundResults.empty())
+            {
+                resultsFeedbackLabel.setText(juce::String::fromUTF8("No se encontraron sonidos similares en Freesound."), juce::dontSendNotification);
+                resultsFeedbackLabel.setVisible(true);
+            }
+            else
+            {
+                resultsFeedbackLabel.setVisible(false);
+            }
+        });
+    }).detach();
+}
+
+void FreesoundOverlayComponent::updatePaginationUi()
+{
+    prevPageButton.setEnabled(currentPage > 1);
+    nextPageButton.setEnabled(currentPage < totalPages);
+
+    if (isViewingSimilar)
+    {
+        exitSimilarButton.setVisible(true);
+        pageInfoLabel.setText(juce::String::fromUTF8("🔗 Similares a '") + similarTargetItem.name.substring(0, 22) + "...'  |  Pág. "
+                              + juce::String(currentPage) + " de " + juce::String(totalPages) + " (" + juce::String(totalResultCount) + " sonidos)",
+                              juce::dontSendNotification);
+    }
+    else
+    {
+        exitSimilarButton.setVisible(false);
+        pageInfoLabel.setText(juce::String::fromUTF8("Página ") + juce::String(currentPage) + " de " + juce::String(totalPages)
+                              + "  (" + juce::String(totalResultCount) + juce::String::fromUTF8(" sonidos encontrados)"),
+                              juce::dontSendNotification);
+    }
 }
 
 // ==============================================================================
@@ -605,7 +902,7 @@ void FreesoundOverlayComponent::downloadAndLoadSample(const FreesoundItem& sound
                 {
                     processor.loadAudioFileIntoSlot(targetFile, 1);
                     processor.setStatusMessage(juce::String::fromUTF8("¡Sample de Freesound cargado!: ") + sound.name);
-                    setVisible(false); // Cerramos el overlay y volvemos a ClipSampler con el sample listo para tocar
+                    setVisible(false); // Volvemos a ClipSampler con el sample listo para rebanar y tocar
                 }
                 else
                 {
@@ -644,7 +941,8 @@ juce::Component* FreesoundOverlayComponent::refreshComponentForRow(int rowNumber
     {
         rowComp = new FreesoundItemRowComponent(
             [this](const FreesoundItem& item) { previewSound(item); },
-            [this](const FreesoundItem& item) { downloadAndLoadSample(item); }
+            [this](const FreesoundItem& item) { downloadAndLoadSample(item); },
+            [this](const FreesoundItem& item) { searchSimilarSounds(item, 1); }
         );
     }
 
@@ -714,16 +1012,21 @@ void FreesoundOverlayComponent::resized()
     }
     else
     {
-        // Layout Estado B: Buscador y Filtros
+        // Layout Estado B: Buscador, Filtros y Paginación
         auto topRow = area.removeFromTop(32);
         closeOverlayButton.setBounds(topRow.removeFromRight(150));
         topRow.removeFromRight(8);
         changeKeyButton.setBounds(topRow.removeFromRight(130));
-        topRow.removeFromRight(12);
-        searchStatusBadge.setBounds(topRow.removeFromRight(200));
+        topRow.removeFromRight(8);
+        if (isViewingSimilar)
+        {
+            exitSimilarButton.setBounds(topRow.removeFromRight(170));
+            topRow.removeFromRight(8);
+        }
+        searchStatusBadge.setBounds(topRow.removeFromRight(170));
         searchHeaderTitleLabel.setBounds(topRow);
 
-        area.removeFromTop(12);
+        area.removeFromTop(10);
 
         // Barra de búsqueda
         auto searchRow = area.removeFromTop(34);
@@ -733,27 +1036,41 @@ void FreesoundOverlayComponent::resized()
 
         area.removeFromTop(10);
 
-        // Fila de Filtros
+        // Fila de 4 Filtros: Duración, Orden, Licencia, Formato
         auto filterRow = area.removeFromTop(28);
-        const int filterColW = (filterRow.getWidth() - 24) / 3;
+        const int filterColW = (filterRow.getWidth() - 36) / 4;
 
         auto durArea = filterRow.removeFromLeft(filterColW);
-        durationFilterLabel.setBounds(durArea.removeFromLeft(60));
+        durationFilterLabel.setBounds(durArea.removeFromLeft(58));
         durationFilterBox.setBounds(durArea);
 
         filterRow.removeFromLeft(12);
 
         auto sortArea = filterRow.removeFromLeft(filterColW);
-        sortFilterLabel.setBounds(sortArea.removeFromLeft(75));
+        sortFilterLabel.setBounds(sortArea.removeFromLeft(58));
         sortFilterBox.setBounds(sortArea);
 
         filterRow.removeFromLeft(12);
 
-        auto licArea = filterRow;
+        auto licArea = filterRow.removeFromLeft(filterColW);
         licenseFilterLabel.setBounds(licArea.removeFromLeft(58));
         licenseFilterBox.setBounds(licArea);
 
+        filterRow.removeFromLeft(12);
+
+        auto typeArea = filterRow;
+        typeFilterLabel.setBounds(typeArea.removeFromLeft(58));
+        typeFilterBox.setBounds(typeArea);
+
         area.removeFromTop(10);
+
+        // Barra inferior de paginación
+        auto pageNavArea = area.removeFromBottom(28);
+        prevPageButton.setBounds(pageNavArea.removeFromLeft(105));
+        nextPageButton.setBounds(pageNavArea.removeFromRight(105));
+        pageInfoLabel.setBounds(pageNavArea);
+
+        area.removeFromBottom(8);
 
         // Lista de resultados
         resultsListBox.setBounds(area);
