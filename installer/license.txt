@@ -1,6 +1,6 @@
 ================================================================================
 ACUERDO DE LICENCIA DE USUARIO FINAL Y POLÍTICAS DE USO (EULA)
-ClipSampler v2.4 - Virtual Instrument Audio Plugin
+ClipSampler v2.5 - Virtual Instrument Audio Plugin
 ================================================================================
 
 POR FAVOR, LEA DETENIDAMENTE ESTE DOCUMENTO ANTES DE INSTALAR Y UTILIZAR EL 
@@ -52,7 +52,13 @@ RESPONSABLES DE DAÑOS DIRECTOS, INDIRECTOS, INCIDENTALES O CONSECUENTES
 (INCLUYENDO PÉRDIDA DE BENEFICIOS O INTERRUPCIÓN DE LA PRODUCCIÓN) DERIVADOS 
 DEL USO O DE LA IMPOSIBILIDAD DE USO DEL SOFTWARE.
 
-6. ACEPTACIÓN DE TÉRMINOS
+6. COMPONENTES Y LICENCIAS DE TERCEROS (FFMPEG Y YT-DLP)
+Este software incluye binarios sin modificar de FFmpeg (licencia LGPL 2.1+) 
+disponibles en https://ffmpeg.org y yt-dlp disponibles en https://github.com/yt-dlp/yt-dlp. 
+Consulte el archivo LICENCIAS_TERCEROS.txt incluido en la carpeta de instalación 
+para obtener la información completa de licenciamiento y acceso al código fuente.
+
+7. ACEPTACIÓN DE TÉRMINOS
 Al marcar la casilla "Acepto el acuerdo" y continuar con la instalación, usted 
 manifiesta haber leído, comprendido y aceptado la totalidad de estas políticas.
 

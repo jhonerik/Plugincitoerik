@@ -1,0 +1,38 @@
+================================================================================
+LICENCIAS Y AVISOS DE COMPONENTES DE TERCEROS
+ClipSampler v2.5
+================================================================================
+
+Este software incluye binarios sin modificar de FFmpeg (licencia LGPL 2.1+) 
+disponibles en https://ffmpeg.org y yt-dlp disponibles en https://github.com/yt-dlp/yt-dlp.
+
+--------------------------------------------------------------------------------
+1. FFmpeg (LGPL v2.1 / GPL v2+)
+--------------------------------------------------------------------------------
+FFmpeg es una marca registrada de Fabrice Bellard y el equipo de desarrollo de FFmpeg.
+Este producto hace uso de herramientas binarias de FFmpeg bajo los términos de la 
+Licencia Pública General Reducida de GNU (LGPL v2.1 / GPL v2+). 
+
+Los desarrolladores de ClipSampler no reclaman la propiedad de FFmpeg ni han 
+modificado sus archivos ejecutables. De conformidad con las disposiciones de la 
+licencia LGPL, el código fuente completo de FFmpeg se encuentra libremente 
+disponible y puede descargarse en:
+https://ffmpeg.org/download.html
+
+--------------------------------------------------------------------------------
+2. yt-dlp (The Unlicense / Dominio Público)
+--------------------------------------------------------------------------------
+yt-dlp es una herramienta de código abierto desarrollada y mantenida por la comunidad 
+de yt-dlp. Se distribuye bajo los términos de "The Unlicense" (dedicación al dominio 
+público).
+
+Para obtener más información, documentación o el código fuente completo, visite:
+https://github.com/yt-dlp/yt-dlp
+
+--------------------------------------------------------------------------------
+3. Framework JUCE
+--------------------------------------------------------------------------------
+ClipSampler utiliza el framework de desarrollo de audio JUCE 
+(Copyright (c) Raw Material Software / PACE Anti-Piracy, Inc.).
+
+================================================================================

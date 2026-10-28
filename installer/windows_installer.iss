@@ -65,5 +65,13 @@ Source: "..\resources\tools\*.exe"; \
     DestDir: "{commonappdata}\ClipSampler\tools"; \
     Flags: ignoreversion skipifsourcedoesntexist
 
+; --- 4. Avisos y Licencias de Componentes de Terceros (LGPL / Dominio Público) ---
+Source: "LICENCIAS_TERCEROS.txt"; \
+    DestDir: "{commonappdata}\ClipSampler\tools"; \
+    Flags: ignoreversion
+Source: "LICENCIAS_TERCEROS.txt"; \
+    DestDir: "{commonpf64}\{#MyAppName}"; \
+    Flags: ignoreversion
+
 [Messages]
 SelectComponentsLabel2=Selecciona los formatos que deseas instalar en tu sistema:

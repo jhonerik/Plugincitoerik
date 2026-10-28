@@ -14,6 +14,7 @@ ClipSampler está diseñado para productores musicales, beatmakers y diseñadore
 > 1. **Instrumento DSP de Procesamiento Local:** ClipSampler es comercializado exclusivamente como una herramienta de ingeniería de sonido, rebanado rítmico y síntesis para audio provisto por el usuario.
 > 2. **Responsabilidad 100% del Usuario:** La procedencia, legalidad y derechos de autor de cualquier muestra, archivo o audio cargado o capturado en el software recaen **única y exclusivamente en el usuario final**.
 > 3. **Función Opcional de Uso Libre (Web):** El acceso a la lectura de URLs de internet (YouTube, TikTok, Instagram) permanece **bloqueado por defecto** y requiere la pulsación del botón **`⚖️ Uso Libre (Web)`** donde el usuario acepta explícitamente los términos de uso antes de su habilitación, eximiendo a los desarrolladores de cualquier responsabilidad civil, mercantil o penal derivada del uso ilícito de contenidos protegidos.
+> 4. **Aviso de Componentes de Terceros (FFmpeg y yt-dlp):** Este software incluye binarios sin modificar de **FFmpeg** (licencia LGPL 2.1+) disponibles en [ffmpeg.org](https://ffmpeg.org) y **yt-dlp** disponibles en [github.com/yt-dlp/yt-dlp](https://github.com/yt-dlp/yt-dlp). Para más detalles y acceso al código fuente abierto de estas herramientas, consulte el archivo [`LICENCIAS_TERCEROS.txt`](file:///c:/Users/joncl/Downloads/Plugin/LICENCIAS_TERCEROS.txt).
 
 ---
 
