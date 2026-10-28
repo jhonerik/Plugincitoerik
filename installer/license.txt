@@ -1,6 +1,6 @@
 ================================================================================
 ACUERDO DE LICENCIA DE USUARIO FINAL Y POLÍTICAS DE USO (EULA)
-ClipSampler v2.5 - Virtual Instrument Audio Plugin
+ClipSampler v2.6 - Virtual Instrument Audio Plugin (VST3)
 ================================================================================
 
 POR FAVOR, LEA DETENIDAMENTE ESTE DOCUMENTO ANTES DE INSTALAR Y UTILIZAR EL 
@@ -15,7 +15,7 @@ para instalar y utilizar ClipSampler en estaciones de trabajo de audio digital
 
 2. NATURALEZA Y PROPÓSITO DEL SOFTWARE
 ClipSampler es una herramienta de asistencia para producción musical diseñada 
-como instrumento virtual (VSTi / AAX Instrument). Su funcionalidad técnica 
+como instrumento virtual (VST3 Instrument). Su funcionalidad técnica 
 permite capturar fragmentos de audio (3s, 10s o 30s) desde plataformas como 
 YouTube, TikTok e Instagram, procesarlos con efectos, modo MPC Auto-Chop o 
 conversión de Audio a MIDI, y transferirlos a pistas de audio o MIDI en el DAW.

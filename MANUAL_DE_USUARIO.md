@@ -1,7 +1,7 @@
 # 🎹 Manual de Usuario — ClipSampler v2.6
 ### Sampler de Transformación Local, Resintetizador, Rebanador MPC y Explorador Freesound API v2
 
-Bienvenido al **Manual Oficial de Usuario de ClipSampler v2.6**, el instrumento virtual y procesador DSP (**VST3 / AAX**) concebido comercialmente bajo el modelo de **Sampler de Transformación Local** e integración abierta con la biblioteca mundial de sonido **Freesound.org**. 
+Bienvenido al **Manual Oficial de Usuario de ClipSampler v2.6**, el instrumento virtual y procesador DSP (**VST3**) concebido comercialmente bajo el modelo de **Sampler de Transformación Local** e integración abierta con la biblioteca mundial de sonido **Freesound.org**. 
 
 ClipSampler está diseñado para productores musicales, beatmakers y diseñadores de sonido que desean importar, trocear (slice MPC), transformar acústicamente, granularizar o convertir en notas MIDI sus **propios archivos de audio (WAV, MP3, AIFF, FLAC, OGG)** desde su disco duro con total privacidad y procesamiento local sin depender de servidores externos, explorar millones de sonidos libres de derechos directamente desde **Freesound**, incluyendo además un módulo opcional de **Uso Libre** para análisis de enlaces web bajo exclusiva responsabilidad del usuario.
 
@@ -38,9 +38,8 @@ ClipSampler está diseñado para productores musicales, beatmakers y diseñadore
 ## 1. Instalación en tu DAW
 
 1. Ejecuta el instalador **`ClipSampler_Windows_Installer_v2.6.0.exe`** como Administrador.
-2. Acepta el acuerdo de licencia y selecciona los formatos que utilices en tu estudio:
-   - **VST3 (64-bit):** Compatible con FL Studio, Ableton Live, Cubase, Studio One, Reaper, Bitwig, etc. (Se instala en `C:\Program Files\Common Files\VST3\ClipSampler.vst3`).
-   - **AAX (64-bit):** Compatible con Avid Pro Tools.
+2. Acepta el acuerdo de licencia e instala el plugin:
+   - **VST3 (64-bit):** Compatible con FL Studio, Ableton Live, Cubase, Studio One, Reaper, Bitwig, etc. (Se instala automáticamente en la ruta estándar `C:\Program Files\Common Files\VST3\ClipSampler.vst3`).
 3. El instalador copiará automáticamente las herramientas auxiliares en `C:\ProgramData\ClipSampler\tools` para que el plugin funcione de inmediato sin configuraciones adicionales.
 4. Abre tu DAW, actualiza tu lista de plugins y carga **ClipSampler** en una pista de **Instrumento MIDI / Instrument Track**.
 

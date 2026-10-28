@@ -1,6 +1,6 @@
 # ==============================================================================
 # ClipSampler v2.6 - Script Automatizado de Compilación y Empaquetado (Windows)
-# Compila el plugin VST3/AAX en modo Release y genera el instalador oficial .exe
+# Compila el plugin VST3 en modo Release y genera el instalador oficial .exe
 # ==============================================================================
 $ErrorActionPreference = "Stop"
 

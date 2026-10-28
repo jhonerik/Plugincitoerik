@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.22)
 
 # ==============================================================================
-# ClipSampler v2.6 - Instrumento Virtual (VST3 / AAX)
+# ClipSampler v2.6 - Instrumento Virtual (VST3 de 64 bits)
 # Extractor Multi-Plataforma (YouTube, TikTok, Instagram), Rebanador MPC,
 # Procesador de Efectos Macro, Detector de BPM/Tonalidad, Conversor Audio a MIDI
 # y Explorador Integrado Freesound API v2.
@@ -37,26 +37,9 @@ if(NOT TARGET juce::juce_audio_utils)
 endif()
 
 # ------------------------------------------------------------------------------
-# Configuración opcional del SDK de AAX (Avid Pro Tools)
-# ------------------------------------------------------------------------------
-if(DEFINED AAX_SDK_PATH)
-    message(STATUS "Configurando ruta del SDK de AAX: ${AAX_SDK_PATH}")
-    juce_set_aax_sdk_path("${AAX_SDK_PATH}")
-endif()
-
-# ------------------------------------------------------------------------------
-# Formatos del Plugin: VST3 y AAX
+# Formato Exclusivo del Plugin: VST3 (64 bits)
 # ------------------------------------------------------------------------------
 set(PLUGIN_FORMATS VST3)
-
-if(DEFINED AAX_SDK_PATH AND EXISTS "${AAX_SDK_PATH}")
-    list(APPEND PLUGIN_FORMATS AAX)
-else()
-    message(WARNING "AAX_SDK_PATH no está definido. Se compilará el formato VST3 por defecto.")
-    if(DEFINED FORCE_AAX_BUILD AND FORCE_AAX_BUILD)
-        list(APPEND PLUGIN_FORMATS AAX)
-    endif()
-endif()
 
 # ------------------------------------------------------------------------------
 # Declaración Principal del Plugin (Objetivo: ClipSampler)
@@ -75,7 +58,6 @@ juce_add_plugin(ClipSampler
     PRODUCT_NAME                "ClipSampler"
     BUNDLE_ID                   "com.audioinnovations.clipsampler"
     VERSION                     "2.6.0"
-    AAX_CATEGORY                AAX_ePlugInCategory_SWGenerators
 )
 
 # ------------------------------------------------------------------------------
