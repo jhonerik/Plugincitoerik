@@ -8,7 +8,8 @@ ClipSamplerAudioProcessorEditor::ClipSamplerAudioProcessorEditor(ClipSamplerAudi
       audioProcessor(p),
       originalWaveformComponent(p, 1, juce::String::fromUTF8("VISOR 1: AUDIO ORIGINAL (REBANADOR MPC C1-G2)")),
       transformedWaveformComponent(p, 2, juce::String::fromUTF8("VISOR 2: AUDIO MODIFICADO (DERECHOS ±3 ST IA)")),
-      licenseOverlay(p.getLicenseManager(), [this] { updateLicenseUiState(); })
+      licenseOverlay(p.getLicenseManager(), [this] { updateLicenseUiState(); }),
+      freesoundOverlay(p)
 {
     setLookAndFeel(&scalableLnf);
 
@@ -19,10 +20,15 @@ ClipSamplerAudioProcessorEditor::ClipSamplerAudioProcessorEditor(ClipSamplerAudi
     setWantsKeyboardFocus(true);
 
     // =========================================================================
-    // Controles del Encabezado Superior (Licencia / Prueba de 3 Días y Mantenimiento)
+    // Controles del Encabezado Superior (Licencia / Prueba de 3 Días, Freesound y Mantenimiento)
     // =========================================================================
     licenseBadgeButton.onClick = [this] { onLicenseBadgeClicked(); };
     addAndMakeVisible(licenseBadgeButton);
+
+    freesoundButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xffea580c)); // Naranja cálido distintivo Freesound
+    freesoundButton.setColour(juce::TextButton::textColourOffId, juce::Colours::white);
+    freesoundButton.onClick = [this] { onFreesoundButtonClicked(); };
+    addAndMakeVisible(freesoundButton);
 
     updateExtractorButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff2b3d63));
     updateExtractorButton.setColour(juce::TextButton::textColourOffId, juce::Colour(0xffe2e8f0));
@@ -390,6 +396,7 @@ ClipSamplerAudioProcessorEditor::ClipSamplerAudioProcessorEditor(ClipSamplerAudi
     addAndMakeVisible(exportWavButton);
 
     addChildComponent(licenseOverlay);
+    addChildComponent(freesoundOverlay);
     updateLicenseUiState();
     updatePlatformUiState();
     updateFxAndMpcUiState();
@@ -1305,6 +1312,13 @@ void ClipSamplerAudioProcessorEditor::onLicenseBadgeClicked()
     licenseOverlay.toFront(true);
 }
 
+void ClipSamplerAudioProcessorEditor::onFreesoundButtonClicked()
+{
+    freesoundOverlay.refreshView();
+    freesoundOverlay.setVisible(true);
+    freesoundOverlay.toFront(true);
+}
+
 void ClipSamplerAudioProcessorEditor::updateLicenseUiState()
 {
     auto& lm = audioProcessor.getLicenseManager();
@@ -1437,7 +1451,7 @@ void ClipSamplerAudioProcessorEditor::paint(juce::Graphics& g)
     // Título principal adaptable
     g.setColour(juce::Colour(0xff7dd3fc));
     g.setFont(juce::Font(juce::jlimit(14.5f, 24.0f, 21.0f * wScale), juce::Font::bold));
-    g.drawFittedText(juce::String::fromUTF8("CLIPSAMPLER v2.5"),
+    g.drawFittedText(juce::String::fromUTF8("CLIPSAMPLER v2.6"),
                      16, titleY, availHeaderTextW, titleH,
                      juce::Justification::centredLeft, 1, 0.68f);
 
@@ -1471,6 +1485,7 @@ void ClipSamplerAudioProcessorEditor::paint(juce::Graphics& g)
 void ClipSamplerAudioProcessorEditor::resized()
 {
     licenseOverlay.setBounds(getLocalBounds());
+    freesoundOverlay.setBounds(getLocalBounds());
 
     const int totalW = getWidth();
     const int totalH = getHeight();
@@ -1499,19 +1514,22 @@ void ClipSamplerAudioProcessorEditor::resized()
     bpmKeyBadgeLabel.setFont(juce::Font(juce::jlimit(9.5f, 14.0f, 11.2f * uiScale), juce::Font::bold));
 
     // -------------------------------------------------------------------------
-    // 0. Encabezado Responsivo (los 3 botones derechos ocupan máximo el 47% del ancho)
+    // 0. Encabezado Responsivo (los 4 botones derechos ocupan máximo el 48% del ancho)
     // -------------------------------------------------------------------------
     const int headerH = juce::roundToInt(54.0f * hScale);
     auto headerArea = getLocalBounds().removeFromTop(headerH).reduced(12, juce::roundToInt(9.0f * hScale));
 
-    const int cleanBtnW   = juce::jlimit(76, 122, juce::roundToInt(totalW * 0.105f));
-    const int updateBtnW  = juce::jlimit(88, 142, juce::roundToInt(totalW * 0.125f));
-    const int licenseBtnW = juce::jlimit(165, 265, juce::roundToInt(totalW * 0.235f));
+    const int cleanBtnW     = juce::jlimit(68, 112, juce::roundToInt(totalW * 0.090f));
+    const int updateBtnW    = juce::jlimit(80, 128, juce::roundToInt(totalW * 0.105f));
+    const int freesoundBtnW = juce::jlimit(88, 138, juce::roundToInt(totalW * 0.115f));
+    const int licenseBtnW   = juce::jlimit(145, 235, juce::roundToInt(totalW * 0.190f));
 
     cleanCacheButton.setBounds(headerArea.removeFromRight(cleanBtnW));
-    headerArea.removeFromRight(6);
+    headerArea.removeFromRight(5);
     updateExtractorButton.setBounds(headerArea.removeFromRight(updateBtnW));
-    headerArea.removeFromRight(6);
+    headerArea.removeFromRight(5);
+    freesoundButton.setBounds(headerArea.removeFromRight(freesoundBtnW));
+    headerArea.removeFromRight(5);
     licenseBadgeButton.setBounds(headerArea.removeFromRight(licenseBtnW));
 
     auto totalArea = getLocalBounds();

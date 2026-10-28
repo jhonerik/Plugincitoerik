@@ -5,6 +5,7 @@
 #include "../DSP/PluginProcessor.h"
 #include "WaveformComponent.h"
 #include "LicenseOverlayComponent.h"
+#include "FreesoundOverlayComponent.h"
 
 /**
  * @class ScalablePluginLookAndFeel
@@ -322,6 +323,7 @@ private:
     void onUpdateExtractorClicked();
     void onCleanCacheClicked();
     void onLicenseBadgeClicked();
+    void onFreesoundButtonClicked();
     void updateLicenseUiState();
     void updatePlatformUiState();
     void updateFxAndMpcUiState();
@@ -332,8 +334,9 @@ private:
     int licenseCheckTickCounter = 0;
     int lastKnownVideoDuration = -1;
 
-    // Botones de la barra de encabezado (Estado de Licencia / Prueba de 3 Días y Mantenimiento)
+    // Botones de la barra de encabezado (Estado de Licencia / Prueba de 3 Días, Freesound y Mantenimiento)
     juce::TextButton licenseBadgeButton;
+    juce::TextButton freesoundButton       { juce::String::fromUTF8("🎵 Freesound") };
     juce::TextButton updateExtractorButton { juce::String::fromUTF8("Actualizar Motor") };
     juce::TextButton cleanCacheButton      { juce::String::fromUTF8("Limpiar Caché") };
 
@@ -439,6 +442,7 @@ private:
     juce::TextButton exportWavButton { juce::String::fromUTF8("Exportar .WAV...") };
 
     LicenseOverlayComponent licenseOverlay;
+    FreesoundOverlayComponent freesoundOverlay;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ClipSamplerAudioProcessorEditor)
 };

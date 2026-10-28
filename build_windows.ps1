@@ -1,11 +1,11 @@
 # ==============================================================================
-# ClipSampler v2.5 - Script Automatizado de Compilación y Empaquetado (Windows)
+# ClipSampler v2.6 - Script Automatizado de Compilación y Empaquetado (Windows)
 # Compila el plugin VST3/AAX en modo Release y genera el instalador oficial .exe
 # ==============================================================================
 $ErrorActionPreference = "Stop"
 
 Write-Host "==========================================================" -ForegroundColor Cyan
-Write-Host "   ClipSampler v2.5 - Sistema de Compilación (Windows)    " -ForegroundColor Cyan
+Write-Host "   ClipSampler v2.6 - Sistema de Compilación (Windows)    " -ForegroundColor Cyan
 Write-Host "==========================================================" -ForegroundColor Cyan
 
 $ProjectRoot = $PSScriptRoot

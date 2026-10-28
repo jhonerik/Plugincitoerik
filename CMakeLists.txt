@@ -1,11 +1,12 @@
 cmake_minimum_required(VERSION 3.22)
 
 # ==============================================================================
-# ClipSampler v2.5 - Instrumento Virtual (VST3 / AAX)
+# ClipSampler v2.6 - Instrumento Virtual (VST3 / AAX)
 # Extractor Multi-Plataforma (YouTube, TikTok, Instagram), Rebanador MPC,
-# Procesador de Efectos Macro, Detector de BPM/Tonalidad y Conversor Audio a MIDI.
+# Procesador de Efectos Macro, Detector de BPM/Tonalidad, Conversor Audio a MIDI
+# y Explorador Integrado Freesound API v2.
 # ==============================================================================
-project(ClipSampler VERSION 2.5.0 LANGUAGES C CXX)
+project(ClipSampler VERSION 2.6.0 LANGUAGES C CXX)
 
 # Estándar C++17 requerido por JUCE 8 y las utilidades modernas de concurrencia
 set(CMAKE_CXX_STANDARD 17)
@@ -73,7 +74,7 @@ juce_add_plugin(ClipSampler
     FORMATS                     ${PLUGIN_FORMATS}
     PRODUCT_NAME                "ClipSampler"
     BUNDLE_ID                   "com.audioinnovations.clipsampler"
-    VERSION                     "2.4.0"
+    VERSION                     "2.6.0"
     AAX_CATEGORY                AAX_ePlugInCategory_SWGenerators
 )
 
@@ -88,6 +89,8 @@ target_sources(ClipSampler
         Source/Security/LicenseManager.cpp
         Source/Services/AudioExtractorWorker.h
         Source/Services/AudioExtractorWorker.cpp
+        Source/UI/FreesoundOverlayComponent.h
+        Source/UI/FreesoundOverlayComponent.cpp
         Source/UI/LicenseOverlayComponent.h
         Source/UI/LicenseOverlayComponent.cpp
         Source/UI/PluginEditor.h
@@ -153,7 +156,7 @@ set_target_properties(ClipSampler PROPERTIES
 )
 
 message(STATUS "==========================================================")
-message(STATUS " ClipSampler v2.4.0 configurado correctamente!")
+message(STATUS " ClipSampler v2.6.0 configurado correctamente!")
 message(STATUS " Formatos de destino: ${PLUGIN_FORMATS}")
 message(STATUS " Instrumento Virtual (IS_SYNTH): TRUE")
 message(STATUS "==========================================================")

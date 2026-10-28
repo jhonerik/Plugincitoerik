@@ -1,10 +1,10 @@
 ; ==============================================================================
-; ClipSampler v2.5 - Script de Instalador de Windows de 64 bits (Inno Setup)
+; ClipSampler v2.6 - Script de Instalador de Windows de 64 bits (Inno Setup)
 ; Formatos Exclusivos: VST3 y AAX (Pro Tools)
 ; ==============================================================================
 
 #define MyAppName "ClipSampler"
-#define MyAppVersion "2.5.0"
+#define MyAppVersion "2.6.0"
 #define MyAppPublisher "AudioInnovations"
 #define MyAppURL "https://www.audioinnovations.com"
 

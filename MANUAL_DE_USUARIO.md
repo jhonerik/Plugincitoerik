@@ -1,9 +1,9 @@
-# 🎹 Manual de Usuario — ClipSampler v2.5
-### Sampler de Transformación Local, Resintetizador y Rebanador MPC
+# 🎹 Manual de Usuario — ClipSampler v2.6
+### Sampler de Transformación Local, Resintetizador, Rebanador MPC y Explorador Freesound API v2
 
-Bienvenido al **Manual Oficial de Usuario de ClipSampler v2.5**, el instrumento virtual y procesador DSP (**VST3 / AAX**) concebido comercialmente bajo el modelo de **Sampler de Transformación Local**. 
+Bienvenido al **Manual Oficial de Usuario de ClipSampler v2.6**, el instrumento virtual y procesador DSP (**VST3 / AAX**) concebido comercialmente bajo el modelo de **Sampler de Transformación Local** e integración abierta con la biblioteca mundial de sonido **Freesound.org**. 
 
-ClipSampler está diseñado para productores musicales, beatmakers y diseñadores de sonido que desean importar, trocear (slice MPC), transformar acústicamente, granularizar o convertir en notas MIDI sus **propios archivos de audio (WAV, MP3, AIFF, FLAC, OGG)** desde su disco duro con total privacidad y procesamiento local sin depender de servidores externos, incluyendo además un módulo opcional de **Uso Libre** para análisis de enlaces web bajo exclusiva responsabilidad del usuario.
+ClipSampler está diseñado para productores musicales, beatmakers y diseñadores de sonido que desean importar, trocear (slice MPC), transformar acústicamente, granularizar o convertir en notas MIDI sus **propios archivos de audio (WAV, MP3, AIFF, FLAC, OGG)** desde su disco duro con total privacidad y procesamiento local sin depender de servidores externos, explorar millones de sonidos libres de derechos directamente desde **Freesound**, incluyendo además un módulo opcional de **Uso Libre** para análisis de enlaces web bajo exclusiva responsabilidad del usuario.
 
 ---
 
@@ -24,19 +24,20 @@ ClipSampler está diseñado para productores musicales, beatmakers y diseñadore
 2. [Período de Prueba (3 Días) y Activación de Licencia](#2-período-de-prueba-3-días-y-activación-de-licencia)
 3. [Vista General de la Interfaz (Responsive)](#3-vista-general-de-la-interfaz-responsive)
 4. [Paso 1: Modelo Sampler Local (Arrastrar WAV/MP3 o Cargar Archivo)](#4-paso-1-modelo-sampler-local-arrastrar-wavmp3-o-cargar-archivo)
-5. [Paso 2: Función Opcional 'Uso Libre' (Lectura de URLs Web)](#5-paso-2-función-opcional-uso-libre-lectura-de-urls-web)
-6. [Paso 3: Doble Visor de Onda, Coloración Analógica y Suite de Derechos IA](#6-paso-3-doble-visor-de-onda-coloración-analógica-y-suite-de-derechos-ia)
-7. [Paso 4: Modo Auto-Chop (Estilo MPC) y Rack de Efectos Macro](#7-paso-4-modo-auto-chop-estilo-mpc-y-rack-de-efectos-macro)
-8. [Paso 5: Reverse y Half-Time por Pad, Ajuste de Transientes y Exportación](#8-paso-5-reverse-y-half-time-por-pad-ajuste-de-transientes-y-exportación)
-9. [Botón Nueva Extracción y Mantenimiento](#9-botón-nueva-extracción-y-mantenimiento)
-10. [Administración del Generador de Licencias (Para el Propietario)](#10-administración-del-generador-de-licencias-para-el-propietario)
-11. [Solución de Problemas Frecuentes](#11-solución-de-problemas-frecuentes)
+5. [Paso 2: Explorador Integrado de Freesound (API v2)](#5-paso-2-explorador-integrado-de-freesound-api-v2)
+6. [Paso 3: Función Opcional 'Uso Libre' (Lectura de URLs Web)](#6-paso-3-función-opcional-uso-libre-lectura-de-urls-web)
+7. [Paso 4: Doble Visor de Onda, Coloración Analógica y Suite de Derechos IA](#7-paso-4-doble-visor-de-onda-coloración-analógica-y-suite-de-derechos-ia)
+8. [Paso 5: Modo Auto-Chop (Estilo MPC) y Rack de Efectos Macro](#8-paso-5-modo-auto-chop-estilo-mpc-y-rack-de-efectos-macro)
+9. [Paso 6: Reverse y Half-Time por Pad, Ajuste de Transientes y Exportación](#9-paso-6-reverse-y-half-time-por-pad-ajuste-de-transientes-y-exportación)
+10. [Botón Nueva Extracción y Mantenimiento](#10-botón-nueva-extracción-y-mantenimiento)
+11. [Administración del Generador de Licencias (Para el Propietario)](#11-administración-del-generador-de-licencias-para-el-propietario)
+12. [Solución de Problemas Frecuentes](#12-solución-de-problemas-frecuentes)
 
 ---
 
 ## 1. Instalación en tu DAW
 
-1. Ejecuta el instalador **`ClipSampler_Windows_Installer_v2.5.0.exe`** como Administrador.
+1. Ejecuta el instalador **`ClipSampler_Windows_Installer_v2.6.0.exe`** como Administrador.
 2. Acepta el acuerdo de licencia y selecciona los formatos que utilices en tu estudio:
    - **VST3 (64-bit):** Compatible con FL Studio, Ableton Live, Cubase, Studio One, Reaper, Bitwig, etc. (Se instala en `C:\Program Files\Common Files\VST3\ClipSampler.vst3`).
    - **AAX (64-bit):** Compatible con Avid Pro Tools.
@@ -79,7 +80,44 @@ La interfaz de **ClipSampler v2.5** cuenta con un diseño de estudio **Royal Sap
 
 ---
 
-## 5. Paso 2: Función Opcional 'Uso Libre' (Lectura de URLs Web)
+## 5. Paso 2: Explorador Integrado de Freesound (API v2)
+
+**ClipSampler v2.6** integra un navegador modal completo conectado directamente a la API oficial v2 de **Freesound.org** para buscar, filtrar, preescuchar y cargar sonidos libres de derechos directamente a tus pads.
+
+### 🔑 Activación con tu API Key Gratuita
+1. Haz clic en el botón naranja **`🎵 Freesound`** ubicado en la barra de encabezado superior.
+2. Si es la primera vez que lo abres, verás una ventana modal con el cuadro central: **"Pega tu API Key de Freesound aquí"**.
+3. Haz clic en el enlace **`🌐 ¿Cómo obtener una API Key gratuita? (freesound.org)`** o visita directamente [freesound.org/apiv2/apply](https://freesound.org/apiv2/apply) para registrarte y generar una clave de desarrollador gratuita al instante.
+4. Pulsa el botón **`📋 Pegar`** y haz clic en **`🔓 Conectar y Cargar Buscador`**.
+5. Tu API Key se guardará de forma segura y persistente en `%APPDATA%\ClipSampler\freesound_api_key.txt`, por lo que no necesitarás volver a introducirla en futuras sesiones. Si deseas actualizarla o cambiarla más adelante, dispones del botón **`🔑 Cambiar API Key`**.
+
+### 🔍 Buscador y Filtros Avanzados
+Una vez conectada la API Key, se desplegará el panel del buscador:
+- **Caja de Búsqueda:** Escribe cualquier término (ej. *snare, kick, vinyl scratch, synth pad, vocal chop, hi-hat, ambient rain*) y pulsa Enter o haz clic en **`🔍 Buscar Sonidos`**.
+- **Filtro de Duración:**
+  - *Cualquiera:* Sin límite de duración.
+  - *One-Shots (0 a 2s):* Ideal para bombos, cajas, platillos y golpes percusivos.
+  - *Loops Cortos (2 a 6s):* Para compases rítmicos o fills.
+  - *Frases (6 a 15s):* Riffs melódicos, líneas vocales y secuencias.
+  - *Muestras Largas (15s a 5m):* Texturas ambientales, grabaciones de campo y pistas completas.
+- **Filtro de Ordenación:**
+  - *Más Relevantes:* Coincidencia semántica con tu búsqueda.
+  - *Más Descargados:* Las muestras más populares y probadas de la comunidad.
+  - *Mejor Valorados:* Los sonidos con mayor puntuación de usuarios.
+  - *Más Recientes:* Novedades y samples recién subidos.
+- **Filtro de Licencia:**
+  - *Todas las Licencias:* Acceso a todo el catálogo.
+  - *Creative Commons 0 (Dominio Público):* 100% libre para cualquier uso comercial o privado sin necesidad de atribución.
+  - *Creative Commons Attribution (CC-BY):* Libre para producciones dando crédito al autor original.
+
+### 🎧 Preescucha y Carga Instantánea en Pads
+- **`▶ Escuchar` / `⏹ Detener`:** Cada resultado de la lista incluye un botón de preescucha instantánea con barra de volumen para audicionar el sonido antes de decidir cargarlo.
+- **`⚡ Cargar en Pad`:** Al pulsar este botón, ClipSampler descarga la muestra en alta fidelidad a la caché local, la carga automáticamente en el **Visor 1**, calcula su **BPM y Tono**, activa el **Rebanador MPC (C1 a G2)** y deja el sample listo para tocar, aplicar efectos o arrastrar a tu DAW.
+- Pulsa **`✕ Volver a ClipSampler`** en cualquier momento para regresar a la vista principal.
+
+---
+
+## 6. Paso 3: Función Opcional 'Uso Libre' (Lectura de URLs Web)
 
 Para habilitar la captura opcional desde plataformas de internet:
 
@@ -95,9 +133,9 @@ Para habilitar la captura opcional desde plataformas de internet:
 
 ---
 
-## 6. Paso 3: Doble Visor de Onda, Coloración Analógica y Suite de Derechos IA
+## 7. Paso 4: Doble Visor de Onda, Coloración Analógica y Suite de Derechos IA
 
-**ClipSampler v2.5** cuenta con una suite de herramientas avanzadas de **Modificación y Coloración de Audio** ubicada en la Fila 4:
+**ClipSampler v2.6** cuenta con una suite de herramientas avanzadas de **Modificación y Coloración de Audio** ubicada en la Fila 4:
 
 ### 📼 Botón `📼 Calor Analógico`
 - **¿Qué hace?** Aplica una coloración analógica vintage inspirada en grabadoras de cinta de carrete abierto (*tape machines*) y previos a válvulas:
@@ -120,7 +158,7 @@ Para habilitar la captura opcional desde plataformas de internet:
 
 ---
 
-## 7. Paso 4: Modo Auto-Chop (Estilo MPC) y Rack de Efectos Macro
+## 8. Paso 5: Modo Auto-Chop (Estilo MPC) y Rack de Efectos Macro
 
 En la **Fila 4 (Rack de Efectos Macro + Modo MPC)**:
 
@@ -147,7 +185,7 @@ En la **Fila 4 (Rack de Efectos Macro + Modo MPC)**:
 
 ---
 
-## 8. Paso 5: Reverse y Half-Time por Pad, Ajuste de Transientes y Exportación
+## 9. Paso 6: Reverse y Half-Time por Pad, Ajuste de Transientes y Exportación
 
 En los **Visores de Onda** y en la **Fila 5 (Barra Inferior de Transporte, Controles de Pad y Exportación)**:
 
@@ -180,7 +218,7 @@ En los **Visores de Onda** y en la **Fila 5 (Barra Inferior de Transporte, Contr
 
 ---
 
-## 9. Botón Nueva Extracción y Mantenimiento
+## 10. Botón Nueva Extracción y Mantenimiento
 
 En la esquina superior derecha del encabezado encontrarás dos botones de mantenimiento rápido:
 - **`🔄 Actualizar Motor`:** Ejecuta `yt-dlp -U` en segundo plano para actualizar el motor de descarga cuando YouTube, TikTok o Instagram cambien sus algoritmos.
@@ -188,7 +226,7 @@ En la esquina superior derecha del encabezado encontrarás dos botones de manten
 
 ---
 
-## 10. Administración del Generador de Licencias (Para el Propietario)
+## 11. Administración del Generador de Licencias (Para el Propietario)
 
 Si eres el administrador del software y deseas generar licencias para tus clientes:
 
@@ -201,7 +239,7 @@ Si eres el administrador del software y deseas generar licencias para tus client
 
 ---
 
-## 11. Solución de Problemas Frecuentes
+## 12. Solución de Problemas Frecuentes
 
 - **El texto o los botones se ven pequeños en mi monitor 4K:**
   Arrastra el triángulo de la esquina inferior derecha del plugin para ampliar la ventana al tamaño que prefieras; toda la interfaz y las fuentes crecerán proporcionalmente.
