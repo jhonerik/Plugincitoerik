@@ -1451,7 +1451,7 @@ void ClipSamplerAudioProcessorEditor::paint(juce::Graphics& g)
     // Título principal adaptable
     g.setColour(juce::Colour(0xff7dd3fc));
     g.setFont(juce::Font(juce::jlimit(14.5f, 24.0f, 21.0f * wScale), juce::Font::bold));
-    g.drawFittedText(juce::String::fromUTF8("CLIPSAMPLER v2.6"),
+    g.drawFittedText(juce::String::fromUTF8("CLIPSAMPLER v2.6.1"),
                      16, titleY, availHeaderTextW, titleH,
                      juce::Justification::centredLeft, 1, 0.68f);
 

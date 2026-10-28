@@ -263,6 +263,14 @@ public:
     bool isAudioPlaying() const { return isPlaying.load(std::memory_order_relaxed); }
     float getPlaybackProgress() const;
 
+    //==============================================================================
+    // Preescucha Directa en el DAW (Freesound / Previews)
+    //==============================================================================
+    void startFreesoundPreview(const juce::File& file, const juce::String& soundId);
+    void stopFreesoundPreview();
+    bool isFreesoundPreviewPlaying() const;
+    juce::String getActivePreviewSoundId() const;
+
     /** Accesores de archivos y estado para la interfaz gráfica. */
     juce::File getCurrentAudioFile() const;
     juce::File getSlotAudioFile(int slotIndex) const;
@@ -472,6 +480,13 @@ private:
     int licenseRecheckCountdown = 0;
 
     std::shared_ptr<std::atomic<bool>> aliveFlag = std::make_shared<std::atomic<bool>>(true);
+
+    // Preescucha directa a través de processBlock hacia el canal del DAW
+    juce::CriticalSection previewLock;
+    juce::AudioTransportSource previewTransportSource;
+    std::unique_ptr<juce::AudioFormatReaderSource> previewReaderSource;
+    juce::String currentPreviewSoundId;
+    juce::AudioBuffer<float> previewTempBuffer;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ClipSamplerAudioProcessor)
 };

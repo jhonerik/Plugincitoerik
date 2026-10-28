@@ -1,7 +1,7 @@
-# 🎹 Manual de Usuario — ClipSampler v2.6
+# 🎹 Manual de Usuario — ClipSampler v2.6.1
 ### Sampler de Transformación Local, Resintetizador, Rebanador MPC y Explorador Freesound API v2
 
-Bienvenido al **Manual Oficial de Usuario de ClipSampler v2.6**, el instrumento virtual y procesador DSP (**VST3**) concebido comercialmente bajo el modelo de **Sampler de Transformación Local** e integración abierta con la biblioteca mundial de sonido **Freesound.org**. 
+Bienvenido al **Manual Oficial de Usuario de ClipSampler v2.6.1**, el instrumento virtual y procesador DSP (**VST3**) concebido comercialmente bajo el modelo de **Sampler de Transformación Local** e integración abierta con la biblioteca mundial de sonido **Freesound.org**. 
 
 ClipSampler está diseñado para productores musicales, beatmakers y diseñadores de sonido que desean importar, trocear (slice MPC), transformar acústicamente, granularizar o convertir en notas MIDI sus **propios archivos de audio (WAV, MP3, AIFF, FLAC, OGG)** desde su disco duro con total privacidad y procesamiento local sin depender de servidores externos, explorar millones de sonidos libres de derechos directamente desde **Freesound**, incluyendo además un módulo opcional de **Uso Libre** para análisis de enlaces web bajo exclusiva responsabilidad del usuario.
 
@@ -37,7 +37,7 @@ ClipSampler está diseñado para productores musicales, beatmakers y diseñadore
 
 ## 1. Instalación en tu DAW
 
-1. Ejecuta el instalador **`ClipSampler_Windows_Installer_v2.6.0.exe`** como Administrador.
+1. Ejecuta el instalador **`ClipSampler_Windows_Installer_v2.6.1.exe`** como Administrador.
 2. Acepta el acuerdo de licencia e instala el plugin:
    - **VST3 (64-bit):** Compatible con FL Studio, Ableton Live, Cubase, Studio One, Reaper, Bitwig, etc. (Se instala automáticamente en la ruta estándar `C:\Program Files\Common Files\VST3\ClipSampler.vst3`).
 3. El instalador copiará automáticamente las herramientas auxiliares en `C:\ProgramData\ClipSampler\tools` para que el plugin funcione de inmediato sin configuraciones adicionales.
@@ -81,7 +81,7 @@ La interfaz de **ClipSampler v2.5** cuenta con un diseño de estudio **Royal Sap
 
 ## 5. Paso 2: Explorador Integrado de Freesound (API v2)
 
-**ClipSampler v2.6** integra un navegador modal completo conectado directamente a la API oficial v2 de **Freesound.org** para buscar, filtrar, preescuchar y cargar sonidos libres de derechos directamente a tus pads.
+**ClipSampler v2.6.1** integra un navegador modal completo conectado directamente a la API oficial v2 de **Freesound.org** para buscar, filtrar, preescuchar a través del canal del DAW en tiempo real y cargar sonidos libres de derechos directamente a tus pads.
 
 ### 🔑 Activación con tu API Key Gratuita
 1. Haz clic en el botón naranja **`🎵 Freesound`** ubicado en la barra de encabezado superior.
@@ -144,7 +144,7 @@ Para habilitar la captura opcional desde plataformas de internet:
 
 ## 7. Paso 4: Doble Visor de Onda, Coloración Analógica y Suite de Derechos IA
 
-**ClipSampler v2.6** cuenta con una suite de herramientas avanzadas de **Modificación y Coloración de Audio** ubicada en la Fila 4:
+**ClipSampler v2.6.1** cuenta con una suite de herramientas avanzadas de **Modificación y Coloración de Audio** ubicada en la Fila 4:
 
 ### 📼 Botón `📼 Calor Analógico`
 - **¿Qué hace?** Aplica una coloración analógica vintage inspirada en grabadoras de cinta de carrete abierto (*tape machines*) y previos a válvulas:

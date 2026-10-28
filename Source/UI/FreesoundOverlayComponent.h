@@ -36,7 +36,7 @@ struct FreesoundItem
  */
 class FreesoundOverlayComponent : public juce::Component,
                                   private juce::ListBoxModel,
-                                  private juce::ChangeListener
+                                  private juce::Timer
 {
 public:
     explicit FreesoundOverlayComponent(ClipSamplerAudioProcessor& processorToUse);
@@ -55,7 +55,7 @@ private:
     juce::Component* refreshComponentForRow(int rowNumber, bool isRowSelected, juce::Component* existingComponentToUpdate) override;
 
     // Manejador de eventos de audio preview
-    void changeListenerCallback(juce::ChangeBroadcaster* source) override;
+    void timerCallback() override;
 
     // Métodos de gestión de API Key
     juce::File getApiKeyStorageFile() const;
@@ -139,12 +139,14 @@ private:
     juce::TextButton nextPageButton       { juce::String::fromUTF8("Siguiente ▶") };
 
     // Preescucha de audio
-    juce::AudioFormatManager previewFormatManager;
-    std::unique_ptr<juce::AudioFormatReaderSource> previewReaderSource;
-    juce::AudioTransportSource previewTransport;
-    juce::AudioSourcePlayer previewPlayer;
-    juce::AudioDeviceManager previewDeviceManager;
-    juce::String currentlyPreviewingId;
+    // Estado de preescucha de audio enrutada al DAW
+    bool lastKnownPreviewPlaying = false;
+    juce::String lastKnownPreviewId;
+
+
+
+
+
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(FreesoundOverlayComponent)
 };

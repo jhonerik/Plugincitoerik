@@ -1,5 +1,6 @@
 # Build & Packaging Output
 build/
+Builds/
 dist_windows/
 dist_macos/
 staging_pkg/
@@ -17,6 +18,9 @@ installer/*.pkg
 
 # JUCE Fetched Data & CMake Caches
 _deps/
+JUCE/
+cmake/
+modules/
 CMakeCache.txt
 CMakeFiles/
 

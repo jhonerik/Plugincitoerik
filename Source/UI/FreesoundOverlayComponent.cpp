@@ -112,11 +112,7 @@ private:
 FreesoundOverlayComponent::FreesoundOverlayComponent(ClipSamplerAudioProcessor& processorToUse)
     : processor(processorToUse)
 {
-    previewFormatManager.registerBasicFormats();
-    previewTransport.addChangeListener(this);
-    previewDeviceManager.initialiseWithDefaultDevices(0, 2);
-    previewDeviceManager.addAudioCallback(&previewPlayer);
-    previewPlayer.setSource(&previewTransport);
+    startTimerHz(15);
 
     // =========================================================================
     // Estado A: Cuadro inicial "Pega tu API Key de Freesound aquí"
@@ -316,11 +312,20 @@ FreesoundOverlayComponent::FreesoundOverlayComponent(ClipSamplerAudioProcessor& 
 
 FreesoundOverlayComponent::~FreesoundOverlayComponent()
 {
-    previewTransport.removeChangeListener(this);
-    previewTransport.stop();
-    previewTransport.setSource(nullptr);
-    previewPlayer.setSource(nullptr);
-    previewDeviceManager.removeAudioCallback(&previewPlayer);
+    stopTimer();
+    stopPreview();
+}
+
+void FreesoundOverlayComponent::timerCallback()
+{
+    const bool isPlaying = processor.isFreesoundPreviewPlaying();
+    const juce::String activeId = processor.getActivePreviewSoundId();
+    if (isPlaying != lastKnownPreviewPlaying || activeId != lastKnownPreviewId)
+    {
+        lastKnownPreviewPlaying = isPlaying;
+        lastKnownPreviewId = activeId;
+        resultsListBox.repaint();
+    }
 }
 
 juce::File FreesoundOverlayComponent::getApiKeyStorageFile() const
@@ -785,14 +790,13 @@ void FreesoundOverlayComponent::updatePaginationUi()
 // ==============================================================================
 void FreesoundOverlayComponent::previewSound(const FreesoundItem& sound)
 {
-    if (currentlyPreviewingId == sound.id && previewTransport.isPlaying())
+    if (processor.isFreesoundPreviewPlaying() && processor.getActivePreviewSoundId() == sound.id)
     {
         stopPreview();
         return;
     }
 
     stopPreview();
-    currentlyPreviewingId = sound.id;
 
     juce::String previewUrl = sound.previewHqMp3.isNotEmpty() ? sound.previewHqMp3 : sound.previewLqMp3;
     if (previewUrl.isEmpty())
@@ -803,24 +807,18 @@ void FreesoundOverlayComponent::previewSound(const FreesoundItem& sound)
     cacheDir.createDirectory();
     auto tempFile = cacheDir.getChildFile("preview_" + sound.id + ".mp3");
 
-    // Si ya lo tenemos en caché, reproducimos al instante
+    // Si ya lo tenemos en caché, reproducimos al instante a través del flujo del DAW
     if (tempFile.existsAsFile() && tempFile.getSize() > 2048)
     {
-        std::unique_ptr<juce::AudioFormatReader> reader(previewFormatManager.createReaderFor(tempFile));
-        if (reader != nullptr)
-        {
-            previewReaderSource = std::make_unique<juce::AudioFormatReaderSource>(reader.release(), true);
-            previewTransport.setSource(previewReaderSource.get(), 0, nullptr, previewReaderSource->getAudioFormatReader()->sampleRate);
-            previewTransport.start();
-            resultsListBox.repaint();
-            return;
-        }
+        processor.startFreesoundPreview(tempFile, sound.id);
+        resultsListBox.repaint();
+        return;
     }
 
-    // Si no, lo descargamos asíncronamente y lo reproducimos
+    // Si no, lo descargamos asíncronamente y lo reproducimos directo en el DAW
     std::thread([this, previewUrl, tempFile, sound]() {
         juce::URL url(previewUrl);
-        auto stream = url.createInputStream(juce::URL::InputStreamOptions(juce::URL::ParameterHandling::inAddress).withConnectionTimeoutMs(8000));
+        auto stream = url.createInputStream(juce::URL::InputStreamOptions(juce::URL::ParameterHandling::inAddress).withConnectionTimeoutMs(10000));
         if (stream != nullptr)
         {
             tempFile.deleteFile();
@@ -829,16 +827,10 @@ void FreesoundOverlayComponent::previewSound(const FreesoundItem& sound)
             out.flush();
 
             juce::MessageManager::callAsync([this, tempFile, sound]() {
-                if (currentlyPreviewingId == sound.id && tempFile.existsAsFile())
+                if (tempFile.existsAsFile() && tempFile.getSize() > 2048)
                 {
-                    std::unique_ptr<juce::AudioFormatReader> reader(previewFormatManager.createReaderFor(tempFile));
-                    if (reader != nullptr)
-                    {
-                        previewReaderSource = std::make_unique<juce::AudioFormatReaderSource>(reader.release(), true);
-                        previewTransport.setSource(previewReaderSource.get(), 0, nullptr, previewReaderSource->getAudioFormatReader()->sampleRate);
-                        previewTransport.start();
-                        resultsListBox.repaint();
-                    }
+                    processor.startFreesoundPreview(tempFile, sound.id);
+                    resultsListBox.repaint();
                 }
             });
         }
@@ -847,23 +839,8 @@ void FreesoundOverlayComponent::previewSound(const FreesoundItem& sound)
 
 void FreesoundOverlayComponent::stopPreview()
 {
-    previewTransport.stop();
-    previewTransport.setSource(nullptr);
-    previewReaderSource.reset();
-    currentlyPreviewingId.clear();
+    processor.stopFreesoundPreview();
     resultsListBox.repaint();
-}
-
-void FreesoundOverlayComponent::changeListenerCallback(juce::ChangeBroadcaster* source)
-{
-    if (source == &previewTransport)
-    {
-        if (!previewTransport.isPlaying())
-        {
-            currentlyPreviewingId.clear();
-            resultsListBox.repaint();
-        }
-    }
 }
 
 void FreesoundOverlayComponent::downloadAndLoadSample(const FreesoundItem& sound)
@@ -949,7 +926,7 @@ juce::Component* FreesoundOverlayComponent::refreshComponentForRow(int rowNumber
     if (rowNumber >= 0 && rowNumber < static_cast<int>(soundResults.size()))
     {
         const auto& sound = soundResults[(size_t)rowNumber];
-        rowComp->updateItem(sound, currentlyPreviewingId == sound.id);
+        rowComp->updateItem(sound, processor.isFreesoundPreviewPlaying() && processor.getActivePreviewSoundId() == sound.id);
     }
 
     return rowComp;

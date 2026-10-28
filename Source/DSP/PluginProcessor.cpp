@@ -43,6 +43,12 @@ ClipSamplerAudioProcessor::ClipSamplerAudioProcessor()
 {
     // Registramos formatos de audio estándar (WAV, AIFF, FLAC, OGG, MP3/WMA en Windows)
     formatManager.registerBasicFormats();
+#if JUCE_USE_MP3AUDIOFORMAT
+    formatManager.registerFormat(new juce::MP3AudioFormat(), false);
+#endif
+#if JUCE_USE_WINDOWS_MEDIA_FORMAT
+    formatManager.registerFormat(new juce::WindowsMediaAudioFormat(), false);
+#endif
 
     // Inicializamos las 8 voces polifónicas del sampler MIDI
     for (int i = 0; i < NUM_VOICES; ++i)
@@ -52,6 +58,11 @@ ClipSamplerAudioProcessor::ClipSamplerAudioProcessor()
 ClipSamplerAudioProcessor::~ClipSamplerAudioProcessor()
 {
     // Marcamos el procesador como inactivo para ignorar callbacks asíncronos pendientes
+    stopFreesoundPreview();
+    {
+        const juce::ScopedLock sl(previewLock);
+        previewTransportSource.releaseResources();
+    }
     aliveFlag->store(false, std::memory_order_release);
     extractorWorker.cancelExtraction();
 }
@@ -111,10 +122,15 @@ namespace
 //==============================================================================
 // Preparación de Frecuencia de Muestreo y Recursos de Tiempo Real
 //==============================================================================
-void ClipSamplerAudioProcessor::prepareToPlay(double sampleRate, int /*samplesPerBlock*/)
+void ClipSamplerAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
 {
     currentSampleRateHz = (sampleRate > 8000.0) ? sampleRate : 44100.0;
     sampler.setCurrentPlaybackSampleRate(currentSampleRateHz);
+
+    {
+        const juce::ScopedLock sl(previewLock);
+        previewTransportSource.prepareToPlay(juce::jmax(32, samplesPerBlock), currentSampleRateHz);
+    }
 
     // Rampas anti-click escaladas a la frecuencia de muestreo del DAW
     fadeInSamples  = juce::jmax(32,  (int)std::round(currentSampleRateHz * 0.0018)); // ~1.8 ms (ataque limpio sin click)
@@ -166,6 +182,11 @@ void ClipSamplerAudioProcessor::prepareToPlay(double sampleRate, int /*samplesPe
 void ClipSamplerAudioProcessor::releaseResources()
 {
     stopPlayback();
+    stopFreesoundPreview();
+    {
+        const juce::ScopedLock sl(previewLock);
+        previewTransportSource.releaseResources();
+    }
 }
 
 bool ClipSamplerAudioProcessor::isBusesLayoutSupported(const BusesLayout& layouts) const
@@ -700,6 +721,32 @@ void ClipSamplerAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, j
         targetGain = gainParam->load(std::memory_order_relaxed);
     smoothedMasterGain.setTargetValue(targetGain);
     smoothedMasterGain.applyGain(buffer, numSamples);
+
+    // 10. Mezcla directa del reproductor de preescucha (Freesound / Previews) hacia el DAW
+    if (previewTransportSource.isPlaying())
+    {
+        const int outChannels = buffer.getNumChannels();
+        if (outChannels > 0)
+        {
+            if (previewTempBuffer.getNumChannels() < outChannels || previewTempBuffer.getNumSamples() < numSamples)
+                previewTempBuffer.setSize(outChannels, numSamples, false, false, true);
+
+            previewTempBuffer.clear();
+            juce::AudioSourceChannelInfo previewInfo(&previewTempBuffer, 0, numSamples);
+
+            {
+                const juce::ScopedLock sl(previewLock);
+                if (previewTransportSource.isPlaying())
+                    previewTransportSource.getNextAudioBlock(previewInfo);
+            }
+
+            for (int ch = 0; ch < outChannels; ++ch)
+            {
+                const int srcCh = juce::jmin(ch, previewTempBuffer.getNumChannels() - 1);
+                buffer.addFrom(ch, 0, previewTempBuffer, srcCh, 0, numSamples);
+            }
+        }
+    }
 }
 
 //==============================================================================
@@ -812,6 +859,11 @@ bool ClipSamplerAudioProcessor::hasBothAudiosReady() const
 void ClipSamplerAudioProcessor::resetForNewExtraction()
 {
     stopPlayback();
+    stopFreesoundPreview();
+    {
+        const juce::ScopedLock sl(previewLock);
+        previewTransportSource.releaseResources();
+    }
     extractorWorker.cancelExtraction();
 
     publishPlaybackData(nullptr);
@@ -2891,6 +2943,52 @@ float ClipSamplerAudioProcessor::getPlaybackProgress() const
 //==============================================================================
 // Punto de Entrada Oficial del Plugin para el Host VST3 / AAX
 //==============================================================================
+//==============================================================================
+// Reproductor de Preescucha Integrado con el DAW (Freesound API v2)
+//==============================================================================
+void ClipSamplerAudioProcessor::startFreesoundPreview(const juce::File& file, const juce::String& soundId)
+{
+    if (!file.existsAsFile() || file.getSize() < 512)
+        return;
+
+    std::unique_ptr<juce::AudioFormatReader> reader(formatManager.createReaderFor(file));
+    if (reader == nullptr)
+        return;
+
+    const double sampleRate = (currentSampleRateHz > 8000.0) ? currentSampleRateHz : 44100.0;
+    const juce::ScopedLock sl(previewLock);
+    previewTransportSource.stop();
+    previewTransportSource.setSource(nullptr);
+    previewReaderSource.reset();
+
+    const double fileSampleRate = reader->sampleRate > 8000.0 ? reader->sampleRate : 44100.0;
+    previewReaderSource = std::make_unique<juce::AudioFormatReaderSource>(reader.release(), true);
+    previewTransportSource.setSource(previewReaderSource.get(), 0, nullptr, fileSampleRate);
+    previewTransportSource.prepareToPlay(512, sampleRate);
+    previewTransportSource.setPosition(0.0);
+    previewTransportSource.start();
+    currentPreviewSoundId = soundId;
+}
+
+void ClipSamplerAudioProcessor::stopFreesoundPreview()
+{
+    const juce::ScopedLock sl(previewLock);
+    previewTransportSource.stop();
+    previewTransportSource.setSource(nullptr);
+    previewReaderSource.reset();
+    currentPreviewSoundId.clear();
+}
+
+bool ClipSamplerAudioProcessor::isFreesoundPreviewPlaying() const
+{
+    return previewTransportSource.isPlaying();
+}
+
+juce::String ClipSamplerAudioProcessor::getActivePreviewSoundId() const
+{
+    return currentPreviewSoundId;
+}
+
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()
 {
     return new ClipSamplerAudioProcessor();

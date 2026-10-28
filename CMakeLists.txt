@@ -6,7 +6,7 @@ cmake_minimum_required(VERSION 3.22)
 # Procesador de Efectos Macro, Detector de BPM/Tonalidad, Conversor Audio a MIDI
 # y Explorador Integrado Freesound API v2.
 # ==============================================================================
-project(ClipSampler VERSION 2.6.0 LANGUAGES C CXX)
+project(ClipSampler VERSION 2.6.1 LANGUAGES C CXX)
 
 # Estándar C++17 requerido por JUCE 8 y las utilidades modernas de concurrencia
 set(CMAKE_CXX_STANDARD 17)
@@ -57,7 +57,7 @@ juce_add_plugin(ClipSampler
     FORMATS                     ${PLUGIN_FORMATS}
     PRODUCT_NAME                "ClipSampler"
     BUNDLE_ID                   "com.audioinnovations.clipsampler"
-    VERSION                     "2.6.0"
+    VERSION                     "2.6.1"
 )
 
 # ------------------------------------------------------------------------------
@@ -121,9 +121,9 @@ target_compile_definitions(ClipSampler
         JUCE_STRICT_REFCOUNTEDPOINTER=1
         JUCE_USE_FLAC=0
         JUCE_USE_OGGVORBIS=0
-        JUCE_USE_MP3AUDIOFORMAT=0
+        JUCE_USE_MP3AUDIOFORMAT=1
         JUCE_USE_LAME_AUDIO_FORMAT=0
-        JUCE_USE_WINDOWS_MEDIA_FORMAT=0
+        JUCE_USE_WINDOWS_MEDIA_FORMAT=1
 )
 
 # Opciones de seguridad de memoria y codificación UTF-8 en compilador MSVC (Windows)
@@ -138,7 +138,7 @@ set_target_properties(ClipSampler PROPERTIES
 )
 
 message(STATUS "==========================================================")
-message(STATUS " ClipSampler v2.6.0 configurado correctamente!")
+message(STATUS " ClipSampler v2.6.1 configurado correctamente!")
 message(STATUS " Formatos de destino: ${PLUGIN_FORMATS}")
 message(STATUS " Instrumento Virtual (IS_SYNTH): TRUE")
 message(STATUS "==========================================================")
