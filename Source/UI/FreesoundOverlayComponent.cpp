@@ -190,6 +190,28 @@ FreesoundOverlayComponent::FreesoundOverlayComponent(ClipSamplerAudioProcessor& 
     changeKeyButton.onClick = [this] { onChangeApiKeyClicked(); };
     addChildComponent(changeKeyButton);
 
+    audioRouteButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff1e3a5f));
+    audioRouteButton.setColour(juce::TextButton::textColourOffId, juce::Colour(0xff7dd3fc));
+    audioRouteButton.setTooltip(juce::String::fromUTF8("Haz clic para alternar: Modo Auto (reproduce en DAW o altavoces segÃºn actividad), Solo DAW o Solo Directo"));
+    audioRouteButton.onClick = [this] {
+        if (currentAudioMode == AudioOutputMode::Auto)
+        {
+            currentAudioMode = AudioOutputMode::DawMixer;
+            audioRouteButton.setButtonText(juce::String::fromUTF8("ðŸŽ›ï¸ Salida: Solo DAW"));
+        }
+        else if (currentAudioMode == AudioOutputMode::DawMixer)
+        {
+            currentAudioMode = AudioOutputMode::DirectWindows;
+            audioRouteButton.setButtonText(juce::String::fromUTF8("ðŸ”ˆ Salida: Solo Directo"));
+        }
+        else
+        {
+            currentAudioMode = AudioOutputMode::Auto;
+            audioRouteButton.setButtonText(juce::String::fromUTF8("ðŸ”Š Salida: Auto"));
+        }
+    };
+    addChildComponent(audioRouteButton);
+
     closeOverlayButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff475569));
     closeOverlayButton.setColour(juce::TextButton::textColourOffId, juce::Colours::white);
     closeOverlayButton.onClick = [this] {
@@ -314,12 +336,84 @@ FreesoundOverlayComponent::~FreesoundOverlayComponent()
 {
     stopTimer();
     stopPreview();
+    if (directDeviceManager != nullptr)
+    {
+        if (directSourcePlayer != nullptr)
+        {
+            directSourcePlayer->setSource(nullptr);
+            directDeviceManager->removeAudioCallback(directSourcePlayer.get());
+        }
+        directReaderSource.reset();
+        directTransportSource.reset();
+        directSourcePlayer.reset();
+        directDeviceManager.reset();
+    }
+}
+
+void FreesoundOverlayComponent::initDirectAudioIfNeeded()
+{
+    if (directDeviceManager == nullptr)
+    {
+        directDeviceManager = std::make_unique<juce::AudioDeviceManager>();
+        directDeviceManager->initialiseWithDefaultDevices(0, 2);
+
+        directTransportSource = std::make_unique<juce::AudioTransportSource>();
+        directSourcePlayer = std::make_unique<juce::AudioSourcePlayer>();
+        directSourcePlayer->setSource(directTransportSource.get());
+        directDeviceManager->addAudioCallback(directSourcePlayer.get());
+    }
+}
+
+void FreesoundOverlayComponent::startDirectPlayback(const juce::File& file, const juce::String& soundId)
+{
+    initDirectAudioIfNeeded();
+    if (directTransportSource == nullptr)
+        return;
+
+    directTransportSource->stop();
+    directTransportSource->setSource(nullptr);
+    directReaderSource.reset();
+
+    auto* reader = processor.getFormatManager().createReaderFor(file);
+    if (reader != nullptr)
+    {
+        directReaderSource = std::make_unique<juce::AudioFormatReaderSource>(reader, true);
+        directTransportSource->setSource(directReaderSource.get(), 0, nullptr, reader->sampleRate);
+        directTransportSource->setPosition(0.0);
+        directTransportSource->start();
+        directPlayingSoundId = soundId;
+    }
+}
+
+void FreesoundOverlayComponent::stopDirectPlayback()
+{
+    if (directTransportSource != nullptr)
+    {
+        directTransportSource->stop();
+        directTransportSource->setSource(nullptr);
+    }
+    directReaderSource.reset();
+    directPlayingSoundId.clear();
+}
+
+bool FreesoundOverlayComponent::isDirectPlaying() const
+{
+    return directTransportSource != nullptr && directTransportSource->isPlaying();
+}
+
+bool FreesoundOverlayComponent::isCurrentSoundPlaying(const juce::String& soundId) const
+{
+    if (processor.isFreesoundPreviewPlaying() && processor.getActivePreviewSoundId() == soundId)
+        return true;
+    if (isDirectPlaying() && directPlayingSoundId == soundId)
+        return true;
+    return false;
 }
 
 void FreesoundOverlayComponent::timerCallback()
 {
-    const bool isPlaying = processor.isFreesoundPreviewPlaying();
-    const juce::String activeId = processor.getActivePreviewSoundId();
+    const bool isPlaying = processor.isFreesoundPreviewPlaying() || isDirectPlaying();
+    const juce::String activeId = processor.isFreesoundPreviewPlaying() ? processor.getActivePreviewSoundId() : directPlayingSoundId;
     if (isPlaying != lastKnownPreviewPlaying || activeId != lastKnownPreviewId)
     {
         lastKnownPreviewPlaying = isPlaying;
@@ -380,6 +474,7 @@ void FreesoundOverlayComponent::refreshView()
     searchStatusBadge.setVisible(showSearch);
     exitSimilarButton.setVisible(showSearch && isViewingSimilar);
     changeKeyButton.setVisible(showSearch);
+    audioRouteButton.setVisible(showSearch);
     closeOverlayButton.setVisible(true);
     searchBox.setVisible(showSearch);
     searchButton.setVisible(showSearch);
@@ -790,7 +885,7 @@ void FreesoundOverlayComponent::updatePaginationUi()
 // ==============================================================================
 void FreesoundOverlayComponent::previewSound(const FreesoundItem& sound)
 {
-    if (processor.isFreesoundPreviewPlaying() && processor.getActivePreviewSoundId() == sound.id)
+    if (isCurrentSoundPlaying(sound.id))
     {
         stopPreview();
         return;
@@ -807,30 +902,64 @@ void FreesoundOverlayComponent::previewSound(const FreesoundItem& sound)
     cacheDir.createDirectory();
     auto tempFile = cacheDir.getChildFile("preview_" + sound.id + ".mp3");
 
-    // Si ya lo tenemos en caché, reproducimos al instante a través del flujo del DAW
+    auto executePlayback = [this, tempFile, sound]() {
+        if (currentAudioMode == AudioOutputMode::DirectWindows)
+        {
+            startDirectPlayback(tempFile, sound.id);
+        }
+        else if (currentAudioMode == AudioOutputMode::DawMixer)
+        {
+            processor.startFreesoundPreview(tempFile, sound.id);
+        }
+        else
+        {
+            processor.startFreesoundPreview(tempFile, sound.id);
+            if (!processor.isDawActivelyProcessing())
+            {
+                startDirectPlayback(tempFile, sound.id);
+            }
+        }
+        resultsListBox.repaint();
+    };
+
+    bool fileValidInCache = false;
     if (tempFile.existsAsFile() && tempFile.getSize() > 2048)
     {
-        processor.startFreesoundPreview(tempFile, sound.id);
-        resultsListBox.repaint();
+        std::unique_ptr<juce::AudioFormatReader> testReader(processor.getFormatManager().createReaderFor(tempFile));
+        if (testReader != nullptr && testReader->lengthInSamples > 0)
+            fileValidInCache = true;
+        else
+            tempFile.deleteFile();
+    }
+
+    if (fileValidInCache)
+    {
+        executePlayback();
         return;
     }
 
-    // Si no, lo descargamos asíncronamente y lo reproducimos directo en el DAW
-    std::thread([this, previewUrl, tempFile, sound]() {
+    std::thread([this, previewUrl, tempFile, sound, executePlayback]() {
         juce::URL url(previewUrl);
-        auto stream = url.createInputStream(juce::URL::InputStreamOptions(juce::URL::ParameterHandling::inAddress).withConnectionTimeoutMs(10000));
+        auto stream = url.createInputStream(juce::URL::InputStreamOptions(juce::URL::ParameterHandling::inAddress)
+                                                .withConnectionTimeoutMs(10000)
+                                                .withNumRedirectsToFollow(5)
+                                                .withExtraHeaders("User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) ClipSampler/2.6.1\r\n"));
         if (stream != nullptr)
         {
             tempFile.deleteFile();
-            juce::FileOutputStream out(tempFile);
-            out.writeFromInputStream(*stream, -1);
-            out.flush();
+            {
+                juce::FileOutputStream out(tempFile);
+                if (out.openedOk())
+                {
+                    out.writeFromInputStream(*stream, -1);
+                    out.flush();
+                }
+            }
 
-            juce::MessageManager::callAsync([this, tempFile, sound]() {
+            juce::MessageManager::callAsync([this, tempFile, sound, executePlayback]() {
                 if (tempFile.existsAsFile() && tempFile.getSize() > 2048)
                 {
-                    processor.startFreesoundPreview(tempFile, sound.id);
-                    resultsListBox.repaint();
+                    executePlayback();
                 }
             });
         }
@@ -840,9 +969,9 @@ void FreesoundOverlayComponent::previewSound(const FreesoundItem& sound)
 void FreesoundOverlayComponent::stopPreview()
 {
     processor.stopFreesoundPreview();
+    stopDirectPlayback();
     resultsListBox.repaint();
 }
-
 void FreesoundOverlayComponent::downloadAndLoadSample(const FreesoundItem& sound)
 {
     stopPreview();
@@ -870,9 +999,14 @@ void FreesoundOverlayComponent::downloadAndLoadSample(const FreesoundItem& sound
         if (stream != nullptr)
         {
             targetFile.deleteFile();
-            juce::FileOutputStream out(targetFile);
-            out.writeFromInputStream(*stream, -1);
-            out.flush();
+            {
+                juce::FileOutputStream out(targetFile);
+                if (out.openedOk())
+                {
+                    out.writeFromInputStream(*stream, -1);
+                    out.flush();
+                }
+            }
 
             juce::MessageManager::callAsync([this, targetFile, sound]() {
                 if (targetFile.existsAsFile() && targetFile.getSize() > 1024)
@@ -926,7 +1060,7 @@ juce::Component* FreesoundOverlayComponent::refreshComponentForRow(int rowNumber
     if (rowNumber >= 0 && rowNumber < static_cast<int>(soundResults.size()))
     {
         const auto& sound = soundResults[(size_t)rowNumber];
-        rowComp->updateItem(sound, processor.isFreesoundPreviewPlaying() && processor.getActivePreviewSoundId() == sound.id);
+        rowComp->updateItem(sound, isCurrentSoundPlaying(sound.id));
     }
 
     return rowComp;
@@ -995,12 +1129,14 @@ void FreesoundOverlayComponent::resized()
         topRow.removeFromRight(8);
         changeKeyButton.setBounds(topRow.removeFromRight(130));
         topRow.removeFromRight(8);
+        audioRouteButton.setBounds(topRow.removeFromRight(150));
+        topRow.removeFromRight(8);
         if (isViewingSimilar)
         {
             exitSimilarButton.setBounds(topRow.removeFromRight(170));
             topRow.removeFromRight(8);
         }
-        searchStatusBadge.setBounds(topRow.removeFromRight(170));
+        searchStatusBadge.setBounds(topRow.removeFromRight(140));
         searchHeaderTitleLabel.setBounds(topRow);
 
         area.removeFromTop(10);

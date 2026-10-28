@@ -59,10 +59,6 @@ ClipSamplerAudioProcessor::~ClipSamplerAudioProcessor()
 {
     // Marcamos el procesador como inactivo para ignorar callbacks asíncronos pendientes
     stopFreesoundPreview();
-    {
-        const juce::ScopedLock sl(previewLock);
-        previewTransportSource.releaseResources();
-    }
     aliveFlag->store(false, std::memory_order_release);
     extractorWorker.cancelExtraction();
 }
@@ -78,7 +74,18 @@ const juce::String ClipSamplerAudioProcessor::getName() const
 bool ClipSamplerAudioProcessor::acceptsMidi() const { return true; }
 bool ClipSamplerAudioProcessor::producesMidi() const { return false; }
 bool ClipSamplerAudioProcessor::isMidiEffect() const { return false; }
-double ClipSamplerAudioProcessor::getTailLengthSeconds() const { return 0.0; }
+double ClipSamplerAudioProcessor::getTailLengthSeconds() const
+{
+    return previewIsPlaying.load(std::memory_order_relaxed) ? 60.0 : 0.0;
+}
+
+bool ClipSamplerAudioProcessor::isDawActivelyProcessing() const
+{
+    const juce::int64 lastTime = lastProcessBlockTimestampMs.load(std::memory_order_relaxed);
+    if (lastTime <= 0)
+        return false;
+    return (juce::Time::currentTimeMillis() - lastTime) < 300;
+}
 
 int ClipSamplerAudioProcessor::getNumPrograms() { return 1; }
 int ClipSamplerAudioProcessor::getCurrentProgram() { return 0; }
@@ -127,10 +134,7 @@ void ClipSamplerAudioProcessor::prepareToPlay(double sampleRate, int samplesPerB
     currentSampleRateHz = (sampleRate > 8000.0) ? sampleRate : 44100.0;
     sampler.setCurrentPlaybackSampleRate(currentSampleRateHz);
 
-    {
-        const juce::ScopedLock sl(previewLock);
-        previewTransportSource.prepareToPlay(juce::jmax(32, samplesPerBlock), currentSampleRateHz);
-    }
+
 
     // Rampas anti-click escaladas a la frecuencia de muestreo del DAW
     fadeInSamples  = juce::jmax(32,  (int)std::round(currentSampleRateHz * 0.0018)); // ~1.8 ms (ataque limpio sin click)
@@ -183,10 +187,6 @@ void ClipSamplerAudioProcessor::releaseResources()
 {
     stopPlayback();
     stopFreesoundPreview();
-    {
-        const juce::ScopedLock sl(previewLock);
-        previewTransportSource.releaseResources();
-    }
 }
 
 bool ClipSamplerAudioProcessor::isBusesLayoutSupported(const BusesLayout& layouts) const
@@ -613,6 +613,44 @@ void ClipSamplerAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, j
     juce::ScopedNoDenormals noDenormals;
     buffer.clear();
 
+    lastProcessBlockTimestampMs.store(juce::Time::currentTimeMillis(), std::memory_order_relaxed);
+
+    // 1. Preescucha directa de Freesound (SE RENDERIZA SIEMPRE EN EL BUS DEL DAW, INCLUSO SIN SAMPLE CARGADO EN PADS)
+    if (previewIsPlaying.load(std::memory_order_acquire))
+    {
+        const int outChannels = buffer.getNumChannels();
+        const int numSamples = buffer.getNumSamples();
+        int pos = previewPlayPos.load(std::memory_order_relaxed);
+        const int total = previewTotalSamples.load(std::memory_order_relaxed);
+
+        if (pos < total && outChannels > 0)
+        {
+            const juce::ScopedLock sl(previewLock);
+            const int samplesToMix = juce::jmin(numSamples, total - pos);
+            const int srcChannels = previewAudioBuffer.getNumChannels();
+
+            if (samplesToMix > 0 && srcChannels > 0)
+            {
+                for (int ch = 0; ch < outChannels; ++ch)
+                {
+                    const int srcCh = juce::jmin(ch, srcChannels - 1);
+                    buffer.addFrom(ch, 0, previewAudioBuffer, srcCh, pos, samplesToMix);
+                }
+                previewPlayPos.store(pos + samplesToMix, std::memory_order_release);
+            }
+            else
+            {
+                previewIsPlaying.store(false, std::memory_order_release);
+                currentPreviewSoundId.clear();
+            }
+        }
+        else
+        {
+            previewIsPlaying.store(false, std::memory_order_release);
+            currentPreviewSoundId.clear();
+        }
+    }
+
     // 1. Verificación ligera en caché (consulta completa solo cada ~250 ms para no penalizar el hilo de audio)
     if (--licenseRecheckCountdown <= 0)
     {
@@ -647,6 +685,13 @@ void ClipSamplerAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, j
         playheadPosition.store(0, std::memory_order_relaxed);
         activePlayingSlice.store(-1, std::memory_order_relaxed);
         midiMessages.clear();
+
+        // Aplicamos la ganancia master al buffer (que conserva intacta la preescucha activa de Freesound)
+        float targetGain = 1.0f;
+        if (auto* gainParam = apvts.getRawParameterValue("masterGain"))
+            targetGain = gainParam->load(std::memory_order_relaxed);
+        smoothedMasterGain.setTargetValue(targetGain);
+        smoothedMasterGain.applyGain(buffer, buffer.getNumSamples());
         return;
     }
 
@@ -722,31 +767,7 @@ void ClipSamplerAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, j
     smoothedMasterGain.setTargetValue(targetGain);
     smoothedMasterGain.applyGain(buffer, numSamples);
 
-    // 10. Mezcla directa del reproductor de preescucha (Freesound / Previews) hacia el DAW
-    if (previewTransportSource.isPlaying())
-    {
-        const int outChannels = buffer.getNumChannels();
-        if (outChannels > 0)
-        {
-            if (previewTempBuffer.getNumChannels() < outChannels || previewTempBuffer.getNumSamples() < numSamples)
-                previewTempBuffer.setSize(outChannels, numSamples, false, false, true);
 
-            previewTempBuffer.clear();
-            juce::AudioSourceChannelInfo previewInfo(&previewTempBuffer, 0, numSamples);
-
-            {
-                const juce::ScopedLock sl(previewLock);
-                if (previewTransportSource.isPlaying())
-                    previewTransportSource.getNextAudioBlock(previewInfo);
-            }
-
-            for (int ch = 0; ch < outChannels; ++ch)
-            {
-                const int srcCh = juce::jmin(ch, previewTempBuffer.getNumChannels() - 1);
-                buffer.addFrom(ch, 0, previewTempBuffer, srcCh, 0, numSamples);
-            }
-        }
-    }
 }
 
 //==============================================================================
@@ -860,10 +881,6 @@ void ClipSamplerAudioProcessor::resetForNewExtraction()
 {
     stopPlayback();
     stopFreesoundPreview();
-    {
-        const juce::ScopedLock sl(previewLock);
-        previewTransportSource.releaseResources();
-    }
     extractorWorker.cancelExtraction();
 
     publishPlaybackData(nullptr);
@@ -2952,40 +2969,66 @@ void ClipSamplerAudioProcessor::startFreesoundPreview(const juce::File& file, co
         return;
 
     std::unique_ptr<juce::AudioFormatReader> reader(formatManager.createReaderFor(file));
-    if (reader == nullptr)
+    if (reader == nullptr || reader->lengthInSamples <= 0)
         return;
 
-    const double sampleRate = (currentSampleRateHz > 8000.0) ? currentSampleRateHz : 44100.0;
-    const juce::ScopedLock sl(previewLock);
-    previewTransportSource.stop();
-    previewTransportSource.setSource(nullptr);
-    previewReaderSource.reset();
+    const double dawRate = (currentSampleRateHz > 8000.0) ? currentSampleRateHz : 44100.0;
+    const double fileRate = (reader->sampleRate > 8000.0) ? reader->sampleRate : 44100.0;
+    const int numChannels = juce::jlimit(1, 2, (int)reader->numChannels);
+    const int numSamples = (int)reader->lengthInSamples;
 
-    const double fileSampleRate = reader->sampleRate > 8000.0 ? reader->sampleRate : 44100.0;
-    previewReaderSource = std::make_unique<juce::AudioFormatReaderSource>(reader.release(), true);
-    previewTransportSource.setSource(previewReaderSource.get(), 0, nullptr, fileSampleRate);
-    previewTransportSource.prepareToPlay(512, sampleRate);
-    previewTransportSource.setPosition(0.0);
-    previewTransportSource.start();
-    currentPreviewSoundId = soundId;
+    juce::AudioBuffer<float> tempBuffer(numChannels, numSamples);
+    reader->read(&tempBuffer, 0, numSamples, 0, true, true);
+
+    juce::AudioBuffer<float> finalBuffer;
+    if (std::abs(fileRate - dawRate) > 1.0)
+    {
+        const double ratio = dawRate / fileRate;
+        const int targetSamples = (int)std::ceil(numSamples * ratio);
+        finalBuffer.setSize(numChannels, targetSamples);
+
+        for (int ch = 0; ch < numChannels; ++ch)
+        {
+            juce::LagrangeInterpolator resampler;
+            resampler.process(fileRate / dawRate,
+                              tempBuffer.getReadPointer(ch),
+                              finalBuffer.getWritePointer(ch),
+                              targetSamples);
+        }
+    }
+    else
+    {
+        finalBuffer = std::move(tempBuffer);
+    }
+
+    {
+        const juce::ScopedLock sl(previewLock);
+        previewAudioBuffer = std::move(finalBuffer);
+        previewTotalSamples.store(previewAudioBuffer.getNumSamples(), std::memory_order_relaxed);
+        previewPlayPos.store(0, std::memory_order_relaxed);
+        currentPreviewSoundId = soundId;
+        previewIsPlaying.store(true, std::memory_order_release);
+    }
+
+    updateHostDisplay();
 }
 
 void ClipSamplerAudioProcessor::stopFreesoundPreview()
 {
     const juce::ScopedLock sl(previewLock);
-    previewTransportSource.stop();
-    previewTransportSource.setSource(nullptr);
-    previewReaderSource.reset();
+    previewIsPlaying.store(false, std::memory_order_release);
+    previewPlayPos.store(0, std::memory_order_relaxed);
     currentPreviewSoundId.clear();
 }
 
 bool ClipSamplerAudioProcessor::isFreesoundPreviewPlaying() const
 {
-    return previewTransportSource.isPlaying();
+    return previewIsPlaying.load(std::memory_order_relaxed);
 }
 
 juce::String ClipSamplerAudioProcessor::getActivePreviewSoundId() const
 {
+    const juce::ScopedLock sl(previewLock);
     return currentPreviewSoundId;
 }
 

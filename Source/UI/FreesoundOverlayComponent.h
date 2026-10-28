@@ -140,13 +140,30 @@ private:
 
     // Preescucha de audio
     // Estado de preescucha de audio enrutada al DAW
+    enum class AudioOutputMode
+    {
+        Auto = 0,
+        DawMixer = 1,
+        DirectWindows = 2
+    };
+
+    AudioOutputMode currentAudioMode = AudioOutputMode::Auto;
+    juce::TextButton audioRouteButton { juce::String::fromUTF8("Salida: Auto") };
+
+    // Reproductor directo para Windows (DirectSound / WASAPI)
+    std::unique_ptr<juce::AudioDeviceManager> directDeviceManager;
+    std::unique_ptr<juce::AudioSourcePlayer> directSourcePlayer;
+    std::unique_ptr<juce::AudioTransportSource> directTransportSource;
+    std::unique_ptr<juce::AudioFormatReaderSource> directReaderSource;
+    juce::String directPlayingSoundId;
+
+    void initDirectAudioIfNeeded();
+    void startDirectPlayback(const juce::File& file, const juce::String& soundId);
+    void stopDirectPlayback();
+    bool isDirectPlaying() const;
+    bool isCurrentSoundPlaying(const juce::String& soundId) const;
+
     bool lastKnownPreviewPlaying = false;
     juce::String lastKnownPreviewId;
-
-
-
-
-
-
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(FreesoundOverlayComponent)
 };

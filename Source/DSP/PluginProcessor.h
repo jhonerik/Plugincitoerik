@@ -270,6 +270,8 @@ public:
     void stopFreesoundPreview();
     bool isFreesoundPreviewPlaying() const;
     juce::String getActivePreviewSoundId() const;
+    bool isDawActivelyProcessing() const;
+
 
     /** Accesores de archivos y estado para la interfaz gráfica. */
     juce::File getCurrentAudioFile() const;
@@ -483,10 +485,12 @@ private:
 
     // Preescucha directa a través de processBlock hacia el canal del DAW
     juce::CriticalSection previewLock;
-    juce::AudioTransportSource previewTransportSource;
-    std::unique_ptr<juce::AudioFormatReaderSource> previewReaderSource;
+    juce::AudioBuffer<float> previewAudioBuffer;
+    std::atomic<bool> previewIsPlaying { false };
+    std::atomic<int> previewPlayPos { 0 };
+    std::atomic<int> previewTotalSamples { 0 };
+    std::atomic<juce::int64> lastProcessBlockTimestampMs { 0 };
     juce::String currentPreviewSoundId;
-    juce::AudioBuffer<float> previewTempBuffer;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ClipSamplerAudioProcessor)
 };
