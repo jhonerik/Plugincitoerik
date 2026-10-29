@@ -496,8 +496,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     if (promoActionLink) promoActionLink.textContent = 'Adquirir Licencia';
     if (navBuyBtnText) navBuyBtnText.textContent = 'Comprar Ahora • $50 USD';
-    if (heroBuyBtnText) heroBuyBtnText.textContent = 'Comprar Licencia Vitalicia — $50 USD';
-    if (pricingSectionTag) pricingSectionTag.textContent = 'LICENCIA VITALICIA OFICIAL';
+    if (heroBuyBtnText) heroBuyBtnText.textContent = 'Comprar Licencia De Por Vida — $50 USD';
+    if (pricingSectionTag) pricingSectionTag.textContent = 'LICENCIA DE POR VIDA OFICIAL';
     if (priceNumber) priceNumber.textContent = '50';
     if (discountBadgeBox) discountBadgeBox.style.display = 'none';
     if (btnOpenCheckoutText) btnOpenCheckoutText.textContent = 'Pagar $50 USD con PayPal';
@@ -509,7 +509,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (modalTotalAmount) modalTotalAmount.textContent = '$50.00 USD';
     if (paypalAmountInput) paypalAmountInput.value = '50.00';
     if (paypalItemNameInput) {
-      paypalItemNameInput.value = 'ClipSampler v2.6.1 - Licencia Vitalicia Oficial (Windows y Mac) - $50 USD';
+      paypalItemNameInput.value = 'ClipSampler v2.6.1 - Licencia De Por Vida Oficial (Windows y Mac) - $50 USD';
     }
     if (btnPaypalSubmitText) {
       btnPaypalSubmitText.textContent = 'Proceder al Pago Seguro de $50 USD';
