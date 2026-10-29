@@ -561,6 +561,11 @@ void FreesoundOverlayComponent::startDirectPlayback(const juce::File& file, cons
     directReaderSource.reset();
 
     auto* reader = processor.getFormatManager().createReaderFor(file);
+    if (reader == nullptr)
+    {
+        if (auto inStream = file.createInputStream())
+            reader = processor.getFormatManager().createReaderFor(std::move(inStream));
+    }
     if (reader != nullptr)
     {
         directReaderSource = std::make_unique<juce::AudioFormatReaderSource>(reader, true);
@@ -1145,6 +1150,11 @@ void FreesoundOverlayComponent::previewSound(const FreesoundItem& sound)
     if (tempFile.existsAsFile() && tempFile.getSize() > 2048)
     {
         std::unique_ptr<juce::AudioFormatReader> testReader(processor.getFormatManager().createReaderFor(tempFile));
+        if (testReader == nullptr)
+        {
+            if (auto inStream = tempFile.createInputStream())
+                testReader.reset(processor.getFormatManager().createReaderFor(std::move(inStream)));
+        }
         if (testReader != nullptr && testReader->lengthInSamples > 0)
             fileValidInCache = true;
         else
@@ -1204,17 +1214,41 @@ void FreesoundOverlayComponent::downloadAndLoadSample(const FreesoundItem& sound
     cacheDir.createDirectory();
 
     juce::String cleanName = juce::File::createLegalFileName(sound.name);
-    if (!cleanName.endsWithIgnoreCase(".mp3") && !cleanName.endsWithIgnoreCase(".wav"))
+    if (cleanName.endsWithIgnoreCase(".wav") || cleanName.endsWithIgnoreCase(".flac")
+        || cleanName.endsWithIgnoreCase(".aiff") || cleanName.endsWithIgnoreCase(".aif")
+        || cleanName.endsWithIgnoreCase(".ogg") || cleanName.endsWithIgnoreCase(".m4a"))
+    {
+        cleanName = cleanName.upToLastOccurrenceOf(".", false, false);
+    }
+    if (!cleanName.endsWithIgnoreCase(".mp3"))
         cleanName += ".mp3";
 
     auto targetFile = cacheDir.getChildFile("freesound_" + sound.id + "_" + cleanName);
+    auto previewCacheFile = cacheDir.getChildFile("preview_" + sound.id + ".mp3");
+
+    if (previewCacheFile.existsAsFile() && previewCacheFile.getSize() > 2048)
+    {
+        previewCacheFile.copyFileTo(targetFile);
+        if (targetFile.existsAsFile() && targetFile.getSize() > 1024)
+        {
+            processor.setAutoChopEnabled(true);
+            processor.loadAudioFileIntoSlot(targetFile, 1);
+            processor.setAudioOriginLabel(1, "FREESOUND");
+            processor.setStatusMessage(juce::String::fromUTF8("¡Sample de Freesound cargado y rebanado en C1–G2!: ") + sound.name);
+            setVisible(false);
+            return;
+        }
+    }
 
     resultsFeedbackLabel.setText(juce::String::fromUTF8("Descargando sample y cargando en pads de ClipSampler..."), juce::dontSendNotification);
     resultsFeedbackLabel.setVisible(true);
 
     std::thread([this, downloadUrl, targetFile, sound]() {
         juce::URL url(downloadUrl);
-        auto stream = url.createInputStream(juce::URL::InputStreamOptions(juce::URL::ParameterHandling::inAddress).withConnectionTimeoutMs(15000));
+        auto stream = url.createInputStream(juce::URL::InputStreamOptions(juce::URL::ParameterHandling::inAddress)
+                                                .withConnectionTimeoutMs(15000)
+                                                .withNumRedirectsToFollow(5)
+                                                .withExtraHeaders("User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) ClipSampler\r\n"));
         if (stream != nullptr)
         {
             targetFile.deleteFile();
@@ -1230,9 +1264,10 @@ void FreesoundOverlayComponent::downloadAndLoadSample(const FreesoundItem& sound
             juce::MessageManager::callAsync([this, targetFile, sound]() {
                 if (targetFile.existsAsFile() && targetFile.getSize() > 1024)
                 {
+                    processor.setAutoChopEnabled(true);
                     processor.loadAudioFileIntoSlot(targetFile, 1);
                     processor.setAudioOriginLabel(1, "FREESOUND");
-                    processor.setStatusMessage(juce::String::fromUTF8("¡Sample de Freesound cargado!: ") + sound.name);
+                    processor.setStatusMessage(juce::String::fromUTF8("¡Sample de Freesound cargado y rebanado en C1–G2!: ") + sound.name);
                     setVisible(false); // Volvemos a ClipSampler con el sample listo para rebanar y tocar
                 }
                 else

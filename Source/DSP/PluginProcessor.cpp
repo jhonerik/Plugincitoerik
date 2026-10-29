@@ -124,6 +124,22 @@ namespace
 
         return ((c3 * frac + c2) * frac + c1) * frac + c0;
     }
+
+    /**
+     * Crea un lector de audio probando primero por extensión y, si el archivo tiene
+     * una extensión distinta a su contenido real (ej. stream MP3 de Freesound cuyo título
+     * contenía ".wav"), prueba todos los decodificadores directamente sobre el InputStream.
+     */
+    inline std::unique_ptr<juce::AudioFormatReader> createRobustAudioReader(juce::AudioFormatManager& fm, const juce::File& file)
+    {
+        if (!file.existsAsFile())
+            return nullptr;
+        if (auto* r = fm.createReaderFor(file))
+            return std::unique_ptr<juce::AudioFormatReader>(r);
+        if (auto stream = file.createInputStream())
+            return std::unique_ptr<juce::AudioFormatReader>(fm.createReaderFor(std::move(stream)));
+        return nullptr;
+    }
 }
 
 //==============================================================================
@@ -1104,7 +1120,7 @@ bool ClipSamplerAudioProcessor::analyzeOriginalCopyright(juce::String& outReport
         return false;
     }
 
-    std::unique_ptr<juce::AudioFormatReader> reader(formatManager.createReaderFor(origFile));
+    std::unique_ptr<juce::AudioFormatReader> reader(createRobustAudioReader(formatManager, origFile));
     if (reader == nullptr || reader->lengthInSamples <= 0)
     {
         outReport = juce::String::fromUTF8("No se pudo leer el archivo original para el análisis de derechos.");
@@ -1160,7 +1176,7 @@ bool ClipSamplerAudioProcessor::applyDerechosTransformation(int semitoneShift, j
         return false;
     }
 
-    std::unique_ptr<juce::AudioFormatReader> reader(formatManager.createReaderFor(origFile));
+    std::unique_ptr<juce::AudioFormatReader> reader(createRobustAudioReader(formatManager, origFile));
     if (reader == nullptr || reader->lengthInSamples <= 0)
     {
         outReport = juce::String::fromUTF8("Error al leer el archivo original para la transformación de derechos.");
@@ -1318,7 +1334,7 @@ bool ClipSamplerAudioProcessor::applySubtleColor(SubtleColorType type, juce::Str
         return false;
     }
 
-    std::unique_ptr<juce::AudioFormatReader> reader(formatManager.createReaderFor(srcFile));
+    std::unique_ptr<juce::AudioFormatReader> reader(createRobustAudioReader(formatManager, srcFile));
     if (reader == nullptr || reader->lengthInSamples <= 0)
     {
         outReport = juce::String::fromUTF8("No se pudo leer el archivo de origen para la coloración.");
@@ -1531,8 +1547,8 @@ bool ClipSamplerAudioProcessor::verifyTransformedAudioCopyrightFree(juce::String
         return false;
     }
 
-    std::unique_ptr<juce::AudioFormatReader> r1(formatManager.createReaderFor(origFile));
-    std::unique_ptr<juce::AudioFormatReader> r2(formatManager.createReaderFor(transFile));
+    std::unique_ptr<juce::AudioFormatReader> r1(createRobustAudioReader(formatManager, origFile));
+    std::unique_ptr<juce::AudioFormatReader> r2(createRobustAudioReader(formatManager, transFile));
     if (r1 == nullptr || r2 == nullptr)
     {
         outReport = juce::String::fromUTF8("Error al abrir los archivos de audio para comparar huellas.");
@@ -1593,6 +1609,13 @@ bool ClipSamplerAudioProcessor::verifyTransformedAudioCopyrightFree(juce::String
 void ClipSamplerAudioProcessor::setAutoChopEnabled(bool enabled)
 {
     autoChopEnabled.store(enabled, std::memory_order_relaxed);
+    if (enabled)
+    {
+        if (hasSlotAudio(1) && getChopSlices(1).empty())
+            activateSlotBuffer(getSlotAudioFile(1), 1);
+        if (hasSlotAudio(2) && getChopSlices(2).empty())
+            activateSlotBuffer(getSlotAudioFile(2), 2);
+    }
 }
 
 bool ClipSamplerAudioProcessor::moveSliceDividerPosition(int slotIndex, int dividerIndex, float newNormalizedPos)
@@ -2460,7 +2483,7 @@ void ClipSamplerAudioProcessor::analyzeAutoChopAndMusicData(int slotIndex)
     if (!file.existsAsFile())
         return;
 
-    std::unique_ptr<juce::AudioFormatReader> reader(formatManager.createReaderFor(file));
+    std::unique_ptr<juce::AudioFormatReader> reader(createRobustAudioReader(formatManager, file));
     if (reader == nullptr || reader->lengthInSamples <= 0)
         return;
 
@@ -2555,7 +2578,7 @@ bool ClipSamplerAudioProcessor::applyFxMacroToTargetSlot(juce::String& outReport
         return false;
     }
 
-    std::unique_ptr<juce::AudioFormatReader> reader(formatManager.createReaderFor(srcFile));
+    std::unique_ptr<juce::AudioFormatReader> reader(createRobustAudioReader(formatManager, srcFile));
     if (reader == nullptr || reader->lengthInSamples <= 0)
         return false;
 
@@ -2671,7 +2694,7 @@ juce::File ClipSamplerAudioProcessor::generateMidiFileForSlot(int slotIndex)
     if (!audioFile.existsAsFile())
         return {};
 
-    std::unique_ptr<juce::AudioFormatReader> reader(formatManager.createReaderFor(audioFile));
+    std::unique_ptr<juce::AudioFormatReader> reader(createRobustAudioReader(formatManager, audioFile));
     if (reader == nullptr || reader->lengthInSamples <= 0)
         return {};
 
@@ -3027,7 +3050,7 @@ bool ClipSamplerAudioProcessor::activateSlotBuffer(const juce::File& file, int s
     if (!file.existsAsFile())
         return false;
 
-    std::unique_ptr<juce::AudioFormatReader> reader(formatManager.createReaderFor(file));
+    std::unique_ptr<juce::AudioFormatReader> reader(createRobustAudioReader(formatManager, file));
     if (reader == nullptr)
         return false;
 
@@ -3185,7 +3208,7 @@ void ClipSamplerAudioProcessor::startFreesoundPreview(const juce::File& file, co
     if (!file.existsAsFile() || file.getSize() < 512)
         return;
 
-    std::unique_ptr<juce::AudioFormatReader> reader(formatManager.createReaderFor(file));
+    std::unique_ptr<juce::AudioFormatReader> reader(createRobustAudioReader(formatManager, file));
     if (reader == nullptr || reader->lengthInSamples <= 0)
         return;
 
