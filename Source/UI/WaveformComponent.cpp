@@ -168,39 +168,73 @@ void WaveformComponent::mouseDown(const juce::MouseEvent& event)
     if (!slotFile.existsAsFile())
         return;
 
-    // Clic Secundario / Derecho: Menú contextual rápido para Reverse y Half-Time de la rodaja bajo el cursor
+    // Clic Secundario / Derecho: Menú contextual rápido para Reverse y Half-Time (Todo el Audio o Rodaja bajo el cursor)
     if (event.mods.isPopupMenu())
     {
         float clickNorm = getNormalizedXFromEvent(event);
-        ChopSlice chosenSlice;
-        if (processor.selectSliceAtNormalizedPosition(slotIndex, clickNorm, chosenSlice))
+        const bool fullRev  = processor.isFullAudioReversed(slotIndex);
+        const bool fullHalf = processor.isFullAudioHalfTime(slotIndex);
+
+        juce::PopupMenu menu;
+        menu.addItem(10, juce::String::fromUTF8("◀ Invertir TODO el Audio Completo (Reverse)"), true, fullRev);
+        menu.addItem(11, juce::String::fromUTF8("⏳ Media Velocidad en TODO el Audio (Half-Time 0.5x)"), true, fullHalf);
+
+        auto slices = processor.getChopSlices(slotIndex);
+        int hoveredSliceIdx = -1;
+        juce::String hoveredSliceNote;
+        bool isSliceRev = false;
+        bool isSliceHalf = false;
+        for (size_t i = 0; i < slices.size(); ++i)
         {
-            int sIdx = chosenSlice.sliceIndex;
-            bool isRev = chosenSlice.isReversed;
-            bool isHalf = chosenSlice.isHalfTime;
-
-            juce::PopupMenu menu;
-            menu.addItem(1, juce::String::fromUTF8("◀ Invertir Rodaja [") + chosenSlice.noteName + juce::String::fromUTF8("] (Reverse)"), true, isRev);
-            menu.addItem(2, juce::String::fromUTF8("⏳ Media Velocidad [") + chosenSlice.noteName + juce::String::fromUTF8("] (Half-Time 0.5x)"), true, isHalf);
-
-            menu.showMenuAsync(juce::PopupMenu::Options().withTargetComponent(this),
-                [this, sIdx](int result) {
-                    if (result == 1)
-                    {
-                        processor.toggleSliceReverse(slotIndex, sIdx);
-                        repaint();
-                        if (auto* parent = getParentComponent())
-                            parent->repaint();
-                    }
-                    else if (result == 2)
-                    {
-                        processor.toggleSliceHalfTime(slotIndex, sIdx);
-                        repaint();
-                        if (auto* parent = getParentComponent())
-                            parent->repaint();
-                    }
-                });
+            if (clickNorm >= slices[i].startNorm && clickNorm <= slices[i].endNorm)
+            {
+                hoveredSliceIdx = (int)i;
+                hoveredSliceNote = slices[i].noteName;
+                isSliceRev = slices[i].isReversed;
+                isSliceHalf = slices[i].isHalfTime;
+                break;
+            }
         }
+
+        if (hoveredSliceIdx >= 0)
+        {
+            menu.addSeparator();
+            menu.addItem(1, juce::String::fromUTF8("◀ Invertir Solo Corte [") + hoveredSliceNote + juce::String::fromUTF8("] (Reverse)"), true, isSliceRev);
+            menu.addItem(2, juce::String::fromUTF8("⏳ Media Velocidad Solo Corte [") + hoveredSliceNote + juce::String::fromUTF8("] (Half-Time 0.5x)"), true, isSliceHalf);
+        }
+
+        menu.showMenuAsync(juce::PopupMenu::Options().withTargetComponent(this),
+            [this, hoveredSliceIdx](int result) {
+                if (result == 10)
+                {
+                    processor.selectFullAudioInSlot(slotIndex);
+                    processor.toggleFullAudioReverse(slotIndex);
+                    processor.startPlayback();
+                }
+                else if (result == 11)
+                {
+                    processor.selectFullAudioInSlot(slotIndex);
+                    processor.toggleFullAudioHalfTime(slotIndex);
+                    processor.startPlayback();
+                }
+                else if (result == 1 && hoveredSliceIdx >= 0)
+                {
+                    ChopSlice dummy;
+                    processor.selectSliceByIndex(slotIndex, hoveredSliceIdx, dummy);
+                    processor.toggleSliceReverse(slotIndex, hoveredSliceIdx);
+                    processor.triggerChopSlice(hoveredSliceIdx);
+                }
+                else if (result == 2 && hoveredSliceIdx >= 0)
+                {
+                    ChopSlice dummy;
+                    processor.selectSliceByIndex(slotIndex, hoveredSliceIdx, dummy);
+                    processor.toggleSliceHalfTime(slotIndex, hoveredSliceIdx);
+                    processor.triggerChopSlice(hoveredSliceIdx);
+                }
+                repaint();
+                if (auto* parent = getParentComponent())
+                    parent->repaint();
+            });
         return;
     }
 
@@ -342,9 +376,7 @@ void WaveformComponent::mouseDrag(const juce::MouseEvent& event)
             processor.setActiveSlot(slotIndex);
 
             const int selectedSliceIdx = processor.getSelectedSliceIndex(slotIndex);
-            juce::File fileToDrag = (selectedSliceIdx >= 0)
-                ? processor.getOrCreateSelectedSliceWavFile(slotIndex)
-                : slotFile;
+            juce::File fileToDrag = processor.getOrCreateSelectedSliceWavFile(slotIndex);
 
             if (!fileToDrag.existsAsFile())
                 fileToDrag = slotFile;
@@ -442,9 +474,18 @@ void WaveformComponent::paint(juce::Graphics& g)
     if (totalLength > 0.0)
     {
         if (selectedSliceIdx >= 0 && selectedSliceName.isNotEmpty())
+        {
             selectionBadge = juce::String::fromUTF8("  [✂ CORTE EXACTO: ") + selectedSliceName + "]";
+        }
         else if (isActiveSlot)
-            selectionBadge = juce::String::fromUTF8("  [TODO EL AUDIO | 2 CLICS = CORTE]");
+        {
+            juce::String fullFxTag;
+            if (processor.isFullAudioReversed(slotIndex))
+                fullFxTag += juce::String::fromUTF8(" ◀ REV");
+            if (processor.isFullAudioHalfTime(slotIndex))
+                fullFxTag += juce::String::fromUTF8(" ⏳ 1/2");
+            selectionBadge = juce::String::fromUTF8("  [TODO EL AUDIO") + fullFxTag + juce::String::fromUTF8(" | 2 CLICS = CORTE]");
+        }
     }
 
     juce::String baseTitle = viewerTitle;
@@ -609,10 +650,10 @@ void WaveformComponent::paint(juce::Graphics& g)
             g.fillPath(playCap);
         }
 
-        // 6. Etiqueta derecha adaptable: Plataforma + BPM + Tono + Duración
+        // 6. Etiqueta derecha adaptable: Origen Exacto (LOCAL / FREESOUND / YOUTUBE / TIKTOK / INSTAGRAM) + BPM + Tono + Duración
         double bpm = processor.getDetectedBpm(slotIndex);
         juce::String key = processor.getDetectedKey(slotIndex);
-        juce::String platBadge = AudioExtractorWorker::getPlatformName(processor.getSelectedPlatform()).toUpperCase();
+        juce::String platBadge = processor.getAudioOriginLabel(slotIndex);
         juce::String badgeText = "[" + platBadge + "]  "
                                + juce::String(bpm, 1) + " BPM | "
                                + juce::String::fromUTF8("Tono: ") + key + " | "

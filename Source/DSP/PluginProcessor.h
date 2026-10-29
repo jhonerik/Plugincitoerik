@@ -198,6 +198,18 @@ public:
     bool toggleSliceHalfTime(int slotIndex, int sliceIndex);
     bool isSliceHalfTime(int slotIndex, int sliceIndex) const;
 
+    /** Alterna o consulta la reproducción en reversa (Reverse) para TODO el audio completo (cuando se selecciona con 1 clic). */
+    bool toggleFullAudioReverse(int slotIndex);
+    bool isFullAudioReversed(int slotIndex) const;
+
+    /** Alterna o consulta la reproducción a mitad de velocidad (Half-Time 0.5x) para TODO el audio completo (1 clic). */
+    bool toggleFullAudioHalfTime(int slotIndex);
+    bool isFullAudioHalfTime(int slotIndex) const;
+
+    /** Devuelve o establece la etiqueta exacta de origen del audio en cada visor ("LOCAL", "FREESOUND", "YOUTUBE", "TIKTOK", "INSTAGRAM"). */
+    juce::String getAudioOriginLabel(int slotIndex) const;
+    void setAudioOriginLabel(int slotIndex, const juce::String& origin);
+
     //==============================================================================
     // Macro de Efectos (Lo-Fi 12-Bit, Tono en Semitonos, Filtro y Sincronización BPM)
     //==============================================================================
@@ -342,6 +354,12 @@ private:
     std::atomic<bool> exactCutModeEnabled { false };
     std::atomic<int> slot1SelectedSlice { -1 }; // -1 = Todo el audio, >= 0 = Índice de rodaja (C1, C#1, D1...)
     std::atomic<int> slot2SelectedSlice { -1 };
+    std::atomic<bool> slot1FullReversed { false };
+    std::atomic<bool> slot2FullReversed { false };
+    std::atomic<bool> slot1FullHalfTime { false };
+    std::atomic<bool> slot2FullHalfTime { false };
+    juce::String slot1OriginLabel { "LOCAL" };
+    juce::String slot2OriginLabel { "LOCAL" };
     juce::File slot1SelectedSliceWavFile;
     juce::File slot2SelectedSliceWavFile;
     std::vector<ChopSlice> slot1Slices;
@@ -408,6 +426,8 @@ private:
         juce::AudioBuffer<float> buffer;   ///< Audio PCM ya remuestreado al Sample Rate del DAW.
         std::vector<ChopSlice> slices;     ///< Rodajas MPC que corresponden exactamente a este buffer.
         int slotIndex = 1;                 ///< Ranura de origen (1 = Original, 2 = Derechos IA).
+        bool isFullReversed = false;       ///< true si TODO el audio completo tiene Reverse activado.
+        bool isFullHalfTime = false;       ///< true si TODO el audio completo tiene Half-Time 0.5x activado.
         juce::uint32 generation = 0;       ///< Contador único para detectar cambios de buffer en el hilo de audio.
     };
 

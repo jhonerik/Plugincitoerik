@@ -625,29 +625,30 @@ void ClipSamplerAudioProcessorEditor::updateFxAndMpcUiState()
         extract30sButton.setButtonText(juce::String::fromUTF8("Extraer 30 Segundos"));
     }
 
-    // Actualizar botones de Reverse y Half-Time para la rodaja seleccionada
-    const int targetSliceForPadFx = (selectedSliceIdx >= 0) ? selectedSliceIdx : audioProcessor.getActivePlayingSlice();
-    if (targetSliceForPadFx >= 0)
+    // Actualizar botones de Reverse y Half-Time (según si hay un Corte Exacto con doble clic o Todo el Audio con 1 clic)
+    if (selectedSliceIdx >= 0)
     {
-        const bool isRev = audioProcessor.isSliceReversed(curSlot, targetSliceForPadFx);
+        const bool isRev = audioProcessor.isSliceReversed(curSlot, selectedSliceIdx);
         padReverseButton.setButtonText(isRev ? juce::String::fromUTF8("◀ Rev: SÍ") : juce::String::fromUTF8("◀ Rev"));
         padReverseButton.setColour(juce::TextButton::buttonColourId, isRev ? juce::Colour(0xffd97706) : juce::Colour(0xff263759));
         padReverseButton.setColour(juce::TextButton::textColourOffId, isRev ? juce::Colours::white : juce::Colour(0xffcbd5e1));
 
-        const bool isHalf = audioProcessor.isSliceHalfTime(curSlot, targetSliceForPadFx);
+        const bool isHalf = audioProcessor.isSliceHalfTime(curSlot, selectedSliceIdx);
         padHalfTimeButton.setButtonText(isHalf ? juce::String::fromUTF8("⏳ 1/2: SÍ") : juce::String::fromUTF8("⏳ 1/2"));
         padHalfTimeButton.setColour(juce::TextButton::buttonColourId, isHalf ? juce::Colour(0xff7c3aed) : juce::Colour(0xff263759));
         padHalfTimeButton.setColour(juce::TextButton::textColourOffId, isHalf ? juce::Colours::white : juce::Colour(0xffcbd5e1));
     }
     else
     {
-        padReverseButton.setButtonText(juce::String::fromUTF8("◀ Rev"));
-        padReverseButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff263759));
-        padReverseButton.setColour(juce::TextButton::textColourOffId, juce::Colour(0xffcbd5e1));
+        const bool isFullRev = audioProcessor.isFullAudioReversed(curSlot);
+        padReverseButton.setButtonText(isFullRev ? juce::String::fromUTF8("◀ Rev: SÍ") : juce::String::fromUTF8("◀ Rev"));
+        padReverseButton.setColour(juce::TextButton::buttonColourId, isFullRev ? juce::Colour(0xffd97706) : juce::Colour(0xff263759));
+        padReverseButton.setColour(juce::TextButton::textColourOffId, isFullRev ? juce::Colours::white : juce::Colour(0xffcbd5e1));
 
-        padHalfTimeButton.setButtonText(juce::String::fromUTF8("⏳ 1/2"));
-        padHalfTimeButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff263759));
-        padHalfTimeButton.setColour(juce::TextButton::textColourOffId, juce::Colour(0xffcbd5e1));
+        const bool isFullHalf = audioProcessor.isFullAudioHalfTime(curSlot);
+        padHalfTimeButton.setButtonText(isFullHalf ? juce::String::fromUTF8("⏳ 1/2: SÍ") : juce::String::fromUTF8("⏳ 1/2"));
+        padHalfTimeButton.setColour(juce::TextButton::buttonColourId, isFullHalf ? juce::Colour(0xff7c3aed) : juce::Colour(0xff263759));
+        padHalfTimeButton.setColour(juce::TextButton::textColourOffId, isFullHalf ? juce::Colours::white : juce::Colour(0xffcbd5e1));
     }
 
     const double detBpm = audioProcessor.getDetectedBpm(curSlot);
@@ -832,6 +833,7 @@ void ClipSamplerAudioProcessorEditor::loadLocalAudioFile(const juce::File& file)
 
     if (audioProcessor.loadAudioFileIntoSlot(file, 1))
     {
+        audioProcessor.setAudioOriginLabel(1, file.getFileName().startsWithIgnoreCase("freesound_") ? "FREESOUND" : "LOCAL");
         audioProcessor.setStatusMessage(juce::String::fromUTF8("¡Audio local cargado con éxito en Visor 1!: ") + file.getFileName());
         originalWaveformComponent.repaint();
         transformedWaveformComponent.repaint();
@@ -871,18 +873,21 @@ void ClipSamplerAudioProcessorEditor::onUsoLibreClicked()
 
     auto options = juce::MessageBoxOptions()
         .withIconType(juce::MessageBoxIconType::WarningIcon)
-        .withTitle(juce::String::fromUTF8("⚖️ CONDICIONES DE USO LIBRE Y DESCARGO LEGAL"))
+        .withTitle(juce::String::fromUTF8("⚖️ ACUERDO DE USUARIO, USO LIBRE Y DESCARGO DE RESPONSABILIDAD LEGAL"))
         .withMessage(juce::String::fromUTF8(
-            "CLIPSAMPLER es un Instrumento Musical y Sampler de Transformación de Audio Local.\n\n"
-            "La función de extracción y lectura de URLs (YouTube, TikTok, Instagram) es una "
-            "herramienta opcional de USO LIBRE destinada exclusivamente a contenido de Dominio Público, "
-            "licencias Creative Commons (CC) o material con expresa autorización de su titular.\n\n"
-            "AL ACTIVAR ESTA FUNCIÓN DECLARAS Y ACEPTAS:\n"
-            "1. Que el uso de cualquier audio obtenido de internet es bajo TU TOTAL Y EXCLUSIVA RESPONSABILIDAD LEGAL.\n"
-            "2. Que ClipSampler, AudioInnovations y sus creadores quedan 100% exentos de responsabilidad civil o penal "
-            "por el uso indebido o ilegal que el usuario haga de este software.\n\n"
-            "¿Deseas aceptar los términos y activar la extracción web de Uso Libre?"))
-        .withButton(juce::String::fromUTF8("Aceptar y Activar"))
+            "CLIPSAMPLER v2.6.1 es un Instrumento Musical Virtual (VST3/AU) y Sampler de Transformación de Audio Local.\n\n"
+            "La función de extracción y lectura de URLs externas (YouTube, TikTok, Instagram) es una "
+            "herramienta técnica opcional de USO LIBRE destinada exclusivamente a material de Dominio Público, "
+            "licencias Creative Commons (CC0 / CC-BY), contenido propio o material con expresa autorización de su titular.\n\n"
+            "AL ACTIVAR ESTA FUNCIÓN DECLARAS Y ACEPTAS EXPRESAMENTE:\n"
+            "1. Que el precio de la licencia del software corresponde únicamente al motor DSP e interfaz gráfica; "
+            "AudioInnovations NO vende, aloja ni comercializa fonogramas ni contenidos de terceros.\n"
+            "2. Que la procedencia, legalidad y derechos de autor (Copyright) de cualquier audio cargado o extraído "
+            "recaen bajo TU TOTAL Y EXCLUSIVA RESPONSABILIDAD LEGAL.\n"
+            "3. Que ClipSampler, AudioInnovations y sus desarrolladores quedan 100% exentos de cualquier responsabilidad "
+            "civil, mercantil o penal derivada del uso comercial o no comercial que el usuario realice con el software.\n\n"
+            "¿Deseas aceptar el Acuerdo de Usuario y activar la función de Uso Libre (Web)?"))
+        .withButton(juce::String::fromUTF8("Aceptar Acuerdo y Activar"))
         .withButton(juce::String::fromUTF8("Cancelar (Modo Local Seguro)"))
         .withAssociatedComponent(this);
 
@@ -1169,39 +1174,55 @@ void ClipSamplerAudioProcessorEditor::onExactCutClicked()
 void ClipSamplerAudioProcessorEditor::onPadReverseClicked()
 {
     const int curSlot = audioProcessor.getActiveSlot();
-    int selSlice = audioProcessor.getSelectedSliceIndex(curSlot);
-    if (selSlice < 0)
-        selSlice = audioProcessor.getActivePlayingSlice();
-    if (selSlice < 0)
-        selSlice = 0; // C1 por defecto
-
-    ChopSlice slice;
-    if (audioProcessor.selectSliceByIndex(curSlot, selSlice, slice))
+    if (!audioProcessor.hasSlotAudio(curSlot))
     {
-        audioProcessor.toggleSliceReverse(curSlot, selSlice);
-        updateFxAndMpcUiState();
-        originalWaveformComponent.repaint();
-        transformedWaveformComponent.repaint();
+        audioProcessor.setStatusMessage(juce::String::fromUTF8("Primero carga o extrae un audio para invertirlo (Reverse)."));
+        return;
     }
+
+    const int selSlice = audioProcessor.getSelectedSliceIndex(curSlot);
+    if (selSlice >= 0)
+    {
+        // Si el usuario seleccionó un corte exacto con doble clic (ej. C1, D1), invierte SOLO ese corte
+        audioProcessor.toggleSliceReverse(curSlot, selSlice);
+        audioProcessor.triggerChopSlice(selSlice);
+    }
+    else
+    {
+        // Si el usuario hizo 1 solo clic en el audio (Todo el Audio seleccionado), invierte TODO el audio completo
+        audioProcessor.toggleFullAudioReverse(curSlot);
+        audioProcessor.startPlayback();
+    }
+    updateFxAndMpcUiState();
+    originalWaveformComponent.repaint();
+    transformedWaveformComponent.repaint();
 }
 
 void ClipSamplerAudioProcessorEditor::onPadHalfTimeClicked()
 {
     const int curSlot = audioProcessor.getActiveSlot();
-    int selSlice = audioProcessor.getSelectedSliceIndex(curSlot);
-    if (selSlice < 0)
-        selSlice = audioProcessor.getActivePlayingSlice();
-    if (selSlice < 0)
-        selSlice = 0; // C1 por defecto
-
-    ChopSlice slice;
-    if (audioProcessor.selectSliceByIndex(curSlot, selSlice, slice))
+    if (!audioProcessor.hasSlotAudio(curSlot))
     {
-        audioProcessor.toggleSliceHalfTime(curSlot, selSlice);
-        updateFxAndMpcUiState();
-        originalWaveformComponent.repaint();
-        transformedWaveformComponent.repaint();
+        audioProcessor.setStatusMessage(juce::String::fromUTF8("Primero carga o extrae un audio para aplicar Media Velocidad (Half-Time)."));
+        return;
     }
+
+    const int selSlice = audioProcessor.getSelectedSliceIndex(curSlot);
+    if (selSlice >= 0)
+    {
+        // Si el usuario seleccionó un corte exacto con doble clic, aplica Half-Time SOLO a ese corte
+        audioProcessor.toggleSliceHalfTime(curSlot, selSlice);
+        audioProcessor.triggerChopSlice(selSlice);
+    }
+    else
+    {
+        // Si el usuario hizo 1 solo clic en el audio (Todo el Audio seleccionado), aplica Half-Time a TODO el audio
+        audioProcessor.toggleFullAudioHalfTime(curSlot);
+        audioProcessor.startPlayback();
+    }
+    updateFxAndMpcUiState();
+    originalWaveformComponent.repaint();
+    transformedWaveformComponent.repaint();
 }
 
 void ClipSamplerAudioProcessorEditor::onDragDawClicked()
@@ -1293,10 +1314,8 @@ void ClipSamplerAudioProcessorEditor::mouseDrag(const juce::MouseEvent& event)
         }
 
         const int curSlot = audioProcessor.getActiveSlot();
-        juce::File fileToDrag;
-        if (audioProcessor.getSelectedSliceIndex(curSlot) >= 0)
-            fileToDrag = audioProcessor.getOrCreateSelectedSliceWavFile(curSlot);
-        else
+        juce::File fileToDrag = audioProcessor.getOrCreateSelectedSliceWavFile(curSlot);
+        if (!fileToDrag.existsAsFile())
             fileToDrag = audioProcessor.getCurrentAudioFile();
 
         if (fileToDrag.existsAsFile())
@@ -1468,10 +1487,8 @@ void ClipSamplerAudioProcessorEditor::updateLicenseUiState()
 void ClipSamplerAudioProcessorEditor::onExportWavClicked()
 {
     const int curSlot = audioProcessor.getActiveSlot();
-    juce::File currentFile;
-    if (audioProcessor.getSelectedSliceIndex(curSlot) >= 0)
-        currentFile = audioProcessor.getOrCreateSelectedSliceWavFile(curSlot);
-    else
+    juce::File currentFile = audioProcessor.getOrCreateSelectedSliceWavFile(curSlot);
+    if (!currentFile.existsAsFile())
         currentFile = audioProcessor.getCurrentAudioFile();
 
     if (!currentFile.existsAsFile())

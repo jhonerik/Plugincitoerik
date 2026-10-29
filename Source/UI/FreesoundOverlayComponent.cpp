@@ -1175,6 +1175,7 @@ void FreesoundOverlayComponent::downloadAndLoadSample(const FreesoundItem& sound
                 if (targetFile.existsAsFile() && targetFile.getSize() > 1024)
                 {
                     processor.loadAudioFileIntoSlot(targetFile, 1);
+                    processor.setAudioOriginLabel(1, "FREESOUND");
                     processor.setStatusMessage(juce::String::fromUTF8("¡Sample de Freesound cargado!: ") + sound.name);
                     setVisible(false); // Volvemos a ClipSampler con el sample listo para rebanar y tocar
                 }

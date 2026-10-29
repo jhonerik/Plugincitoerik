@@ -177,16 +177,19 @@ En la barra superior del Panel Inferior:
 
 ---
 
-## 10. Paso 6: Reverse y Half-Time por Pad, Ajuste de Transientes y Exportación
+## 10. Paso 6: Reverse y Half-Time (Todo el Audio o Por Corte), Ajuste de Transientes y Exportación
 
-- **Modificadores por Rodaja (`◀ Rev` y `⏳ 1/2`):** Invierte la dirección o reproduce a mitad de velocidad cualquier rodaja usando los botones inferiores o haciendo **clic derecho** directamente sobre la rodaja en el visor.
+- **Etiqueta Exacta de Origen en el Visor:** En la esquina superior derecha de cada visor se muestra el origen exacto de la muestra cargada: **`[LOCAL]`** (archivo desde tu PC), **`[FREESOUND]`** (muestra descargada desde Freesound API v2), **`[YOUTUBE]`**, **`[TIKTOK]`** o **`[INSTAGRAM]`**, junto con su BPM, Tonalidad y duración.
+- **Modificadores Inteligentes (`◀ Rev` y `⏳ 1/2`):**
+  - **Modo Audio Completo (1 Clic en el visor):** Si haces **1 solo clic** en la forma de onda (`[TODO EL AUDIO]`) y pulsas **`◀ Rev`** o **`⏳ 1/2`**, se invertirá o aplicará media velocidad a **TODO el audio completo de principio a fin** sin seleccionar un corte individual.
+  - **Modo Corte Exacto (Doble Clic en una nota):** Si haces **doble clic** sobre una rodaja específica (ej. `C1`, `D1`, `F#1`) y pulsas **`◀ Rev`** o **`⏳ 1/2`**, el efecto se aplicará **únicamente a ese corte exacto** (también disponible haciendo **clic derecho** sobre el visor).
 - **Ajuste Manual de Transientes:** Arrastra con el ratón cualquiera de las líneas divisorias amarillas (`↔`) para ajustar el inicio o fin de cada corte con precisión milimétrica.
 - **Selección y Exportación Rápida:**
   - **1 Clic en el visor:** Selecciona y reproduce el audio completo.
   - **Doble Clic en una nota del visor:** Selecciona únicamente ese **Corte Exacto** (`[✂ CORTE EXACTO: C1]`).
-  - **Arrastrar `.WAV` / `✂ Corte Exacto`:** Mantén presionado y arrastra directamente hacia cualquier pista de tu DAW.
+  - **Arrastrar `.WAV` / `✂ Corte Exacto`:** Mantén presionado y arrastra directamente hacia cualquier pista de tu DAW (incluyendo el efecto Reverse o Half-Time si está activo).
   - **`🎹 Convertir a MIDI` (o `Ctrl/Cmd + M`):** Transcribe el audio a notas MIDI y permite arrastrar el archivo `.mid` al Piano Roll.
-  - **`Exportar .WAV...` (o `Ctrl/Cmd + E`):** Guarda la muestra o rodaja activa en disco en formato WAV de 24 bits.
+  - **`Exportar .WAV...` (o `Ctrl/Cmd + E`):** Guarda la muestra completa o rodaja activa en disco en formato WAV de 24 bits.
 
 ---
 

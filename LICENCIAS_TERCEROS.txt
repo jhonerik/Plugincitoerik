@@ -1,10 +1,11 @@
 ================================================================================
 LICENCIAS Y AVISOS DE COMPONENTES DE TERCEROS
-ClipSampler v2.5
+ClipSampler v2.6.1 - Virtual Instrument Audio Plugin (VST3 / AU / Standalone)
 ================================================================================
 
 Este software incluye binarios sin modificar de FFmpeg (licencia LGPL 2.1+) 
-disponibles en https://ffmpeg.org y yt-dlp disponibles en https://github.com/yt-dlp/yt-dlp.
+disponibles en https://ffmpeg.org, yt-dlp disponibles en https://github.com/yt-dlp/yt-dlp
+y conectividad opcional con la API pública de Freesound.org.
 
 --------------------------------------------------------------------------------
 1. FFmpeg (LGPL v2.1 / GPL v2+)
@@ -34,5 +35,15 @@ https://github.com/yt-dlp/yt-dlp
 --------------------------------------------------------------------------------
 ClipSampler utiliza el framework de desarrollo de audio JUCE 
 (Copyright (c) Raw Material Software / PACE Anti-Piracy, Inc.).
+Sitio oficial: https://juce.com
+
+--------------------------------------------------------------------------------
+4. Freesound.org API v2 (Music Technology Group - Universitat Pompeu Fabra)
+--------------------------------------------------------------------------------
+Este producto utiliza la API pública v2 de Freesound (https://freesound.org/docs/api/)
+mediante clave de acceso personal (API Key) gestionada por el propio usuario, pero no
+está respaldado, certificado ni afiliado oficialmente con Freesound.org.
+Las muestras descargadas desde Freesound.org están sujetas a sus respectivas licencias
+Creative Commons (CC0 / CC-BY) definidas por cada autor en dicha plataforma.
 
 ================================================================================

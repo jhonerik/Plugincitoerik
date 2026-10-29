@@ -380,6 +380,11 @@ void ClipSamplerAudioProcessor::handlePendingTransportCommand(const PlaybackData
             rev = data.slices[(size_t)sliceI].isReversed;
             half = data.slices[(size_t)sliceI].isHalfTime;
         }
+        else
+        {
+            rev = data.isFullReversed;
+            half = data.isFullHalfTime;
+        }
         startVoice(data, startS, endS, sliceI, 1.0f, 1.0, -1, true, rev, half);
     }
 }
@@ -402,7 +407,7 @@ void ClipSamplerAudioProcessor::triggerNoteFromMidi(const PlaybackData& data, in
     {
         // Modo Cromático Polifónico: C3 (nota 60) es el tono original; permite tocar acordes y melodías fluidas
         const double chromaticRatio = std::pow(2.0, ((double)midiNote - 60.0) / 12.0);
-        startVoice(data, 0, data.buffer.getNumSamples(), -1, velGain, chromaticRatio, midiNote, false, false, false);
+        startVoice(data, 0, data.buffer.getNumSamples(), -1, velGain, chromaticRatio, midiNote, false, data.isFullReversed, data.isFullHalfTime);
     }
 }
 
@@ -804,6 +809,8 @@ void ClipSamplerAudioProcessor::getStateInformation(juce::MemoryBlock& destData)
     state.setProperty("lastWavPath", origFile.getFullPathName(), nullptr);
     state.setProperty("lastWavFileName", origFile.getFileName(), nullptr);
     state.setProperty("lastTransWavPath", transFile.getFullPathName(), nullptr);
+    state.setProperty("slot1OriginLabel", getAudioOriginLabel(1), nullptr);
+    state.setProperty("slot2OriginLabel", getAudioOriginLabel(2), nullptr);
     state.setProperty("activeSlot", activeSlot.load(), nullptr);
 
     juce::MemoryOutputStream stream(destData, false);
@@ -851,10 +858,18 @@ void ClipSamplerAudioProcessor::setStateInformation(const void* data, int sizeIn
         }
 
         if (fileToLoad.existsAsFile())
+        {
             loadAudioFileIntoSlot(fileToLoad, 1);
+            if (state.hasProperty("slot1OriginLabel"))
+                setAudioOriginLabel(1, state.getProperty("slot1OriginLabel", "LOCAL").toString());
+        }
 
         if (transPath.isNotEmpty() && juce::File(transPath).existsAsFile())
+        {
             loadAudioFileIntoSlot(juce::File(transPath), 2);
+            if (state.hasProperty("slot2OriginLabel"))
+                setAudioOriginLabel(2, state.getProperty("slot2OriginLabel", getAudioOriginLabel(1)).toString());
+        }
 
         setActiveSlot(savedSlot);
     }
@@ -903,6 +918,12 @@ void ClipSamplerAudioProcessor::resetForNewExtraction()
     exactCutModeEnabled.store(false, std::memory_order_relaxed);
     slot1SelectedSlice.store(-1, std::memory_order_relaxed);
     slot2SelectedSlice.store(-1, std::memory_order_relaxed);
+    slot1FullReversed.store(false, std::memory_order_relaxed);
+    slot2FullReversed.store(false, std::memory_order_relaxed);
+    slot1FullHalfTime.store(false, std::memory_order_relaxed);
+    slot2FullHalfTime.store(false, std::memory_order_relaxed);
+    setAudioOriginLabel(1, "LOCAL");
+    setAudioOriginLabel(2, "LOCAL");
 
     {
         const juce::ScopedLock sl(retiredLock);
@@ -1037,6 +1058,7 @@ void ClipSamplerAudioProcessor::startSampleExtraction(const juce::String& url, c
             if (success && resultFile.existsAsFile())
             {
                 loadAudioFileIntoSlot(resultFile, 1);
+                setAudioOriginLabel(1, platName.toUpperCase());
 
                 // Si TikTok o Instagram no reportaron la duración previa, la actualizamos con la duración real del audio
                 if (detectedVideoDurationSec.load(std::memory_order_relaxed) <= 0)
@@ -1627,6 +1649,8 @@ bool ClipSamplerAudioProcessor::moveSliceDividerPosition(int slotIndex, int divi
         updatedData->buffer = slotData->buffer;
         updatedData->slices = slices;
         updatedData->slotIndex = targetSlot;
+        updatedData->isFullReversed = slotData->isFullReversed;
+        updatedData->isFullHalfTime = slotData->isFullHalfTime;
         updatedData->generation = ++playbackGenerationCounter;
 
         if (targetSlot == 2)
@@ -1796,7 +1820,10 @@ juce::File ClipSamplerAudioProcessor::getOrCreateSelectedSliceWavFile(int slotIn
 {
     const int targetSlot = (slotIndex == 2) ? 2 : 1;
     const int selIdx = getSelectedSliceIndex(targetSlot);
-    if (selIdx < 0)
+    const bool fullRev  = isFullAudioReversed(targetSlot);
+    const bool fullHalf = isFullAudioHalfTime(targetSlot);
+
+    if (selIdx < 0 && !fullRev && !fullHalf)
         return getSlotAudioFile(targetSlot);
 
     std::shared_ptr<PlaybackData> slotData;
@@ -1808,11 +1835,23 @@ juce::File ClipSamplerAudioProcessor::getOrCreateSelectedSliceWavFile(int slotIn
             return cachedWav;
 
         slotData = (targetSlot == 2) ? slot2PlaybackData : slot1PlaybackData;
-        const auto& slices = (targetSlot == 2) ? slot2Slices : slot1Slices;
-        if (selIdx < 0 || selIdx >= (int)slices.size())
-            return getSlotAudioFile(targetSlot);
+        if (selIdx >= 0)
+        {
+            const auto& slices = (targetSlot == 2) ? slot2Slices : slot1Slices;
+            if (selIdx >= (int)slices.size())
+                return getSlotAudioFile(targetSlot);
 
-        chosenSlice = slices[(size_t)selIdx];
+            chosenSlice = slices[(size_t)selIdx];
+        }
+        else if (slotData != nullptr)
+        {
+            chosenSlice.sliceIndex = -1;
+            chosenSlice.noteName = "Completo";
+            chosenSlice.startSample = 0;
+            chosenSlice.endSample = slotData->buffer.getNumSamples();
+            chosenSlice.isReversed = fullRev;
+            chosenSlice.isHalfTime = fullHalf;
+        }
     }
 
     if (slotData == nullptr || slotData->buffer.getNumSamples() <= 0)
@@ -1823,6 +1862,15 @@ juce::File ClipSamplerAudioProcessor::getOrCreateSelectedSliceWavFile(int slotIn
 
         const juce::ScopedLock sl(bufferLock);
         slotData = (targetSlot == 2) ? slot2PlaybackData : slot1PlaybackData;
+        if (selIdx < 0 && slotData != nullptr)
+        {
+            chosenSlice.sliceIndex = -1;
+            chosenSlice.noteName = "Completo";
+            chosenSlice.startSample = 0;
+            chosenSlice.endSample = slotData->buffer.getNumSamples();
+            chosenSlice.isReversed = fullRev;
+            chosenSlice.isHalfTime = fullHalf;
+        }
     }
 
     if (slotData == nullptr || slotData->buffer.getNumSamples() <= 0)
@@ -1946,6 +1994,8 @@ bool ClipSamplerAudioProcessor::toggleSliceReverse(int slotIndex, int sliceIndex
         updatedData->buffer = slotData->buffer;
         updatedData->slices = slices;
         updatedData->slotIndex = targetSlot;
+        updatedData->isFullReversed = slotData->isFullReversed;
+        updatedData->isFullHalfTime = slotData->isFullHalfTime;
         updatedData->generation = ++playbackGenerationCounter;
 
         if (targetSlot == 2)
@@ -1996,6 +2046,8 @@ bool ClipSamplerAudioProcessor::toggleSliceHalfTime(int slotIndex, int sliceInde
         updatedData->buffer = slotData->buffer;
         updatedData->slices = slices;
         updatedData->slotIndex = targetSlot;
+        updatedData->isFullReversed = slotData->isFullReversed;
+        updatedData->isFullHalfTime = slotData->isFullHalfTime;
         updatedData->generation = ++playbackGenerationCounter;
 
         if (targetSlot == 2)
@@ -2021,6 +2073,133 @@ bool ClipSamplerAudioProcessor::isSliceHalfTime(int slotIndex, int sliceIndex) c
     if (sliceIndex >= 0 && sliceIndex < (int)slices.size())
         return slices[(size_t)sliceIndex].isHalfTime;
     return false;
+}
+
+bool ClipSamplerAudioProcessor::toggleFullAudioReverse(int slotIndex)
+{
+    const int targetSlot = (slotIndex == 2) ? 2 : 1;
+    const bool nextState = !(targetSlot == 2
+        ? slot2FullReversed.load(std::memory_order_relaxed)
+        : slot1FullReversed.load(std::memory_order_relaxed));
+
+    if (targetSlot == 2)
+        slot2FullReversed.store(nextState, std::memory_order_relaxed);
+    else
+        slot1FullReversed.store(nextState, std::memory_order_relaxed);
+
+    {
+        const juce::ScopedLock sl(bufferLock);
+        if (targetSlot == 2)
+            slot2SelectedSliceWavFile = juce::File();
+        else
+            slot1SelectedSliceWavFile = juce::File();
+
+        auto slotData = (targetSlot == 2) ? slot2PlaybackData : slot1PlaybackData;
+        if (slotData != nullptr)
+        {
+            auto updatedData = std::make_shared<PlaybackData>();
+            updatedData->buffer = slotData->buffer;
+            updatedData->slices = slotData->slices;
+            updatedData->slotIndex = targetSlot;
+            updatedData->isFullReversed = nextState;
+            updatedData->isFullHalfTime = slotData->isFullHalfTime;
+            updatedData->generation = ++playbackGenerationCounter;
+
+            if (targetSlot == 2)
+                slot2PlaybackData = updatedData;
+            else
+                slot1PlaybackData = updatedData;
+
+            if (activeSlot.load(std::memory_order_relaxed) == targetSlot)
+                publishPlaybackData(updatedData);
+        }
+    }
+
+    setStatusMessage(juce::String::fromUTF8("Audio ") + juce::String(targetSlot)
+                     + (nextState
+                        ? juce::String::fromUTF8(" Completo: Reverse (◀ Invertido de principio a fin) ACTIVADO")
+                        : juce::String::fromUTF8(" Completo: Reproducción normal (Adelante)")));
+    return true;
+}
+
+bool ClipSamplerAudioProcessor::isFullAudioReversed(int slotIndex) const
+{
+    return (slotIndex == 2)
+        ? slot2FullReversed.load(std::memory_order_relaxed)
+        : slot1FullReversed.load(std::memory_order_relaxed);
+}
+
+bool ClipSamplerAudioProcessor::toggleFullAudioHalfTime(int slotIndex)
+{
+    const int targetSlot = (slotIndex == 2) ? 2 : 1;
+    const bool nextState = !(targetSlot == 2
+        ? slot2FullHalfTime.load(std::memory_order_relaxed)
+        : slot1FullHalfTime.load(std::memory_order_relaxed));
+
+    if (targetSlot == 2)
+        slot2FullHalfTime.store(nextState, std::memory_order_relaxed);
+    else
+        slot1FullHalfTime.store(nextState, std::memory_order_relaxed);
+
+    {
+        const juce::ScopedLock sl(bufferLock);
+        if (targetSlot == 2)
+            slot2SelectedSliceWavFile = juce::File();
+        else
+            slot1SelectedSliceWavFile = juce::File();
+
+        auto slotData = (targetSlot == 2) ? slot2PlaybackData : slot1PlaybackData;
+        if (slotData != nullptr)
+        {
+            auto updatedData = std::make_shared<PlaybackData>();
+            updatedData->buffer = slotData->buffer;
+            updatedData->slices = slotData->slices;
+            updatedData->slotIndex = targetSlot;
+            updatedData->isFullReversed = slotData->isFullReversed;
+            updatedData->isFullHalfTime = nextState;
+            updatedData->generation = ++playbackGenerationCounter;
+
+            if (targetSlot == 2)
+                slot2PlaybackData = updatedData;
+            else
+                slot1PlaybackData = updatedData;
+
+            if (activeSlot.load(std::memory_order_relaxed) == targetSlot)
+                publishPlaybackData(updatedData);
+        }
+    }
+
+    setStatusMessage(juce::String::fromUTF8("Audio ") + juce::String(targetSlot)
+                     + (nextState
+                        ? juce::String::fromUTF8(" Completo: Half-Time (⏳ 0.5x velocidad) ACTIVADO")
+                        : juce::String::fromUTF8(" Completo: Velocidad 1.0x normal")));
+    return true;
+}
+
+bool ClipSamplerAudioProcessor::isFullAudioHalfTime(int slotIndex) const
+{
+    return (slotIndex == 2)
+        ? slot2FullHalfTime.load(std::memory_order_relaxed)
+        : slot1FullHalfTime.load(std::memory_order_relaxed);
+}
+
+juce::String ClipSamplerAudioProcessor::getAudioOriginLabel(int slotIndex) const
+{
+    const juce::ScopedLock sl(statusLock);
+    const juce::String& lbl = (slotIndex == 2) ? slot2OriginLabel : slot1OriginLabel;
+    return lbl.isNotEmpty() ? lbl : juce::String("LOCAL");
+}
+
+void ClipSamplerAudioProcessor::setAudioOriginLabel(int slotIndex, const juce::String& origin)
+{
+    const juce::ScopedLock sl(statusLock);
+    juce::String clean = origin.trim().toUpperCase();
+    if (clean.isEmpty())
+        clean = "LOCAL";
+    if (slotIndex == 2)
+        slot2OriginLabel = clean;
+    else
+        slot1OriginLabel = clean;
 }
 
 std::vector<ChopSlice> ClipSamplerAudioProcessor::computeTransientSlices(const juce::AudioBuffer<float>& buffer, double sampleRate)
@@ -2800,8 +2979,40 @@ bool ClipSamplerAudioProcessor::loadAudioFileIntoSlot(const juce::File& file, in
         slot1SelectedSlice.store(-1, std::memory_order_relaxed);
     exactCutModeEnabled.store(false, std::memory_order_relaxed);
 
-    if (!file.getFileName().contains("_FX_"))
+    const juce::String fn = file.getFileName();
+    if (!fn.contains("_FX_"))
+    {
         setFxActiveForSlot(targetSlot, false);
+        if (targetSlot == 2)
+        {
+            slot2FullReversed.store(false, std::memory_order_relaxed);
+            slot2FullHalfTime.store(false, std::memory_order_relaxed);
+        }
+        else
+        {
+            slot1FullReversed.store(false, std::memory_order_relaxed);
+            slot1FullHalfTime.store(false, std::memory_order_relaxed);
+        }
+
+        // Detección exacta de la fuente de origen del audio ("FREESOUND", "LOCAL", "YOUTUBE", "TIKTOK", "INSTAGRAM")
+        if (fn.startsWithIgnoreCase("freesound_"))
+        {
+            setAudioOriginLabel(targetSlot, "FREESOUND");
+        }
+        else if (fn.containsIgnoreCase("_Extract_") || fn.startsWithIgnoreCase("ClipSampler_Sample_"))
+        {
+            setAudioOriginLabel(targetSlot, AudioExtractorWorker::getPlatformName(getSelectedPlatform()).toUpperCase());
+        }
+        else if (targetSlot == 2 && (fn.containsIgnoreCase("Derechos") || fn.containsIgnoreCase("Warmth")
+                                     || fn.containsIgnoreCase("Color") || fn.containsIgnoreCase("Slot2")))
+        {
+            setAudioOriginLabel(2, getAudioOriginLabel(1));
+        }
+        else
+        {
+            setAudioOriginLabel(targetSlot, "LOCAL");
+        }
+    }
 
     if (targetSlot == 2)
         transformedThumbnail.setSource(new juce::FileInputSource(file));
@@ -2880,6 +3091,12 @@ bool ClipSamplerAudioProcessor::activateSlotBuffer(const juce::File& file, int s
     newPlaybackData->buffer = std::move(preparedBuffer);
     newPlaybackData->slices = resampledSlices;
     newPlaybackData->slotIndex = cleanSlot;
+    newPlaybackData->isFullReversed = (cleanSlot == 2)
+        ? slot2FullReversed.load(std::memory_order_relaxed)
+        : slot1FullReversed.load(std::memory_order_relaxed);
+    newPlaybackData->isFullHalfTime = (cleanSlot == 2)
+        ? slot2FullHalfTime.load(std::memory_order_relaxed)
+        : slot1FullHalfTime.load(std::memory_order_relaxed);
     newPlaybackData->generation = ++playbackGenerationCounter;
 
     {
