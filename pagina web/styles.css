@@ -1,5 +1,5 @@
 /* ==========================================================================
-   ClipSampler v2.6.1 — Hoja de Estilos de Alta Gama
+   ClipSampler — Hoja de Estilos de Alta Gama
    Inspirado en el Sistema de Diseño UI/UX Pro Max (Estudio Zafiro & Titanio)
    ========================================================================== */
 
@@ -1947,6 +1947,35 @@ h1, h2, h3, h4 {
   color: var(--cyan-primary);
   font-weight: 700;
   text-decoration: none;
+}
+
+.footer-whatsapp {
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+  margin-top: 10px;
+  margin-bottom: 6px;
+}
+
+.link-whatsapp {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #25d366;
+  font-weight: 700;
+  text-decoration: none;
+  transition: color 0.2s ease, transform 0.2s ease;
+}
+
+.link-whatsapp:hover {
+  color: #3bf280;
+  transform: translateY(-1px);
+}
+
+.whatsapp-icon {
+  width: 16px;
+  height: 16px;
+  fill: currentColor;
+  flex-shrink: 0;
 }
 
 .footer-time {

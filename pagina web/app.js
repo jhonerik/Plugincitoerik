@@ -1,5 +1,5 @@
 /**
- * ClipSampler v2.6.1 — Motor de Interacción y Audio Web
+ * ClipSampler — Motor de Interacción y Audio Web
  * Implementa síntesis en tiempo real con Web Audio API, emulador de 16 pads MPC,
  * visualizador de onda interactivo y pasarela de pago PayPal.
  */
@@ -492,7 +492,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (promoBadge) promoBadge.textContent = 'OFERTA FINALIZADA';
     if (promoBarText) {
-      promoBarText.innerHTML = 'Tu tiempo de promoción de 24 horas ha finalizado. Obtén <strong>ClipSampler v2.6.1 Pro</strong> (Instalador 100% en Español + Manual PDF) por <span class="price-highlight">$50 USD</span>';
+      promoBarText.innerHTML = 'Tu tiempo de promoción de 24 horas ha finalizado. Obtén <strong>ClipSampler Pro</strong> (Instalador 100% en Español + Manual PDF) por <span class="price-highlight">$50 USD</span>';
     }
     if (promoActionLink) promoActionLink.textContent = 'Adquirir Licencia';
     if (navBuyBtnText) navBuyBtnText.textContent = 'Comprar Ahora • $50 USD';
@@ -509,7 +509,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (modalTotalAmount) modalTotalAmount.textContent = '$50.00 USD';
     if (paypalAmountInput) paypalAmountInput.value = '50.00';
     if (paypalItemNameInput) {
-      paypalItemNameInput.value = 'ClipSampler v2.6.1 - Licencia De Por Vida Oficial (Windows y Mac) - $50 USD';
+      paypalItemNameInput.value = 'ClipSampler - Licencia De Por Vida Oficial (Windows y Mac) - $50 USD';
     }
     if (btnPaypalSubmitText) {
       btnPaypalSubmitText.textContent = 'Proceder al Pago Seguro de $50 USD';
@@ -566,7 +566,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // =========================================================================
-  // 9. PESTAÑAS DEL HERO: 3 CAPTURAS REALES v2.6.1 VS SIMULADOR INTERACTIVO
+  // 9. PESTAÑAS DEL HERO: 3 CAPTURAS REALES VS SIMULADOR INTERACTIVO
   // =========================================================================
   const allHeroTabs = document.querySelectorAll('.window-tabs .win-tab-btn');
   const tabBtnInteractive = document.getElementById('tabBtnInteractive');
@@ -599,7 +599,7 @@ document.addEventListener('DOMContentLoaded', () => {
           const capText = tab.getAttribute('data-caption');
           if (heroMainImg && imgPath) {
             heroMainImg.src = imgPath;
-            heroMainImg.alt = capText || 'Captura real del plugin ClipSampler v2.6.1';
+            heroMainImg.alt = capText || 'Captura real del plugin ClipSampler';
           }
           if (heroCaptionText && capText) {
             heroCaptionText.textContent = capText;
@@ -639,9 +639,9 @@ document.addEventListener('DOMContentLoaded', () => {
   function openLightbox(imgSrc, captionText) {
     if (!imageLightbox || !lightboxImg) return;
     lightboxImg.src = imgSrc;
-    lightboxImg.alt = captionText || 'Captura de pantalla de ClipSampler v2.6.1';
+    lightboxImg.alt = captionText || 'Captura de pantalla de ClipSampler';
     if (lightboxCaption) {
-      lightboxCaption.textContent = captionText || 'ClipSampler v2.6.1 - Software Real';
+      lightboxCaption.textContent = captionText || 'ClipSampler - Software Real';
     }
     imageLightbox.classList.add('is-open');
     imageLightbox.setAttribute('aria-hidden', 'false');
@@ -680,7 +680,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const triggerHeroZoom = () => {
       openLightbox(
         heroMainImg.getAttribute('src'),
-        heroCaptionText ? heroCaptionText.textContent : 'ClipSampler v2.6.1 — Interfaz Principal en Acción'
+        heroCaptionText ? heroCaptionText.textContent : 'ClipSampler — Interfaz Principal en Acción'
       );
     };
     heroZoomTrigger.addEventListener('click', triggerHeroZoom);
@@ -693,7 +693,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const handler = () => {
       const fullSrc = container.getAttribute('data-full');
       const img = container.querySelector('img');
-      const caption = img ? img.getAttribute('alt') : 'ClipSampler v2.6.1';
+      const caption = img ? img.getAttribute('alt') : 'ClipSampler';
       if (fullSrc) {
         openLightbox(fullSrc, caption);
       }
