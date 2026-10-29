@@ -234,10 +234,11 @@ ClipSamplerAudioProcessorEditor::ClipSamplerAudioProcessorEditor(ClipSamplerAudi
     fxTargetAudio2Btn.onClick = [this] { onSelectFxTargetSlot(2); };
     addAndMakeVisible(fxTargetAudio2Btn);
 
-    // Perilla 1: Lo-Fi 12-Bit (0% a 100%)
+    // Perilla 1: Lo-Fi 12-Bit (0% a 100%) - Doble clic resetea a 0%
     lofiKnob.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
     lofiKnob.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
     lofiKnob.setRange(0.0, 100.0, 1.0);
+    lofiKnob.setDoubleClickReturnValue(true, 0.0);
     lofiKnob.setValue(audioProcessor.getLofiAmount() * 100.0f, juce::dontSendNotification);
     lofiKnob.setColour(juce::Slider::rotarySliderFillColourId, juce::Colour(0xffffca28));
     lofiKnob.onValueChange = [this] {
@@ -253,10 +254,11 @@ ClipSamplerAudioProcessorEditor::ClipSamplerAudioProcessorEditor(ClipSamplerAudi
     lofiLabel.setMinimumHorizontalScale(0.68f);
     addAndMakeVisible(lofiLabel);
 
-    // Perilla 2: Tono / Pitch en Semitonos (-12 st a +12 st)
+    // Perilla 2: Tono / Pitch en Semitonos (-12 st a +12 st) - Doble clic resetea a 0 st
     pitchKnob.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
     pitchKnob.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
     pitchKnob.setRange(-12.0, 12.0, 1.0);
+    pitchKnob.setDoubleClickReturnValue(true, 0.0);
     pitchKnob.setValue(audioProcessor.getFxPitchSemitones(), juce::dontSendNotification);
     pitchKnob.setColour(juce::Slider::rotarySliderFillColourId, juce::Colour(0xff38bdf8));
     pitchKnob.onValueChange = [this] {
@@ -273,10 +275,11 @@ ClipSamplerAudioProcessorEditor::ClipSamplerAudioProcessorEditor(ClipSamplerAudi
     pitchLabel.setMinimumHorizontalScale(0.68f);
     addAndMakeVisible(pitchLabel);
 
-    // Perilla 3: Filtro Paso-Bajo Cálido (15% a 100%)
+    // Perilla 3: Filtro Paso-Bajo Cálido (15% a 100%) - Doble clic resetea a 100%
     toneKnob.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
     toneKnob.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
     toneKnob.setRange(15.0, 100.0, 1.0);
+    toneKnob.setDoubleClickReturnValue(true, 100.0);
     toneKnob.setValue(audioProcessor.getFxToneFilter() * 100.0f, juce::dontSendNotification);
     toneKnob.setColour(juce::Slider::rotarySliderFillColourId, juce::Colour(0xff00e676));
     toneKnob.onValueChange = [this] {
@@ -292,11 +295,12 @@ ClipSamplerAudioProcessorEditor::ClipSamplerAudioProcessorEditor(ClipSamplerAudi
     toneLabel.setMinimumHorizontalScale(0.68f);
     addAndMakeVisible(toneLabel);
 
-    // Perilla 4: Envolvente de Ataque (Attack) Anti-Chasquidos (0.5 ms a 500 ms)
+    // Perilla 4: Envolvente de Ataque (Attack) Anti-Chasquidos (0.5 ms a 500 ms) - Doble clic resetea a 2.0 ms
     attackKnob.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
     attackKnob.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
     attackKnob.setRange(0.5, 500.0, 0.5);
     attackKnob.setSkewFactorFromMidPoint(25.0);
+    attackKnob.setDoubleClickReturnValue(true, 2.0);
     attackKnob.setValue(audioProcessor.getEnvelopeAttackMs(), juce::dontSendNotification);
     attackKnob.setColour(juce::Slider::rotarySliderFillColourId, juce::Colour(0xffff9100));
     attackKnob.onValueChange = [this] {
@@ -311,11 +315,12 @@ ClipSamplerAudioProcessorEditor::ClipSamplerAudioProcessorEditor(ClipSamplerAudi
     attackLabel.setMinimumHorizontalScale(0.68f);
     addAndMakeVisible(attackLabel);
 
-    // Perilla 5: Envolvente de Caída (Release) Suave (5 ms a 2000 ms)
+    // Perilla 5: Envolvente de Caída (Release) Suave (5 ms a 2000 ms) - Doble clic resetea a 50.0 ms
     releaseKnob.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
     releaseKnob.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
     releaseKnob.setRange(5.0, 2000.0, 1.0);
     releaseKnob.setSkewFactorFromMidPoint(120.0);
+    releaseKnob.setDoubleClickReturnValue(true, 50.0);
     releaseKnob.setValue(audioProcessor.getEnvelopeReleaseMs(), juce::dontSendNotification);
     releaseKnob.setColour(juce::Slider::rotarySliderFillColourId, juce::Colour(0xffff4081));
     releaseKnob.onValueChange = [this] {
@@ -426,11 +431,11 @@ ClipSamplerAudioProcessorEditor::ClipSamplerAudioProcessorEditor(ClipSamplerAudi
     dragDawButton.setTooltip(juce::String::fromUTF8("Mantén presionado y arrastra el archivo .WAV directamente a una pista de tu DAW"));
     dragMidiButton.setTooltip(juce::String::fromUTF8("Convertir muestra a notas MIDI y arrastrar al Piano Roll [Atajo: Ctrl+M]"));
     exportWavButton.setTooltip(juce::String::fromUTF8("Guardar muestra activa como archivo .WAV de 24 bits [Atajo: Ctrl+E]"));
-    lofiKnob.setTooltip(juce::String::fromUTF8("Reducción de resolución estilo sampler vintage de 12 bits (0% - 100%)"));
-    pitchKnob.setTooltip(juce::String::fromUTF8("Transposición cromática en semitonos (-12 st a +12 st)"));
-    toneKnob.setTooltip(juce::String::fromUTF8("Filtro paso-bajo analógico cálido (15% - 100%)"));
-    attackKnob.setTooltip(juce::String::fromUTF8("Tiempo de ataque de la envolvente anti-click (0.5 ms - 500 ms)"));
-    releaseKnob.setTooltip(juce::String::fromUTF8("Tiempo de caída/relajación de cada nota o rodaja (5 ms - 2000 ms)"));
+    lofiKnob.setTooltip(juce::String::fromUTF8("Reducción de resolución vintage de 12 bits (0% - 100%) [Doble clic: Reset a 0%]"));
+    pitchKnob.setTooltip(juce::String::fromUTF8("Transposición cromática en semitonos (-12 st a +12 st) [Doble clic: Reset a 0 st]"));
+    toneKnob.setTooltip(juce::String::fromUTF8("Filtro paso-bajo analógico cálido (15% - 100%) [Doble clic: Reset a 100%]"));
+    attackKnob.setTooltip(juce::String::fromUTF8("Tiempo de ataque anti-click (0.5 ms - 500 ms) [Doble clic: Reset a 2 ms]"));
+    releaseKnob.setTooltip(juce::String::fromUTF8("Tiempo de caída/relajación de cada nota (5 ms - 2000 ms) [Doble clic: Reset a 50 ms]"));
 
     // Temporizador a 60 FPS (juce-custom-lookandfeel) para máxima fluidez visual del cabezal y animaciones
     startTimerHz(60);
@@ -1385,6 +1390,24 @@ bool ClipSamplerAudioProcessorEditor::keyPressed(const juce::KeyPress& key)
         {
             onExportWavClicked();
             return true;
+        }
+    }
+
+    // Teclas numéricas 1 a 8: Disparo en vivo de las primeras 8 rodajas MPC (C1 a G1) desde el teclado del PC
+    if (!key.getModifiers().isAnyModifierKeyDown())
+    {
+        const auto ch = key.getTextCharacter();
+        if (ch >= '1' && ch <= '8')
+        {
+            const int sliceIdx = (int)(ch - '1');
+            const int curSlot = audioProcessor.getActiveSlot();
+            if (audioProcessor.hasSlotAudio(curSlot))
+            {
+                audioProcessor.triggerChopSlice(sliceIdx);
+                originalWaveformComponent.repaint();
+                transformedWaveformComponent.repaint();
+                return true;
+            }
         }
     }
 
