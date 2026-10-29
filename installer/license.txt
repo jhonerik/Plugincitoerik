@@ -1,39 +1,40 @@
-================================================================================
-ACUERDO DE LICENCIA DE USUARIO FINAL Y POLÍTICAS DE USO (EULA)
-ClipSampler v2.6.1 - Virtual Instrument Audio Plugin (VST3 64-bit)
+﻿================================================================================
+ACUERDO DE LICENCIA DE USUARIO FINAL Y POLÍTICAS DE USO
+ClipSampler v2.6.1 - Plugin de Instrumento Virtual de Audio (VST3 / AAX 64 bits)
 ================================================================================
 
 POR FAVOR, LEA DETENIDAMENTE ESTE DOCUMENTO ANTES DE INSTALAR Y UTILIZAR EL 
-SOFTWARE. AL INSTALAR, COPIAR O UTILIZAR CLIPSAMPLER, USTED ACEPTA QUEDAR 
+PROGRAMA. AL INSTALAR, COPIAR O UTILIZAR CLIPSAMPLER, USTED ACEPTA QUEDAR 
 VINCULADO POR LOS TÉRMINOS Y CONDICIONES DE ESTE ACUERDO. SI NO ESTÁ DE ACUERDO, 
-CANCELE LA INSTALACIÓN Y NO UTILICE EL SOFTWARE.
+CANCELE LA INSTALACIÓN Y NO UTILICE EL PROGRAMA.
 
 --------------------------------------------------------------------------------
 1. CONCESIÓN DE LICENCIA
 --------------------------------------------------------------------------------
 AudioInnovations le otorga una licencia no exclusiva, intransferible y revocable 
 para instalar y utilizar ClipSampler en estaciones de trabajo de audio digital 
-(DAWs) compatibles, de acuerdo con los términos estipulados en este contrato.
+(DAW) compatibles, de acuerdo con los términos estipulados en este contrato.
 
 --------------------------------------------------------------------------------
-2. NATURALEZA Y PROPÓSITO DEL SOFTWARE (MODELO DE TRANSFORMACIÓN LOCAL)
+2. NATURALEZA Y PROPÓSITO DEL PROGRAMA (MODELO DE TRANSFORMACIÓN LOCAL)
 --------------------------------------------------------------------------------
-ClipSampler es una estación de trabajo virtual de resíntesis y procesador de 
-audio avanzado (VST3 Instrument). Su función principal y prevista es permitir 
-al Usuario cargar y procesar sus propios archivos de audio locales (WAV, MP3, 
-FLAC, AIFF), rebanarlos automáticamente mediante el motor MPC Auto-Chop, 
-aplicar modulación de tono (pitch shifting), filtrado de formantes y síntesis 
-polifónica de Audio a MIDI para producción musical.
+ClipSampler es una estación de trabajo virtual de resíntesis y procesamiento de 
+audio avanzado (Instrumento Virtual de 64 bits). Su función principal y prevista 
+es permitir al Usuario cargar y procesar sus propios archivos de audio locales 
+(WAV, MP3, FLAC, AIFF, OGG), rebanarlos automáticamente mediante el Rebanador 
+MPC (C1–G2), aplicar transformación analógica (Calor Analógico y alteración de 
+±3 tonos), filtrado de formantes y conversión polifónica de Audio a MIDI para 
+producción musical.
 
 --------------------------------------------------------------------------------
-3. POLÍTICA DE DERECHOS DE AUTOR Y DESCARGO DE RESPONSABILIDAD (FAIR USE)
+3. POLÍTICA DE DERECHOS DE AUTOR Y DESCARGO DE RESPONSABILIDAD (USO LIBRE)
 --------------------------------------------------------------------------------
 (a) El usuario final reconoce y acepta que es el único y exclusivo responsable 
     del material de audio que decida capturar, importar, muestrear o procesar a 
-    través de este software.
-(b) El software está concebido para fines de estudio acústico, diseño sonoro, 
+    través de este programa.
+(b) El programa está concebido para fines de estudio acústico, diseño sonoro, 
     parodia, crítica, investigación o uso transformativo amparado bajo las 
-    doctrinas de "Uso Justo" (Fair Use) y las leyes de propiedad intelectual 
+    doctrinas de Uso Justo / Uso Libre y las leyes de propiedad intelectual 
     aplicables en su jurisdicción.
 (c) AudioInnovations y sus desarrolladores NO alojan, distribuyen, poseen ni 
     controlan ningún contenido de terceros transmitido a través de plataformas 
@@ -48,52 +49,52 @@ polifónica de Audio a MIDI para producción musical.
 --------------------------------------------------------------------------------
 Queda expresamente prohibido:
 (a) Modificar, descompilar, realizar ingeniería inversa o desensamblar el código 
-    binario del software, excepto en la medida en que la legislación aplicable lo 
+    binario del programa, excepto en la medida en que la legislación aplicable lo 
     permita expresamente.
-(b) Utilizar el software para vulnerar derechos de propiedad intelectual, 
+(b) Utilizar el programa para vulnerar derechos de propiedad intelectual, 
     distribuir material ilícito o violar los términos de servicio de plataformas 
     de terceros.
 
 --------------------------------------------------------------------------------
 5. EXCLUSIÓN DE GARANTÍAS Y LÍMITE DE RESPONSABILIDAD
 --------------------------------------------------------------------------------
-EL SOFTWARE SE SUMINISTRA "TAL CUAL" ("AS IS"), SIN GARANTÍAS DE NINGÚN TIPO, 
-EXPRESAS O IMPLÍCITAS. EN NINGÚN CASO LOS DESARROLLADORES O DISTRIBUIDORES SERÁN 
+EL PROGRAMA SE SUMINISTRA "TAL CUAL", SIN GARANTÍAS DE NINGÚN TIPO, EXPRESAS O 
+IMPLÍCITAS. EN NINGÚN CASO LOS DESARROLLADORES O DISTRIBUIDORES SERÁN 
 RESPONSABLES DE DAÑOS DIRECTOS, INDIRECTOS, INCIDENTALES O CONSECUENTES 
 (INCLUYENDO PÉRDIDA DE BENEFICIOS O INTERRUPCIÓN DE LA PRODUCCIÓN) DERIVADOS 
-DEL USO O DE LA IMPOSIBILIDAD DE USO DEL SOFTWARE.
+DEL USO O DE LA IMPOSIBILIDAD DE USO DEL PROGRAMA.
 
 --------------------------------------------------------------------------------
 6. COMPONENTES Y LICENCIAS DE TERCEROS (FFMPEG Y YT-DLP)
 --------------------------------------------------------------------------------
-Este software incluye binarios sin modificar de FFmpeg (licencia LGPL 2.1+) 
+Este programa incluye binarios sin modificar de FFmpeg (licencia LGPL 2.1+) 
 disponibles en https://ffmpeg.org y yt-dlp disponibles en https://github.com/yt-dlp/yt-dlp. 
 Consulte el archivo LICENCIAS_TERCEROS.txt incluido en la carpeta de instalación 
 para obtener la información completa de licenciamiento y acceso al código fuente.
 
 --------------------------------------------------------------------------------
-7. INTEGRACIÓN CON SERVICIOS DE TERCEROS (FREESOUND.ORG API)
+7. INTEGRACIÓN CON SERVICIOS DE TERCEROS (API v2 DE FREESOUND.ORG)
 --------------------------------------------------------------------------------
-1. Naturaleza del Software: El precio pagado por el Usuario corresponde única y 
-   exclusivamente a la licencia de uso del software, su interfaz gráfica y sus 
-   algoritmos de procesamiento de audio. El Desarrollador no vende, comercializa 
-   ni reclama propiedad sobre ningún archivo de audio, muestra (sample) o 
-   fonograma descargado a través de la función de búsqueda en línea integrada en 
-   el Plugin.
+1. Naturaleza del Programa: El precio pagado por el Usuario corresponde única y 
+   exclusivamente a la licencia de uso del programa, su interfaz gráfica, su 
+   manual oficial en PDF y sus algoritmos de procesamiento de audio. El 
+   Desarrollador no vende, comercializa ni reclama propiedad sobre ningún archivo 
+   de audio, muestra sonora o fonograma descargado a través de la función de 
+   búsqueda en línea integrada en el Plugin.
 
-2. Uso de API de Terceros: Este software incluye una interfaz técnica opcional 
+2. Uso de API de Terceros: Este programa incluye una interfaz técnica opcional 
    que permite al Usuario conectarse directamente a los servidores públicos de 
-   Freesound.org (propiedad de la Music Technology Group de la Universitat Pompeu 
-   Fabra) mediante el uso de una clave de acceso personal (API Key) gestionada 
-   por el propio Usuario. Este producto utiliza la API de Freesound pero no está 
-   respaldado, certificado ni afiliado oficialmente con Freesound.org.
+   Freesound.org (propiedad del Grupo de Tecnología Musical de la Universitat 
+   Pompeu Fabra) mediante el uso de una clave de acceso personal gratuita 
+   gestionada por el propio Usuario. Este producto utiliza la API de Freesound 
+   pero no está respaldado, certificado ni afiliado oficialmente con Freesound.org.
 
-3. Licencias de Contenido y Exención de Responsabilidad (Copyright): Aunque el 
-   Software incluye filtros automatizados para priorizar muestras catalogadas 
-   bajo licencia Creative Commons 0 (CC0 - Dominio Público) en Freesound.org, 
-   el contenido proviene de una base de datos comunitaria externa. El Usuario 
-   asume la total responsabilidad de verificar la licencia aplicable a cada 
-   sonido descargado y se compromete a eximir al Desarrollador de cualquier 
+3. Licencias de Contenido y Exención de Responsabilidad (Derechos de Autor): 
+   Aunque el Programa incluye filtros automatizados para priorizar muestras 
+   catalogadas bajo licencia Creative Commons 0 (CC0 - Dominio Público) en 
+   Freesound.org, el contenido proviene de una base de datos comunitaria externa. 
+   El Usuario asume la total responsabilidad de verificar la licencia aplicable 
+   a cada sonido descargado y se compromete a eximir al Desarrollador de cualquier 
    reclamación por infracción de derechos de autor derivada del uso comercial o 
    no comercial de los sonidos obtenidos a través de dicha plataforma.
 
@@ -104,5 +105,5 @@ Al marcar la casilla "Acepto el acuerdo" y continuar con la instalación, usted
 manifiesta haber leído, comprendido y aceptado la totalidad de estas políticas.
 
 ================================================================================
-Copyright (c) AudioInnovations. Todos los derechos reservados.
+Derechos Reservados (c) AudioInnovations. Todos los derechos reservados.
 ================================================================================

@@ -1,11 +1,11 @@
-================================================================================
+﻿================================================================================
 LICENCIAS Y AVISOS DE COMPONENTES DE TERCEROS
-ClipSampler v2.6.1 - Virtual Instrument Audio Plugin (VST3 / AU / Standalone)
+ClipSampler v2.6.1 - Plugin de Instrumento Virtual de Audio (VST3 / AAX / AU)
 ================================================================================
 
-Este software incluye binarios sin modificar de FFmpeg (licencia LGPL 2.1+) 
+Este programa incluye binarios sin modificar de FFmpeg (licencia LGPL 2.1+) 
 disponibles en https://ffmpeg.org, yt-dlp disponibles en https://github.com/yt-dlp/yt-dlp
-y conectividad opcional con la API pública de Freesound.org.
+y conectividad opcional con la API pública v2 de Freesound.org.
 
 --------------------------------------------------------------------------------
 1. FFmpeg (LGPL v2.1 / GPL v2+)
@@ -21,27 +21,25 @@ disponible y puede descargarse en:
 https://ffmpeg.org/download.html
 
 --------------------------------------------------------------------------------
-2. yt-dlp (The Unlicense / Dominio Público)
+2. yt-dlp (Dominio Público)
 --------------------------------------------------------------------------------
 yt-dlp es una herramienta de código abierto desarrollada y mantenida por la comunidad 
-de yt-dlp. Se distribuye bajo los términos de "The Unlicense" (dedicación al dominio 
-público).
+de yt-dlp. Se distribuye bajo dedicación al dominio público.
 
 Para obtener más información, documentación o el código fuente completo, visite:
 https://github.com/yt-dlp/yt-dlp
 
 --------------------------------------------------------------------------------
-3. Framework JUCE
+3. Entorno de Audio JUCE
 --------------------------------------------------------------------------------
-ClipSampler utiliza el framework de desarrollo de audio JUCE 
-(Copyright (c) Raw Material Software / PACE Anti-Piracy, Inc.).
+ClipSampler utiliza el entorno de desarrollo de audio en C++ JUCE.
 Sitio oficial: https://juce.com
 
 --------------------------------------------------------------------------------
-4. Freesound.org API v2 (Music Technology Group - Universitat Pompeu Fabra)
+4. Freesound.org API v2 (Grupo de Tecnología Musical - Universitat Pompeu Fabra)
 --------------------------------------------------------------------------------
 Este producto utiliza la API pública v2 de Freesound (https://freesound.org/docs/api/)
-mediante clave de acceso personal (API Key) gestionada por el propio usuario, pero no
+mediante clave de acceso personal gratuita gestionada por el propio usuario, pero no
 está respaldado, certificado ni afiliado oficialmente con Freesound.org.
 Las muestras descargadas desde Freesound.org están sujetas a sus respectivas licencias
 Creative Commons (CC0 / CC-BY) definidas por cada autor en dicha plataforma.

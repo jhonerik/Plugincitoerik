@@ -176,7 +176,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  let auroraPulseEnergy = 0;
+
   function triggerWaveformBurst() {
+    auroraPulseEnergy = 1.0;
     const burstIdx = Math.floor(Math.random() * wavePoints.length);
     drawWaveform(burstIdx);
     setTimeout(() => drawWaveform(-1), 160);
@@ -488,38 +491,46 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // =========================================================================
-  // 9. PESTAÑAS DEL HERO: CAPTURA REAL VS SIMULADOR INTERACTIVO
+  // 9. PESTAÑAS DEL HERO: 3 CAPTURAS REALES v2.6.1 VS SIMULADOR INTERACTIVO
   // =========================================================================
-  const tabBtnReal = document.getElementById('tabBtnReal');
+  const allHeroTabs = document.querySelectorAll('.window-tabs .win-tab-btn');
   const tabBtnInteractive = document.getElementById('tabBtnInteractive');
   const viewRealImage = document.getElementById('viewRealImage');
   const viewInteractive = document.getElementById('viewInteractive');
+  const heroMainImg = document.getElementById('heroMainImg');
+  const heroCaptionText = document.getElementById('heroCaptionText');
   const btnHeroAudioQuick = document.getElementById('btnHeroAudioQuick');
 
-  if (tabBtnReal && tabBtnInteractive && viewRealImage && viewInteractive) {
-    tabBtnReal.addEventListener('click', () => {
-      tabBtnReal.classList.add('active');
-      tabBtnReal.setAttribute('aria-selected', 'true');
-      tabBtnInteractive.classList.remove('active');
-      tabBtnInteractive.setAttribute('aria-selected', 'false');
+  if (allHeroTabs.length > 0 && viewRealImage && viewInteractive) {
+    allHeroTabs.forEach((tab) => {
+      tab.addEventListener('click', () => {
+        allHeroTabs.forEach((t) => {
+          t.classList.remove('active');
+          t.setAttribute('aria-selected', 'false');
+        });
+        tab.classList.add('active');
+        tab.setAttribute('aria-selected', 'true');
 
-      viewRealImage.classList.add('active');
-      viewInteractive.classList.remove('active');
-    });
-
-    tabBtnInteractive.addEventListener('click', () => {
-      tabBtnInteractive.classList.add('active');
-      tabBtnInteractive.setAttribute('aria-selected', 'true');
-      tabBtnReal.classList.remove('active');
-      tabBtnReal.setAttribute('aria-selected', 'false');
-
-      viewInteractive.classList.add('active');
-      viewRealImage.classList.remove('active');
-
-      // Dibujar forma de onda interactiva si existe
-      if (typeof drawWaveform === 'function') {
-        drawWaveform();
-      }
+        if (tab === tabBtnInteractive) {
+          viewInteractive.classList.add('active');
+          viewRealImage.classList.remove('active');
+          if (typeof drawWaveform === 'function') {
+            drawWaveform();
+          }
+        } else {
+          viewRealImage.classList.add('active');
+          viewInteractive.classList.remove('active');
+          const imgPath = tab.getAttribute('data-img');
+          const capText = tab.getAttribute('data-caption');
+          if (heroMainImg && imgPath) {
+            heroMainImg.src = imgPath;
+            heroMainImg.alt = capText || 'Captura real del plugin ClipSampler v2.6.1';
+          }
+          if (heroCaptionText && capText) {
+            heroCaptionText.textContent = capText;
+          }
+        }
+      });
     });
   }
 
@@ -590,12 +601,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Activar triggers de zoom en la imagen del hero
   const heroZoomTrigger = document.getElementById('heroZoomTrigger');
-  const heroMainImg = document.getElementById('heroMainImg');
   if (heroZoomTrigger && heroMainImg) {
     const triggerHeroZoom = () => {
       openLightbox(
         heroMainImg.getAttribute('src'),
-        'ClipSampler v2.6.1 — Interfaz Principal en Acción (Visor Dual, MPC Auto-Chop C1-D2 y Conversor MIDI)'
+        heroCaptionText ? heroCaptionText.textContent : 'ClipSampler v2.6.1 — Interfaz Principal en Acción'
       );
     };
     heroZoomTrigger.addEventListener('click', triggerHeroZoom);
@@ -622,4 +632,92 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
   });
+
+  // =========================================================================
+  // 11. REACT BITS / ACETERNITY UI: FONDO DE ONDAS SINUSOIDALES REACTIVAS
+  //     (AURORA / WAVES SHADER DETRÁS DEL PLUGIN)
+  // =========================================================================
+  const auroraCanvas = document.getElementById('auroraWavesCanvas');
+  if (auroraCanvas) {
+    const aCtx = auroraCanvas.getContext('2d');
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    let width = 0;
+    let height = 0;
+    let mouseX = 0.5;
+    let mouseY = 0.5;
+    let targetMouseX = 0.5;
+    let targetMouseY = 0.5;
+    let time = 0;
+
+    function resizeAuroraCanvas() {
+      const rect = auroraCanvas.parentElement?.getBoundingClientRect();
+      width = auroraCanvas.width = rect ? rect.width : window.innerWidth;
+      height = auroraCanvas.height = rect ? rect.height : 650;
+    }
+
+    resizeAuroraCanvas();
+    window.addEventListener('resize', resizeAuroraCanvas, { passive: true });
+
+    window.addEventListener('mousemove', (e) => {
+      targetMouseX = e.clientX / Math.max(1, window.innerWidth);
+      targetMouseY = e.clientY / Math.max(1, window.innerHeight);
+    }, { passive: true });
+
+    const waveLayers = [
+      { color: 'rgba(56, 189, 248, 0.22)', amp: 38, freq: 0.0045, speed: 0.018, yOffset: 0.42, lineWidth: 2.2 },
+      { color: 'rgba(45, 212, 191, 0.18)', amp: 52, freq: 0.0034, speed: -0.014, yOffset: 0.50, lineWidth: 1.8 },
+      { color: 'rgba(249, 115, 22, 0.15)', amp: 30, freq: 0.0058, speed: 0.022, yOffset: 0.58, lineWidth: 1.6 },
+      { color: 'rgba(168, 85, 247, 0.16)', amp: 44, freq: 0.0040, speed: 0.012, yOffset: 0.64, lineWidth: 1.5 }
+    ];
+
+    function renderAuroraWaves() {
+      if (!aCtx) return;
+      aCtx.clearRect(0, 0, width, height);
+
+      mouseX += (targetMouseX - mouseX) * 0.06;
+      mouseY += (targetMouseY - mouseY) * 0.06;
+      auroraPulseEnergy *= 0.92;
+
+      // Resplandor Aurora Reactivo detrás de las ondas sinusoidales
+      const glowX = width * (0.35 + mouseX * 0.35);
+      const glowY = height * (0.3 + mouseY * 0.3);
+      const auroraGrad = aCtx.createRadialGradient(glowX, glowY, 20, glowX, glowY, Math.max(width, height) * 0.55);
+      auroraGrad.addColorStop(0, `rgba(56, 189, 248, ${0.12 + auroraPulseEnergy * 0.12})`);
+      auroraGrad.addColorStop(0.45, `rgba(45, 212, 191, ${0.06 + auroraPulseEnergy * 0.06})`);
+      auroraGrad.addColorStop(1, 'rgba(13, 13, 17, 0)');
+      aCtx.fillStyle = auroraGrad;
+      aCtx.fillRect(0, 0, width, height);
+
+      // Ondas sinusoidales reactivas
+      const dynamicBoost = 1 + auroraPulseEnergy * 0.85 + (mouseY - 0.5) * 0.25;
+      for (let l = 0; l < waveLayers.length; l++) {
+        const layer = waveLayers[l];
+        aCtx.beginPath();
+        aCtx.strokeStyle = layer.color;
+        aCtx.lineWidth = layer.lineWidth + auroraPulseEnergy * 1.2;
+
+        const baseY = height * layer.yOffset;
+        for (let x = 0; x <= width; x += 8) {
+          const normalizedX = x / Math.max(1, width);
+          const envelope = Math.sin(normalizedX * Math.PI);
+          const wave1 = Math.sin(x * layer.freq + time * layer.speed * 60 + mouseX * 3.0);
+          const wave2 = Math.cos(x * (layer.freq * 1.7) - time * layer.speed * 38);
+          const y = baseY + (wave1 * 0.68 + wave2 * 0.32) * layer.amp * envelope * dynamicBoost;
+          if (x === 0) {
+            aCtx.moveTo(x, y);
+          } else {
+            aCtx.lineTo(x, y);
+          }
+        }
+        aCtx.stroke();
+      }
+
+      if (!prefersReducedMotion) {
+        time += 0.016;
+        requestAnimationFrame(renderAuroraWaves);
+      }
+    }
+
+    renderAuroraWaves();
+  }
 });

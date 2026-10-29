@@ -68,6 +68,7 @@ private:
 
     // Búsqueda y descubrimiento de sonidos
     void triggerSearch(int page = 1);
+    void onGoToPageTriggered();
     void performSearchAsync(const juce::String& query, const juce::String& filter, const juce::String& sort, int page);
     void searchSimilarSounds(const FreesoundItem& targetSound, int page = 1);
     void updatePaginationUi();
@@ -133,9 +134,12 @@ private:
     std::atomic<bool> isSearching { false };
     std::atomic<bool> isDownloading { false };
 
-    // Barra inferior de paginación
+    // Barra inferior de paginación con salto directo a número de página (Enter)
     juce::TextButton prevPageButton       { juce::String::fromUTF8("◀ Anterior") };
     juce::Label pageInfoLabel;
+    juce::Label pageJumpLabel             { {}, juce::String::fromUTF8("Ir a pág:") };
+    juce::TextEditor pageJumpEditor;
+    juce::TextButton pageJumpGoButton     { juce::String::fromUTF8("Ir ↵") };
     juce::TextButton nextPageButton       { juce::String::fromUTF8("Siguiente ▶") };
 
     // Preescucha de audio

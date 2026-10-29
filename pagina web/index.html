@@ -3,15 +3,15 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ClipSampler v2.6.1 — Instrumento Virtual VST3 / AU | El Sampler Definitivo</title>
-  <meta name="description" content="ClipSampler v2.6.1: El plugin sampler definitivo para productores musicales. Rebanador MPC Auto-Chop, búsqueda integrada Freesound API v2, transformación espectral IA y conversor Audio a MIDI. Windows & Mac.">
-  <meta name="keywords" content="ClipSampler, VST3, Audio Unit, sampler plugin, MPC chop, Freesound API, FL Studio, Ableton Live, Logic Pro, audio to midi, lo-fi sampler">
+  <title>ClipSampler v2.6.1 — Plugin VST3 / AAX / AU | Freesound API v2, Calor Analógico &amp; Rebanador MPC</title>
+  <meta name="description" content="ClipSampler v2.6.1: El plugin sampler definitivo en C++ JUCE (64-bit). Conexión directa a Freesound API v2 (+500,000 sonidos) con salto directo de página, Transformación Analógica (Calor Analógico y ±3 Tonos IA) para crear nuevos samples libres de derechos, Rebanador MPC (C1-G2) para teclado MIDI, Conversor Audio a MIDI y Manual Oficial en PDF incluido.">
+  <meta name="keywords" content="ClipSampler, VST3, AAX, Audio Unit, C++ JUCE, 64-bit, sampler plugin, MPC chop, Freesound API v2, Calor Analogico, sample libre de derechos, teclado MIDI, FL Studio, Ableton Live, Pro Tools, Logic Pro, audio to midi">
   
   <!-- Open Graph / Redes Sociales -->
   <meta property="og:type" content="website">
-  <meta property="og:title" content="ClipSampler v2.6.1 — Plugin Sampler Profesional (Windows & macOS)">
-  <meta property="og:description" content="Oferta de lanzamiento: $29 USD (Antes $50 USD). Incluye MPC Auto-Chop, integración Freesound API v2 y conversor Audio a MIDI.">
-  <meta property="og:image" content="icon.png">
+  <meta property="og:title" content="ClipSampler v2.6.1 — Plugin Sampler Profesional (VST3 • AAX • Windows &amp; macOS)">
+  <meta property="og:description" content="Oferta de lanzamiento: $29 USD (Antes $50 USD). +500,000 sonidos vía Freesound API v2, Transformación Analógica libre de derechos en Visor 2, Rebanador MPC para teclado MIDI y Audio a MIDI.">
+  <meta property="og:image" content="clipsampler-analog-warmth-ui.png">
 
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="icon.png">
@@ -19,20 +19,34 @@
   <!-- Tipografías de Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
 
   <link rel="stylesheet" href="styles.css">
 </head>
-<body class="bg-base text-slate-100 antialiased selection:bg-cyan-500 selection:text-black">
+<body class="bg-anodized-rack text-slate-100 antialiased selection:bg-cyan-500 selection:text-black">
+
+  <!-- =========================================================================
+       TEXTURA DE ALUMINIO ANODIZADO OSCURO (#0D0D11 + SVG NOISE AL 3%)
+       Inspirado en React Bits / Aceternity UI Studio Rack Chassis
+       ========================================================================= -->
+  <div class="anodized-noise-overlay" aria-hidden="true">
+    <svg class="svg-noise-filter" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
+      <filter id="studioRackNoise">
+        <feTurbulence type="fractalNoise" baseFrequency="0.82" numOctaves="4" stitchTiles="stitch" />
+        <feColorMatrix type="saturate" values="0" />
+      </filter>
+      <rect width="100%" height="100%" filter="url(#studioRackNoise)" />
+    </svg>
+  </div>
 
   <!-- =========================================================================
        BARRA DE NOTIFICACIÓN SUPERIOR (OFERTA LIMITADA)
        ========================================================================= -->
   <aside class="promo-bar" aria-label="Aviso de oferta especial">
     <div class="container promo-content">
-      <span class="badge-pulse">OFERTA DE LANZAMIENTO</span>
+      <span class="badge-pulse">OFERTA DE LANZAMIENTO v2.6.1</span>
       <p class="promo-text">
-        Obtén <strong>ClipSampler v2.6.1</strong> con <strong>42% de descuento</strong> por solo 
+        Obtén <strong>ClipSampler v2.6.1 Pro</strong> (Instalador 100% en Español + Manual PDF) con <strong>42% de descuento</strong> por solo 
         <span class="price-highlight">$29 USD</span> <del class="price-strikethrough">$50 USD</del>
       </p>
       <div class="countdown-timer" id="countdownTimer" aria-label="Tiempo restante de oferta">
@@ -53,17 +67,17 @@
         <img src="icon.png" alt="ClipSampler Logo" class="brand-icon" width="38" height="38">
         <div class="brand-text">
           <span class="brand-title">CLIPSAMPLER</span>
-          <span class="brand-badge">v2.6.1</span>
+          <span class="brand-badge">v2.6.1 • C++ JUCE</span>
         </div>
       </a>
 
       <nav class="nav-links" id="navLinks" aria-label="Menú principal">
-        <a href="#capturas" class="nav-link">Software Real</a>
-        <a href="#caracteristicas" class="nav-link">Características</a>
+        <a href="#capturas" class="nav-link">Interfaz Real</a>
+        <a href="#transformacion" class="nav-link">Calor Analógico &amp; MIDI</a>
+        <a href="#caracteristicas" class="nav-link">Freesound v2</a>
         <a href="#demo-mpc" class="nav-link">Demo MPC</a>
-        <a href="#freesound" class="nav-link">Freesound v2</a>
-        <a href="#sonidos" class="nav-link">Audio Demos</a>
-        <a href="#compatibilidad" class="nav-link">Compatibilidad</a>
+        <a href="#compatibilidad" class="nav-link">Bento Specs</a>
+        <a href="Manual_ClipSampler.pdf" target="_blank" rel="noopener" class="nav-link nav-link-manual">📘 Manual PDF</a>
         <a href="#faq" class="nav-link">FAQ</a>
       </nav>
 
@@ -81,9 +95,12 @@
 
   <main>
     <!-- =========================================================================
-         HERO SECTION: PROPUESTA DE VALOR + VISTA REAL DEL SOFTWARE
+         HERO SECTION: FONDO DE ONDAS SINUSOIDALES REACTIVAS (AURORA / WAVES SHADER)
+         + CAJA DEL PLUGIN CON MAGIC UI BORDER BEAM
          ========================================================================= -->
     <section class="hero-section" id="hero">
+      <!-- React Bits / Aceternity UI: Fondo de Ondas Sinusoidales Reactivas (Aurora / Waves Shader) -->
+      <canvas id="auroraWavesCanvas" class="aurora-waves-canvas" aria-hidden="true"></canvas>
       <div class="hero-bg-glow" aria-hidden="true"></div>
       <div class="hero-grid-pattern" aria-hidden="true"></div>
 
@@ -91,15 +108,15 @@
         <div class="hero-copy">
           <div class="inline-badge">
             <span class="badge-dot"></span>
-            Plugin VST3 &amp; AU Multiplataforma • Windows &amp; macOS
+            VST3 • AAX • AU • 64-Bit C++ JUCE • Windows &amp; macOS
           </div>
 
           <h1 class="hero-title">
-            El Sampler de Próxima Generación para <span class="gradient-text">Productores Modernos</span>
+            El Sampler con <span class="gradient-text">Transformación Analógica</span> y +500,000 Sonidos en Tu DAW
           </h1>
 
           <p class="hero-subtitle">
-            Rebana muestras al instante con el motor <strong>MPC Auto-Chop (C1-G2)</strong>, busca entre más de <strong>500,000 sonidos</strong> con <strong>Freesound API v2</strong> sin salir de tu DAW, y transforma tu música con <strong>modulación espectral anti-derechos</strong> y <strong>Audio a MIDI</strong>.
+            Conéctate a <strong>Freesound API v2</strong> con salto instantáneo de página, aplica <strong>📼 Calor Analógico</strong> y <strong>±3 Tonos IA</strong> en el <strong>Visor 2</strong> para generar un <strong>nuevo sample libre de derechos de autor</strong>, tócalo en vivo con tu <strong>teclado MIDI (C1–G2 o cromático)</strong> y convierte cualquier <strong>Audio a MIDI</strong> en un clic.
           </p>
 
           <div class="hero-cta-group">
@@ -107,43 +124,52 @@
               <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
               Comprar Licencia Vitalicia — $29 USD
             </a>
-            <a href="#demo-mpc" class="btn btn-secondary btn-lg">
-              <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>
-              Probar Demo Interactivo
+            <a href="Manual_ClipSampler.pdf" target="_blank" rel="noopener" class="btn btn-secondary btn-lg">
+              <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+              Ver Manual PDF Oficial
             </a>
           </div>
 
           <div class="hero-badges">
             <div class="badge-item">
               <svg class="check-icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
-              <span>Pago único de por vida</span>
+              <span>Transformación Analógica Libre de Derechos</span>
             </div>
             <div class="badge-item">
               <svg class="check-icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
-              <span>Apple Silicon (M1/M2/M3/M4) + Intel</span>
+              <span>Salto Directo de Página en Freesound (Ej. Pág. 1653)</span>
             </div>
             <div class="badge-item">
               <svg class="check-icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
-              <span>Windows 10/11 64-bit</span>
+              <span>Instalador 100% en Español + Botón «Manual» Integrado</span>
             </div>
           </div>
         </div>
 
-        <!-- MOCKUP VIRTUAL DEL PLUGIN: IMAGEN REAL + MODO INTERACTIVO -->
+        <!-- MOCKUP DEL PLUGIN CON MAGIC UI BORDER BEAM (SEÑAL DE AUDIO EN EL BORDE) -->
         <div class="hero-preview">
-          <div class="plugin-window-frame">
+          <div class="plugin-window-frame has-border-beam">
+            <!-- Magic UI Border Beam Element -->
+            <div class="border-beam" aria-hidden="true"></div>
+
             <div class="window-header">
               <div class="window-dots">
                 <span class="dot dot-red"></span>
                 <span class="dot dot-yellow"></span>
                 <span class="dot dot-green"></span>
               </div>
-              <div class="window-tabs">
-                <button class="win-tab-btn active" id="tabBtnReal" aria-selected="true">
-                  📸 Captura Real del Software
+              <div class="window-tabs" role="tablist" aria-label="Vistas del plugin ClipSampler">
+                <button class="win-tab-btn active" id="tabBtnAnalog" role="tab" aria-selected="true" data-img="clipsampler-analog-warmth-ui.png" data-caption="Visor 2: Calor Analógico (+3 st IA) generando un nuevo sample libre de derechos de autor + Botón Manual">
+                  📼 Calor Analógico (Visor 2)
                 </button>
-                <button class="win-tab-btn" id="tabBtnInteractive" aria-selected="false">
-                  🎹 Simulador Interactivo
+                <button class="win-tab-btn" id="tabBtnFreesoundLoaded" role="tab" aria-selected="false" data-img="clipsampler-freesound-loaded.png" data-caption="Visor 1: Sample descargado de Freesound API v2 rebanado automáticamente (C1–D2) listo para tocar en teclado MIDI">
+                  🎵 Sample Freesound (Visor 1)
+                </button>
+                <button class="win-tab-btn" id="tabBtnFreesoundModal" role="tab" aria-selected="false" data-img="freesound-modal-ui.png" data-caption="Buscador Freesound API v2 (+500,000 sonidos) con nueva casilla 'Ir a pág: [1653]' presionando Enter">
+                  🔎 Buscador + Ir a Pág.
+                </button>
+                <button class="win-tab-btn" id="tabBtnInteractive" role="tab" aria-selected="false">
+                  🎹 Simulador en Vivo
                 </button>
               </div>
               <div class="window-actions">
@@ -151,10 +177,10 @@
               </div>
             </div>
 
-            <!-- VISTA 1: IMAGEN REAL DEL SOFTWARE EN ALTA RESOLUCIÓN (POR DEFECTO) -->
+            <!-- VISTA 1: IMAGEN REAL DEL SOFTWARE EN ALTA RESOLUCIÓN (CON CONMUTADOR DE LAS 3 CAPTURAS) -->
             <div class="real-ui-view active" id="viewRealImage">
               <div class="image-wrapper">
-                <img src="clipsampler-main-ui.png" alt="Captura real del plugin ClipSampler v2.6.1 mostrando el visor dual, MPC Auto-Chop y controles de audio" class="real-software-img" id="heroMainImg">
+                <img src="clipsampler-analog-warmth-ui.png" alt="Captura real del plugin ClipSampler v2.6.1 mostrando el Visor 1 y el Visor 2 con Calor Analógico (+3 st IA), Rebanador MPC C1-G2 y el nuevo botón esquinero Manual" class="real-software-img" id="heroMainImg">
                 <div class="img-zoom-hint" id="heroZoomTrigger" role="button" tabindex="0" aria-label="Ampliar captura de pantalla en alta resolución">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
                   <span>Clic para ampliar en HD</span>
@@ -162,8 +188,8 @@
               </div>
               <div class="real-ui-caption">
                 <div class="caption-left">
-                  <span class="caption-tag">INTERFAZ REAL</span>
-                  <strong>Visor Dual de Onda • Rebanador MPC C1-G2 • Calor Analógico • Conversor MIDI</strong>
+                  <span class="caption-tag">INTERFAZ REAL v2.6.1</span>
+                  <strong id="heroCaptionText">Visor 2: Calor Analógico (+3 st IA) generando un nuevo sample libre de derechos de autor + Botón Manual</strong>
                 </div>
                 <button class="btn-play-hero-mini" id="btnHeroAudioQuick" aria-label="Escuchar muestra de audio">
                   <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="6 4 20 12 6 20 6 4"/></svg>
@@ -177,14 +203,14 @@
               <div class="plugin-body">
                 <div class="plugin-top-bar">
                   <span class="plugin-logo-text">CLIPSAMPLER <span>v2.6.1</span></span>
-                  <div class="plugin-status-badge">LICENCIA ACTIVA</div>
+                  <div class="plugin-status-badge">✓ LICENCIA ACTIVA [PRO]</div>
                 </div>
 
                 <!-- Visor de Forma de Onda Animada -->
                 <div class="waveform-viewer">
                   <div class="waveform-header">
-                    <span>VISOR 1: AUDIO ORIGINAL (REBANADOR MPC C1-G2)</span>
-                    <span class="track-info">130.0 BPM • C Minor • Stereo 48kHz</span>
+                    <span>VISOR 2: CALOR ANALÓGICO (TAPE WARMTH • +3 ST IA)</span>
+                    <span class="track-info">77.5 BPM • A Minor • Libre de Derechos</span>
                   </div>
                   <canvas id="waveformCanvas" width="600" height="95" class="waveform-canvas" aria-label="Visualizador de onda en tiempo real"></canvas>
                   <div class="playhead" id="playhead"></div>
@@ -197,15 +223,15 @@
                     <span>Lo-Fi Bits</span>
                   </div>
                   <div class="knob-group">
-                    <div class="mini-knob" data-val="+3 ST"><div class="knob-dial rotate-90"></div></div>
-                    <span>Pitch Shift</span>
+                    <div class="mini-knob" data-val="+3 ST IA"><div class="knob-dial rotate-90"></div></div>
+                    <span>Tono IA</span>
                   </div>
                   <div class="knob-group">
-                    <div class="mini-knob" data-val="Cálido"><div class="knob-dial rotate-120"></div></div>
-                    <span>Filtro Tono</span>
+                    <div class="mini-knob" data-val="Cinta"><div class="knob-dial rotate-120"></div></div>
+                    <span>Calor Analógico</span>
                   </div>
                   <div class="knob-group">
-                    <div class="mini-knob" data-val="120ms"><div class="knob-dial rotate-60"></div></div>
+                    <div class="mini-knob" data-val="50ms"><div class="knob-dial rotate-60"></div></div>
                     <span>Release</span>
                   </div>
                   <button class="btn-plugin-play" id="btnPluginPlay" aria-label="Reproducir muestra de demo">
@@ -221,7 +247,7 @@
                   <button class="pad-btn" data-note="38" data-name="D1"><span>D1</span><small>Chop 1</small></button>
                   <button class="pad-btn" data-note="39" data-name="D#1"><span>D#1</span><small>Chop 2</small></button>
                   <button class="pad-btn" data-note="40" data-name="E1"><span>E1</span><small>Vocal</small></button>
-                  <button class="pad-btn" data-note="41" data-name="F1"><span>F1</span><small>Keys</small></button>
+                  <button class="pad-btn" data-note="41" data-name="F1"><span>F1</span><small>Tape</small></button>
                   <button class="pad-btn" data-note="42" data-name="F#1"><span>F#1</span><small>808</small></button>
                   <button class="pad-btn" data-note="43" data-name="G1"><span>G1</span><small>Hat</small></button>
                 </div>
@@ -233,69 +259,94 @@
     </section>
 
     <!-- =========================================================================
-         GALERÍA DEL SOFTWARE REAL EN ACCIÓN (DOS VISTAS COMPLETAS)
+         GALERÍA DEL SOFTWARE REAL EN ACCIÓN (LAS 3 CAPTURAS ACTUALIZADAS v2.6.1)
          ========================================================================= -->
     <section class="gallery-section section-padding" id="capturas">
       <div class="container">
         <div class="section-header text-center">
-          <span class="section-tag glow">VISTAS REALES DEL PLUGIN</span>
-          <h2 class="section-title">El Software Tal Como Funciona en Tu DAW</h2>
+          <span class="section-tag glow">INTERFAZ GRÁFICA REAL ACTUALIZADA v2.6.1</span>
+          <h2 class="section-title">De Freesound a un Nuevo Sample Libre de Derechos en Segundos</h2>
           <p class="section-subtitle">
-            Sin maquetas falsas. Estas son capturas reales de ClipSampler v2.6.1 ejecutándose en sesiones de producción musical.
+            Observa el flujo completo dentro de ClipSampler v2.6.1: descarga desde Freesound con salto directo de página, aplica <strong>Calor Analógico</strong> para crear un nuevo sample libre de derechos de autor en el Visor 2, y tócalo con tu teclado MIDI.
           </p>
         </div>
 
-        <div class="software-gallery-grid">
-          <!-- Tarjeta de Software 1: Visor Principal y MPC -->
-          <div class="gallery-card">
-            <div class="gallery-img-container" data-full="clipsampler-main-ui.png" role="button" tabindex="0" aria-label="Ver imagen ampliada del visor principal">
-              <img src="clipsampler-main-ui.png" alt="ClipSampler v2.6.1 Interfaz Principal con Visor Dual de Ondas y Rebanador MPC" class="gallery-img">
+        <div class="software-gallery-grid gallery-grid-3">
+          <!-- Tarjeta 1: Sample de Freesound cargado en Visor 1 + Botón Manual -->
+          <div class="gallery-card has-border-beam-subtle">
+            <div class="gallery-img-container" data-full="clipsampler-freesound-loaded.png" role="button" tabindex="0" aria-label="Ver imagen ampliada del sample de Freesound cargado en el Visor 1">
+              <img src="clipsampler-freesound-loaded.png" alt="ClipSampler v2.6.1 - Sample de Freesound cargado en el Visor 1 con Rebanador MPC C1-G2 y botón esquinero Manual" class="gallery-img">
               <div class="gallery-zoom-badge">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
-                <span>Ampliar Captura HD</span>
+                <span>Ampliar HD</span>
               </div>
             </div>
             <div class="gallery-info">
               <div class="gallery-badge-row">
-                <span class="badge-gallery-teal">VISOR PRINCIPAL</span>
-                <span class="badge-gallery-muted">VST3 / AU 64-BIT</span>
+                <span class="badge-gallery-teal">PASO 1 • VISOR 1 ORIGINAL</span>
+                <span class="badge-gallery-muted">BOTÓN «MANUAL»</span>
               </div>
-              <h3 class="gallery-title">Visor Dual de Onda y Motor MPC Auto-Chop</h3>
+              <h3 class="gallery-title">Sample de Freesound Cargado + Rebanador MPC (C1–G2)</h3>
               <p class="gallery-desc">
-                Visualización estéreo simultánea del audio original (Visor 1) y el audio transformado por Derechos IA (Visor 2). Las 20 rodajas MPC (C1 a D2) se marcan con líneas punteadas amarillas listas para arrastrar o tocar.
+                Gracias a la conexión con <strong>Freesound API v2</strong>, cualquier sonido descargado se carga al instante en el <strong>Visor 1</strong> con detección automática de <strong>BPM (77.5)</strong> y <strong>Tonalidad (Am)</strong>. El <strong>Rebanador MPC</strong> divide el audio en rodajas desde <strong>C1 hasta G2</strong> listas para tocar en tu teclado MIDI. Además, incluye el nuevo botón esquinero <strong>📘 Manual</strong> al lado de <em>Limpiar Caché</em>.
               </p>
               <div class="gallery-features-pills">
-                <span>✓ Muestreo de 3s, 10s y 30s</span>
-                <span>✓ Calor Analógico</span>
-                <span>✓ Detección de BPM (115.5) y Tono (F#m)</span>
-                <span>✓ Botón "Convertir a MIDI"</span>
+                <span>✓ Conexión Freesound API v2</span>
+                <span>✓ Rodajas C1–G2 en Teclado MIDI</span>
+                <span>✓ Nuevo Botón Esquinero «Manual»</span>
               </div>
             </div>
           </div>
 
-          <!-- Tarjeta de Software 2: Freesound API v2 Modal -->
-          <div class="gallery-card">
-            <div class="gallery-img-container" data-full="freesound-modal-ui.png" role="button" tabindex="0" aria-label="Ver imagen ampliada del explorador Freesound">
-              <img src="freesound-modal-ui.png" alt="Buscador integrado de Freesound API v2 dentro de ClipSampler" class="gallery-img">
+          <!-- Tarjeta 2: Transformación Analógica en Visor 2 (Sample Libre de Derechos) -->
+          <div class="gallery-card has-border-beam" id="transformacion">
+            <div class="border-beam" aria-hidden="true"></div>
+            <div class="gallery-img-container" data-full="clipsampler-analog-warmth-ui.png" role="button" tabindex="0" aria-label="Ver imagen ampliada de la Transformación Analógica en el Visor 2">
+              <img src="clipsampler-analog-warmth-ui.png" alt="ClipSampler v2.6.1 - Transformación Analógica (Calor Analógico +3 st IA) en el Visor 2 generando un nuevo sample libre de derechos de autor" class="gallery-img">
               <div class="gallery-zoom-badge">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
-                <span>Ampliar Captura HD</span>
+                <span>Ampliar HD</span>
+              </div>
+            </div>
+            <div class="gallery-info">
+              <div class="gallery-badge-row">
+                <span class="badge-gallery-orange">PASO 2 • VISOR 2 TRANSFORMADO</span>
+                <span class="badge-gallery-teal">LIBRE DE DERECHOS</span>
+              </div>
+              <h3 class="gallery-title">Transformación Analógica (Calor Analógico &amp; ±3 Tonos IA)</h3>
+              <p class="gallery-desc">
+                Al pulsar <strong>📼 Calor Analógico</strong> o <strong>▲/▼ Alterar ±3 Tonos</strong>, ClipSampler procesa la muestra con saturación de cinta vintage, preservación de formantes y dispersión de fase para generar en el <strong>Visor 2 (onda verde/púrpura)</strong> un <strong>nuevo sample libre de derechos de autor</strong>. Puedes tocarlo en vivo con tu <strong>teclado MIDI</strong>, arrastrarlo en <code>.WAV</code> o usar <strong>🎹 Convertir a MIDI</strong>.
+              </p>
+              <div class="gallery-features-pills">
+                <span>✓ VISOR 2: CALOR ANALÓGICO (+3 st IA)</span>
+                <span>✓ Nuevo Sample Libre de Derechos</span>
+                <span>✓ Tocar con Teclado MIDI o Convertir a MIDI</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tarjeta 3: Buscador Freesound API v2 con Casilla "Ir a pág:" -->
+          <div class="gallery-card has-border-beam-subtle">
+            <div class="gallery-img-container" data-full="freesound-modal-ui.png" role="button" tabindex="0" aria-label="Ver imagen ampliada del buscador Freesound con casilla Ir a página">
+              <img src="freesound-modal-ui.png" alt="Buscador integrado de Freesound API v2 con casilla de salto directo de página Ir a pág: 1653" class="gallery-img">
+              <div class="gallery-zoom-badge">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+                <span>Ampliar HD</span>
               </div>
             </div>
             <div class="gallery-info">
               <div class="gallery-badge-row">
                 <span class="badge-gallery-orange">FREESOUND API v2</span>
-                <span class="badge-gallery-muted">+500,000 SAMPLES</span>
+                <span class="badge-gallery-muted">NUEVO SALTO DE PÁGINA</span>
               </div>
-              <h3 class="gallery-title">Explorador de Samples Integrado en el DAW</h3>
+              <h3 class="gallery-title">Explorador +500,000 Sonidos con Casilla «Ir a pág: [ 1653 ] ↵»</h3>
               <p class="gallery-desc">
-                Ventana modal accesible con un solo clic en el botón superior <strong>🎵 Freesound</strong>. Permite buscar por término, filtrar por duración, ordenación y formato, con botones instantáneos de <strong>▶ Escuchar</strong> y <strong>⚡ Cargar en Pad</strong>.
+                Explora más de <strong>324,000 a 500,000 muestras</strong> con filtros de Duración, Licencia CC0/CC-BY y Formato. ¿Quieres ir directo a la <strong>página 1000 o 1653</strong> de 16,211 sin dar clic muchas veces en <em>Siguiente</em>? Escribe el número en la nueva casilla en blanco <strong>Ir a pág:</strong> y presiona <strong>Enter</strong> para saltar al instante.
               </p>
               <div class="gallery-features-pills">
-                <span>✓ Salida Dual: Auto / Mixer DAW / Directo</span>
-                <span>✓ Filtros CC0 (Dominio Público)</span>
-                <span>✓ Detección nativa de BPM</span>
-                <span>✓ Botón de Sonidos Similares</span>
+                <span>✓ Casilla «Ir a pág:» + Tecla Enter</span>
+                <span>✓ Botones Similares, Escuchar y Cargar en Pad</span>
+                <span>✓ Salida Auto (DAW Detenido o en Play)</span>
               </div>
             </div>
           </div>
@@ -304,84 +355,85 @@
     </section>
 
     <!-- =========================================================================
-         BENTO GRID: CARACTERÍSTICAS DE ÉLITE
+         BENTO GRID DE CARACTERÍSTICAS DE ÉLITE + MAGIC UI BORDER BEAM
          ========================================================================= -->
     <section class="features-section section-padding" id="caracteristicas">
       <div class="container">
         <div class="section-header text-center">
-          <span class="section-tag">TECNOLOGÍA PROFESIONAL</span>
-          <h2 class="section-title">Diseñado por Productores, para Productores</h2>
+          <span class="section-tag">INGENIERÍA ACÚSTICA C++ JUCE</span>
+          <h2 class="section-title">Todo el Poder de un Estudio Hardware Dentro de Tu DAW</h2>
           <p class="section-subtitle">
-            Todo lo que necesitas para sampling moderno reunido en un único instrumento VST3/AU ultra-ligero y de latencia cero.
+            Cada detalle de ClipSampler v2.6.1 fue diseñado para que pases de la inspiración a un beat terminado y libre de derechos en cuestión de segundos.
           </p>
         </div>
 
         <div class="bento-grid">
-          <!-- Tarjeta 1: Rebanador MPC Auto-Chop (Grande) -->
-          <article class="bento-card card-span-2 card-glow-cyan">
+          <!-- Tarjeta 1: Transformación Analógica y Derechos IA (Grande) -->
+          <article class="bento-card card-span-2 card-glow-cyan has-border-beam">
+            <div class="border-beam" aria-hidden="true"></div>
             <div class="bento-icon-wrapper cyan">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/></svg>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
             </div>
-            <h3 class="bento-title">Rebanador MPC Auto-Chop con Mapeo C1–G2</h3>
+            <h3 class="bento-title">Transformación Analógica (Calor Analógico &amp; ±3 Tonos IA) en Visor 2</h3>
             <p class="bento-desc">
-              Algoritmo de detección de transientes de alta precisión que segmenta cualquier canción, loop o fonograma en rodajas rítmicas perfectas asignadas automáticamente a las notas cromáticas C1 a G2 de tu teclado o controlador pad MIDI.
+              Convierte cualquier sonido descargado de Freesound, archivo local o extracción de <em>Uso Libre (Web)</em> en un <strong>nuevo sample libre de derechos de autor</strong> alojado en el <strong>Visor 2</strong>. El motor combina saturación armónica de cinta (<em>Tape Warmth</em>), curva de graves estilo Pultec (~160 Hz), re-síntesis de formantes de ±3 tonos y dispersión de fase all-pass para modificar la huella espectral manteniendo toda la musicalidad.
             </p>
             <ul class="feature-bullets">
-              <li>Voces polifónicas con crossfade anti-click de 64 muestras.</li>
-              <li>Modos Reverse (◀ Rev) y Half-Time (⏳ 1/2) por cada rodaja individual.</li>
-              <li>Arrastra cualquier fragmento rebanado directamente a la pista de audio de tu DAW.</li>
+              <li><strong>Conmutación Instantánea [Audio 1] / [Audio 2]:</strong> Compara en tiempo real el audio original del Visor 1 frente al nuevo sample transformado del Visor 2.</li>
+              <li><strong>Escudo «🛡️ Verificar Derechos»:</strong> Analiza matemáticamente la divergencia espectral y confirma en pantalla que el Audio 2 está listo y libre de reclamaciones.</li>
+              <li><strong>Extracción por Segundos o Compases:</strong> Captura fragmentos de <code>3s / 10s / 30s</code> o compases exactos (<code>1 Bar / 2 Bars / 4 Bars</code>) sincronizados al BPM de tu DAW.</li>
             </ul>
-            <div class="bento-tag">Detección de Transientes en Tiempo Real</div>
+            <div class="bento-tag">Generación de Nuevo Sample Libre de Derechos en Visor 2</div>
           </article>
 
-          <!-- Tarjeta 2: Freesound API v2 (Destacada) -->
+          <!-- Tarjeta 2: Freesound API v2 + Salto de Página -->
           <article class="bento-card card-span-1 card-glow-orange" id="freesound">
             <div class="bento-icon-wrapper orange">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
             </div>
-            <h3 class="bento-title">Freesound API v2 Canónica Integrada</h3>
+            <h3 class="bento-title">Freesound API v2 + Salto Directo de Página</h3>
             <p class="bento-desc">
-              Busca en una biblioteca infinita de más de 500,000 muestras, one-shots y loops con filtros por duración (&lt;2s, loops 2-6s, frases), BPM nativo y licencias Creative Commons 0 (Dominio Público).
+              Accede a más de <strong>500,000 sonidos libres de regalías</strong> sin abrir el navegador. Filtra por licencias <strong>CC0 Libre</strong>, busca sonidos acústicamente <strong>🔗 Similares</strong> y usa la nueva casilla en blanco <strong>«Ir a pág:»</strong> para escribir cualquier página (ej. <code>1000</code> o <code>1653</code>) y entrar directo con <strong>Enter</strong>.
             </p>
-            <div class="freesound-spec-pill">Preescucha directa en bus DAW o Altavoces</div>
+            <div class="freesound-spec-pill">Casilla «Ir a pág:» + Salida Auto Inteligente</div>
           </article>
 
-          <!-- Tarjeta 3: Algoritmo Anti-Content ID (IA) -->
+          <!-- Tarjeta 3: Teclado MIDI & Rebanador MPC C1-G2 -->
           <article class="bento-card card-span-1 card-glow-purple">
             <div class="bento-icon-wrapper purple">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/></svg>
             </div>
-            <h3 class="bento-title">Derechos IA &amp; Anti-Content ID</h3>
+            <h3 class="bento-title">Tócalo con Tu Teclado MIDI (MPC C1–G2 o Cromático)</h3>
             <p class="bento-desc">
-              Transformación espectral inteligente de ±3 semitonos con micro-desafinación armónica que evade detecciones automáticas de copyright en YouTube, TikTok e Instagram preservando la musicalidad.
+              Con <strong>Rebanador MPC: SÍ</strong>, las 20 rodajas del sample (Visor 1 o Visor 2) se asignan a las notas <strong>C1 a G2</strong> de tu teclado MIDI (o teclas <code>1 a 8</code> de tu PC). Con <strong>Rebanador MPC: NO</strong>, puedes tocar el sample cromáticamente por todo el teclado como un sintetizador melódico.
             </p>
-            <div class="bento-tag">100% Transformación Creativa</div>
+            <div class="bento-tag">16 Voces Polifónicas Anti-Click</div>
           </article>
 
-          <!-- Tarjeta 4: Macro de Efectos Lo-Fi 12-Bit -->
+          <!-- Tarjeta 4: Rack DSP Lo-Fi 12-Bit, Reverse y Half-Time -->
           <article class="bento-card card-span-1 card-glow-teal">
             <div class="bento-icon-wrapper teal">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
             </div>
-            <h3 class="bento-title">Efectos Macro Lo-Fi &amp; Pitch</h3>
+            <h3 class="bento-title">Efectos Macro Lo-Fi, Reverse y Half-Time</h3>
             <p class="bento-desc">
-              Textura de sampler clásico con reducción de bits a 12-Bit estilo SP-1200 / MPC60, filtro de formantes cálido analógico y sincronización de tempo BPM con el transporte de tu DAW.
+              5 perillas hardware DSP (<strong>Lo-Fi 12-Bit</strong> estilo SP-1200, <strong>Tono ±12 st</strong>, <strong>Filtro paso-bajo</strong>, <strong>Ataque</strong> y <strong>Relajación</strong>) más botones <strong>◀ Rev (Reversa)</strong> y <strong>⏳ 1/2 (Half-Time)</strong> aplicables a todo el sample (1 clic) o a una sola rodaja (doble clic).
             </p>
+            <div class="bento-tag">Edición por Rodaja o Muestra Completa</div>
           </article>
 
-          <!-- Tarjeta 5: Conversor Audio a MIDI (Grande) -->
-          <article class="bento-card card-span-2 card-glow-blue">
+          <!-- Tarjeta 5: Conversor Audio a MIDI + Botón Manual PDF -->
+          <article class="bento-card card-span-1 card-glow-blue">
             <div class="bento-icon-wrapper blue">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
             </div>
-            <h3 class="bento-title">Conversor de Audio a MIDI (.mid) Instantáneo</h3>
+            <h3 class="bento-title">Conversor Audio a MIDI (.mid) y Manual PDF</h3>
             <p class="bento-desc">
-              Genera automáticamente archivos MIDI estándar analizando las notas y transientes de la muestra. Arrastra el botón <strong>"🎹 Convertir a MIDI"</strong> directamente a cualquier sintetizador, piano roll o pista de tu DAW para recrear melodías al instante.
+              Transcribe melodías y ritmos del sample activo y arrastra el botón <strong>«🎹 Convertir a MIDI»</strong> o <strong>«✂ Corte Exacto»</strong> directo a la línea de tiempo de tu DAW. Y si tienes dudas, pulsa el botón esquinero <strong>📘 Manual</strong> para abrir el PDF ilustrado.
             </p>
             <div class="bento-badges-row">
-              <span class="badge-mini">Drag &amp; Drop Nativo</span>
-              <span class="badge-mini">Resonadores Goertzel</span>
-              <span class="badge-mini">Detector de Tonalidad (Key)</span>
+              <span class="badge-mini">Drag &amp; Drop .WAV / .MID</span>
+              <span class="badge-mini">Manual PDF Incluido</span>
             </div>
           </article>
         </div>
@@ -394,29 +446,30 @@
     <section class="mpc-interactive-section section-padding" id="demo-mpc">
       <div class="container">
         <div class="section-header text-center">
-          <span class="section-tag">PRUEBA EN VIVO</span>
-          <h2 class="section-title">Experimenta el Modo Rebanador MPC</h2>
+          <span class="section-tag">PRUEBA EN VIVO CON ONDAS REACTIVAS</span>
+          <h2 class="section-title">Experimenta el Modo Rebanador MPC (C1–D#2)</h2>
           <p class="section-subtitle">
             Haz clic en los 16 pads o toca las teclas de tu teclado (1-4, Q-R, A-F, Z-V) para disparar las rodajas acústicas con el sintetizador Web Audio.
           </p>
         </div>
 
-        <div class="mpc-chassis">
+        <div class="mpc-chassis has-border-beam">
+          <div class="border-beam" aria-hidden="true"></div>
           <div class="mpc-top-display">
             <div class="lcd-screen">
               <div class="lcd-row">
-                <span class="lcd-title">CLIPSAMPLER // MPC CHOP MODE</span>
+                <span class="lcd-title">CLIPSAMPLER v2.6.1 // MPC CHOP MODE</span>
                 <span class="lcd-voice" id="lcdVoiceInfo">VOZ: LISTO</span>
               </div>
               <div class="lcd-row">
                 <span class="lcd-slice" id="lcdSliceInfo">RODAJA ACTIVA: NINGUNA</span>
-                <span class="lcd-bpm">130.00 BPM • STEREO</span>
+                <span class="lcd-bpm">77.50 BPM • CALOR ANALÓGICO</span>
               </div>
             </div>
             <div class="mpc-status-lights">
-              <div class="status-light active"><span></span>SYNC</div>
-              <div class="status-light active"><span></span>12-BIT</div>
-              <div class="status-light active"><span></span>ZERO-DENORM</div>
+              <div class="status-light active"><span></span>SYNC DAW</div>
+              <div class="status-light active"><span></span>TAPE WARMTH</div>
+              <div class="status-light active"><span></span>64-BIT DSP</div>
             </div>
           </div>
 
@@ -512,7 +565,7 @@
           </div>
 
           <div class="mpc-footer-note">
-            💡 <em>Consejo: Toca las teclas en tu teclado para disparar las rodajas a ritmo.</em>
+            💡 <em>En tu DAW puedes tocar estas rodajas con cualquier controlador o teclado MIDI (C1–G2) o cambiar a modo cromático para tocar melodías.</em>
           </div>
         </div>
       </div>
@@ -527,7 +580,7 @@
           <span class="section-tag">ESCUCHA EN ACCIÓN</span>
           <h2 class="section-title">Resultados Profesionales en Cualquier Género</h2>
           <p class="section-subtitle">
-            Escucha lo que puedes crear en segundos utilizando ClipSampler v2.6.1 en tu estación de trabajo favorita.
+            Escucha lo que puedes crear en segundos combinando Freesound API v2, Calor Analógico y el Rebanador MPC.
           </p>
         </div>
 
@@ -536,10 +589,10 @@
           <div class="audio-card" data-genre="lofi">
             <div class="audio-card-header">
               <div class="genre-badge lofi">LO-FI HIP HOP</div>
-              <span class="audio-duration">85 BPM • Vinyl 12-Bit</span>
+              <span class="audio-duration">85 BPM • Calor Analógico</span>
             </div>
             <h3 class="audio-track-title">Vintage Dusty Keys</h3>
-            <p class="audio-track-desc">Muestra rebanada con textura 12-Bit, filtro cálido a 450Hz y micro-pitch -2 semitonos.</p>
+            <p class="audio-track-desc">Sample descargado de Freesound y procesado en el Visor 2 con Calor Analógico, textura 12-Bit y filtro cálido.</p>
             <div class="audio-player-control">
               <button class="btn-audio-play" data-demo="lofi" aria-label="Reproducir demo Lo-Fi">
                 <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="6 4 20 12 6 20 6 4"/></svg>
@@ -554,10 +607,10 @@
           <div class="audio-card" data-genre="trap">
             <div class="audio-card-header">
               <div class="genre-badge trap">TRAP / DRILL</div>
-              <span class="audio-duration">140 BPM • Vocal Chop</span>
+              <span class="audio-duration">140 BPM • +3 Tonos IA</span>
             </div>
             <h3 class="audio-track-title">Nightfall 808 Glide</h3>
-            <p class="audio-track-desc">Extracción vocal rápida de 10s con algoritmo anti-derechos y conversión Audio a MIDI al piano roll.</p>
+            <p class="audio-track-desc">Muestra vocal transformada en el Visor 2 (+3 st IA Libre de Derechos) y convertida de Audio a MIDI para el Piano Roll.</p>
             <div class="audio-player-control">
               <button class="btn-audio-play" data-demo="trap" aria-label="Reproducir demo Trap">
                 <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="6 4 20 12 6 20 6 4"/></svg>
@@ -572,10 +625,10 @@
           <div class="audio-card" data-genre="reggaeton">
             <div class="audio-card-header">
               <div class="genre-badge reggaeton">URBANO / DANCEHALL</div>
-              <span class="audio-duration">96 BPM • Pluck Chop</span>
+              <span class="audio-duration">96 BPM • Teclado MIDI</span>
             </div>
             <h3 class="audio-track-title">Perreo Sintético 96</h3>
-            <p class="audio-track-desc">One-shot de guitarra acústica descargado desde Freesound API v2 y mapeado cromáticamente.</p>
+            <p class="audio-track-desc">One-shot hallado saltando a la página 1653 en Freesound API v2 y tocado cromáticamente desde el teclado MIDI.</p>
             <div class="audio-player-control">
               <button class="btn-audio-play" data-demo="reggaeton" aria-label="Reproducir demo Urbano">
                 <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="6 4 20 12 6 20 6 4"/></svg>
@@ -590,10 +643,10 @@
           <div class="audio-card" data-genre="house">
             <div class="audio-card-header">
               <div class="genre-badge house">DEEP HOUSE / TECH</div>
-              <span class="audio-duration">126 BPM • Reverse Loop</span>
+              <span class="audio-duration">126 BPM • Reverse &amp; 1/2</span>
             </div>
             <h3 class="audio-track-title">Subterranean Groove</h3>
-            <p class="audio-track-desc">Rodajas en reversa (Reverse) combinadas con envolvente de ataque suave para eliminar chasquidos.</p>
+            <p class="audio-track-desc">Rodajas seleccionadas con doble clic aplicando Reversa (◀ Rev) y Half-Time (⏳ 1/2) con envolvente anti-click.</p>
             <div class="audio-player-control">
               <button class="btn-audio-play" data-demo="house" aria-label="Reproducir demo House">
                 <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="6 4 20 12 6 20 6 4"/></svg>
@@ -608,68 +661,112 @@
     </section>
 
     <!-- =========================================================================
-         COMPATIBILIDAD CON DAWS Y SISTEMAS
+         MAGIC UI BENTO GRID DE ESPECIFICACIONES Y COMPATIBILIDAD
+         (VST3 • AAX • Windows • macOS • 64-bit • C++ JUCE + Border Beam)
          ========================================================================= -->
     <section class="compatibility-section section-padding" id="compatibilidad">
       <div class="container">
         <div class="section-header text-center">
-          <span class="section-tag">INTEGRACIÓN TOTAL</span>
-          <h2 class="section-title">Compatible con Tu Flujo de Trabajo y Tu DAW</h2>
+          <span class="section-tag glow">ARQUITECTURA DE ESTUDIO • MAGIC UI BENTO SPECS</span>
+          <h2 class="section-title">Bento Grid de Especificaciones y Compatibilidad</h2>
           <p class="section-subtitle">
-            Compilado como binario nativo de 64 bits para exprimir el 100% de la potencia de tu procesador.
+            Construido en <strong>C++ JUCE de 64 bits</strong> sobre un chasis de aluminio anodizado virtual. Compatible con los estándares profesionales de la industria musical.
           </p>
         </div>
 
-        <div class="daw-logos-grid">
-          <div class="daw-item">
-            <span class="daw-name">FL Studio</span>
-            <span class="daw-ver">20 / 21 / 24+</span>
-          </div>
-          <div class="daw-item">
-            <span class="daw-name">Ableton Live</span>
-            <span class="daw-ver">10 / 11 / 12+</span>
-          </div>
-          <div class="daw-item">
-            <span class="daw-name">Logic Pro</span>
-            <span class="daw-ver">10.7+ / 11+</span>
-          </div>
-          <div class="daw-item">
-            <span class="daw-name">Cubase / Nuendo</span>
-            <span class="daw-ver">11 / 12 / 13+</span>
-          </div>
-          <div class="daw-item">
-            <span class="daw-name">Studio One</span>
-            <span class="daw-ver">5 / 6+</span>
-          </div>
-          <div class="daw-item">
-            <span class="daw-name">Reaper</span>
-            <span class="daw-ver">6 / 7+</span>
-          </div>
-          <div class="daw-item">
-            <span class="daw-name">Bitwig Studio</span>
-            <span class="daw-ver">4 / 5+</span>
-          </div>
-        </div>
+        <!-- 6-Card Magic UI Specification Bento Grid -->
+        <div class="specs-bento-grid">
+          <!-- Spec 1: VST3 -->
+          <article class="spec-bento-card spec-span-2 has-border-beam">
+            <div class="border-beam" aria-hidden="true"></div>
+            <div class="spec-bento-top">
+              <span class="spec-chip cyan">FORMATO ESTÁNDAR MUNDIAL</span>
+              <span class="spec-mono-code">Steinberg SDK 3.7+</span>
+            </div>
+            <div class="spec-bento-main">
+              <div class="spec-big-badge">VST3</div>
+              <div class="spec-bento-copy">
+                <h3>Instrumento Virtual VST3 Nativo</h3>
+                <p>Reconocido como <strong>Instrumento (Synth/Sampler)</strong> con entrada MIDI completa, automatización de parámetros por muestra y arrastrar/soltar directo de archivos <code>.WAV</code> y <code>.MID</code> hacia tu pista.</p>
+              </div>
+            </div>
+            <div class="spec-daw-pills">
+              <span>FL Studio 20/21/24+</span>
+              <span>Ableton Live 10/11/12+</span>
+              <span>Cubase / Nuendo</span>
+              <span>Studio One</span>
+              <span>Reaper</span>
+              <span>Bitwig</span>
+            </div>
+          </article>
 
-        <div class="specs-box">
-          <div class="spec-col">
-            <h4>🖥️ Windows</h4>
-            <ul>
-              <li><strong>Formato:</strong> VST3 (64-bit)</li>
-              <li><strong>SO:</strong> Windows 10 u 11 (64-bit)</li>
-              <li><strong>Instalador:</strong> Asistente automático (.exe)</li>
-              <li><strong>RAM mínima:</strong> 4 GB (8 GB recomendado)</li>
-            </ul>
-          </div>
-          <div class="spec-col">
-            <h4>🍎 macOS (Universal Binary)</h4>
-            <ul>
-              <li><strong>Formatos:</strong> Audio Unit (.component), VST3, Standalone (.app)</li>
-              <li><strong>Arquitecturas:</strong> Apple Silicon (M1/M2/M3/M4) y x86_64 (Intel)</li>
-              <li><strong>SO:</strong> macOS 10.15 Catalina hasta macOS 15 Sequoia</li>
-              <li><strong>Optimización:</strong> Aceleración SIMD nativa</li>
-            </ul>
-          </div>
+          <!-- Spec 2: AAX -->
+          <article class="spec-bento-card spec-span-1 has-border-beam-subtle">
+            <div class="spec-bento-top">
+              <span class="spec-chip purple">ESTUDIOS DE GRABACIÓN</span>
+              <span class="spec-mono-code">Avid Audio</span>
+            </div>
+            <div class="spec-big-badge purple-text">AAX</div>
+            <h3>Arquitectura AAX Native &amp; AU</h3>
+            <p>Soporte para sesiones profesionales en <strong>Avid Pro Tools</strong> (<code>.aaxplugin</code>) y <strong>Logic Pro</strong> (Audio Unit <code>.component</code> en macOS).</p>
+            <div class="spec-daw-pills">
+              <span>Avid Pro Tools</span>
+              <span>Logic Pro X / 11</span>
+            </div>
+          </article>
+
+          <!-- Spec 3: Windows -->
+          <article class="spec-bento-card spec-span-1 has-border-beam-subtle">
+            <div class="spec-bento-top">
+              <span class="spec-chip teal">SISTEMA OPERATIVO</span>
+              <span class="spec-mono-code">x86_64 MSVC</span>
+            </div>
+            <div class="spec-os-title">
+              <svg class="spec-os-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M3 5.548l7.065-.966v6.814H3V5.548zm0 12.904l7.065.966v-6.814H3v5.848zm7.857 1.073L21 21V12.604h-10.143v6.921zm0-14.05V11.4H21V3l-10.143 1.475z"/></svg>
+              <h3>Windows 10 &amp; 11</h3>
+            </div>
+            <p>Instalador automático <code>.exe</code> <strong>100% en español</strong> que instala <code>ClipSampler.vst3</code> en <code>Common Files\VST3</code> junto con el <code>Manual_ClipSampler.pdf</code> oficial.</p>
+            <div class="spec-daw-pills">
+              <span>Instalador 100% Español</span>
+              <span>Manual PDF Incluido</span>
+            </div>
+          </article>
+
+          <!-- Spec 4: macOS -->
+          <article class="spec-bento-card spec-span-1 has-border-beam-subtle">
+            <div class="spec-bento-top">
+              <span class="spec-chip orange">UNIVERSAL BINARY</span>
+              <span class="spec-mono-code">arm64 + x86_64</span>
+            </div>
+            <div class="spec-os-title">
+              <svg class="spec-os-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M15.96 6.33c.67-.81 1.12-1.94 1-3.08-.96.04-2.13.64-2.82 1.45-.61.7-.15 1.85-.99 2.97 1.08.08 2.14-.53 2.81-1.34"/></svg>
+              <h3>macOS Native</h3>
+            </div>
+            <p>Binario Universal nativo para chips <strong>Apple Silicon (M1 / M2 / M3 / M4)</strong> y procesadores <strong>Intel</strong> sin necesidad de Rosetta 2. Desde macOS Catalina hasta Sequoia.</p>
+            <div class="spec-daw-pills">
+              <span>Apple Silicon M1–M4</span>
+              <span>Intel Mac</span>
+            </div>
+          </article>
+
+          <!-- Spec 5: 64-bit & C++ JUCE (Span 1) -->
+          <article class="spec-bento-card spec-span-1 has-border-beam">
+            <div class="border-beam" aria-hidden="true"></div>
+            <div class="spec-bento-top">
+              <span class="spec-chip cyan">MOTOR DE AUDIO REAL-TIME</span>
+              <span class="spec-mono-code">Zero-Latency</span>
+            </div>
+            <div class="spec-dual-badges">
+              <span class="spec-big-badge small">64-BIT</span>
+              <span class="spec-big-badge small teal-text">C++ JUCE</span>
+            </div>
+            <h3>Arquitectura C++23 &amp; JUCE 8 (64-bit)</h3>
+            <p>Motor DSP libre de bloqueos (<code>ScopedNoDenormals</code>), interpolación de Lagrange para pitch shifting, crossfade anti-click de 64 muestras y consumo de CPU inferior al 2%.</p>
+            <div class="spec-daw-pills">
+              <span>64-Bit Audio Engine</span>
+              <span>C++23 / JUCE 8.0.4</span>
+            </div>
+          </article>
         </div>
       </div>
     </section>
@@ -683,7 +780,7 @@
           <span class="section-tag glow">OFERTA ESPECIAL DE LANZAMIENTO</span>
           <h2 class="section-title">Invierte en Tu Música con una Licencia Vitalicia</h2>
           <p class="section-subtitle">
-            Sin mensualidades ni pagos ocultos. Una sola compra te otorga acceso permanente al plugin en Windows y Mac.
+            Sin mensualidades ni pagos ocultos. Una sola compra te otorga acceso permanente al plugin en Windows y Mac con el Manual PDF incluido.
           </p>
         </div>
 
@@ -692,36 +789,37 @@
           <div class="pricing-feature-preview-card">
             <div class="preview-card-header">
               <span class="preview-badge">CERTIFICACIÓN Y ESPECIFICACIONES</span>
-              <h3 class="preview-title">Licencia Oficial Verificada</h3>
-              <p class="preview-subtitle">Garantía total de por vida con soporte prioritario e instaladores nativos para tu sistema operativo.</p>
+              <h3 class="preview-title">Licencia Oficial Verificada v2.6.1</h3>
+              <p class="preview-subtitle">Garantía total de por vida con instaladores en español, Manual PDF integrado en el botón esquinero y soporte directo.</p>
             </div>
 
-            <div class="gallery-img-container" data-full="clipsampler-features-card.png" role="button" tabindex="0" aria-label="Ampliar lista de características oficiales en alta resolución">
-              <img src="clipsampler-features-card.png" alt="Licencia Vitalicia ClipSampler v2.6.1 - Características Oficiales" class="gallery-img">
+            <div class="gallery-img-container" data-full="clipsampler-analog-warmth-ui.png" role="button" tabindex="0" aria-label="Ampliar captura de ClipSampler v2.6.1 con Calor Analógico y Manual">
+              <img src="clipsampler-analog-warmth-ui.png" alt="ClipSampler v2.6.1 Pro Edition - Calor Analógico en Visor 2 y Botón Manual" class="gallery-img">
               <div class="gallery-zoom-badge">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
-                <span>Ampliar Lista en HD</span>
+                <span>Ver Interfaz HD</span>
               </div>
             </div>
 
             <div class="preview-badges-row">
               <div class="mini-spec-item">
                 <span class="spec-label">Compatibilidad</span>
-                <strong class="spec-value">Win 10/11 & macOS</strong>
+                <strong class="spec-value">Win 10/11 &amp; macOS</strong>
               </div>
               <div class="mini-spec-item">
-                <span class="spec-label">Formatos</span>
-                <strong class="spec-value">VST3 + AU + App</strong>
+                <span class="spec-label">Formatos 64-Bit</span>
+                <strong class="spec-value">VST3 + AAX + AU</strong>
               </div>
               <div class="mini-spec-item">
-                <span class="spec-label">Activación</span>
-                <strong class="spec-value">Vitalicia Inmediata</strong>
+                <span class="spec-label">Idioma y Guía</span>
+                <strong class="spec-value">100% Español + PDF</strong>
               </div>
             </div>
           </div>
 
-          <!-- Tarjeta de Precio y Checkout PayPal ($29 USD) -->
-          <div class="pricing-card card-featured">
+          <!-- Tarjeta de Precio y Checkout PayPal ($29 USD) con Border Beam -->
+          <div class="pricing-card card-featured has-border-beam">
+            <div class="border-beam" aria-hidden="true"></div>
             <div class="pricing-badge-popular">ACCESO COMPLETO DE POR VIDA</div>
 
             <div class="pricing-header">
@@ -744,31 +842,27 @@
             <ul class="pricing-features-list">
               <li>
                 <svg class="check-icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
-                <span><strong>Licencia Vitalicia</strong> sin pagos mensuales</span>
+                <span><strong>Licencia Vitalicia</strong> sin pagos mensuales (2 activaciones incluidas)</span>
               </li>
               <li>
                 <svg class="check-icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
-                <span>Instalador para <strong>Windows 10/11 (VST3)</strong></span>
+                <span>Instaladores <strong>100% en Español</strong> para <strong>Windows (VST3)</strong> y <strong>macOS (VST3/AAX/AU)</strong></span>
               </li>
               <li>
                 <svg class="check-icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
-                <span>Paquete <strong>macOS Universal Binary (AU + VST3 + App)</strong></span>
+                <span>Conexión a <strong>Freesound API v2 (+500,000 sonidos)</strong> con salto directo de página</span>
               </li>
               <li>
                 <svg class="check-icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
-                <span>Acceso completo a <strong>Freesound API v2 (+500,000 sonidos)</strong></span>
+                <span><strong>Transformación Analógica (Calor Analógico &amp; ±3 st IA)</strong> para samples libres de derechos</span>
               </li>
               <li>
                 <svg class="check-icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
-                <span>Motor <strong>MPC Auto-Chop</strong> con voces polifónicas anti-click</span>
+                <span>Motor <strong>Rebanador MPC (C1–G2)</strong> para tocar con tu <strong>teclado MIDI</strong></span>
               </li>
               <li>
                 <svg class="check-icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
-                <span>Conversor de <strong>Audio a MIDI</strong> para Piano Roll</span>
-              </li>
-              <li>
-                <svg class="check-icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
-                <span>Soporte técnico prioritario y <strong>actualizaciones gratuitas</strong></span>
+                <span>Conversor de <strong>Audio a MIDI (.mid)</strong> + <strong>Manual PDF Oficial</strong> integrado</span>
               </li>
             </ul>
 
@@ -797,57 +891,47 @@
         <div class="section-header text-center">
           <span class="section-tag">DUDAS Y RESPUESTAS</span>
           <h2 class="section-title">Preguntas Frecuentes</h2>
-          <p class="section-subtitle">Todo lo que necesitas saber antes de empezar a usar ClipSampler.</p>
+          <p class="section-subtitle">Todo lo que necesitas saber sobre ClipSampler v2.6.1 antes de empezar.</p>
         </div>
 
         <div class="faq-accordion" id="faqAccordion">
           <details class="faq-item" open>
             <summary class="faq-question">
+              <span>¿Cómo funciona la Transformación Analógica en el Visor 2 para crear un sample libre de derechos?</span>
+              <svg class="faq-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+            </summary>
+            <div class="faq-answer">
+              <p>Cuando cargas cualquier sonido en el Visor 1 (desde Freesound, tu disco duro o modo Uso Libre Web) y pulsas <strong>📼 Calor Analógico</strong> o <strong>▲/▼ Alterar ±3 Tonos</strong>, el plugin procesa la señal mediante saturación armónica de cinta, preservación de formantes y dispersión de fase, generando un <strong>nuevo sample en el Visor 2</strong>. Puedes verificar su divergencia espectral con el botón <strong>🛡️ Verificar Derechos</strong> y tocarlo inmediatamente con tu teclado MIDI.</p>
+            </div>
+          </details>
+
+          <details class="faq-item">
+            <summary class="faq-question">
+              <span>¿Cómo funciona la nueva casilla para saltar de página en Freesound y el botón Manual?</span>
+              <svg class="faq-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+            </summary>
+            <div class="faq-answer">
+              <p>En la barra inferior de la pestaña de <strong>Freesound</strong> encontrarás la casilla en blanco <strong>«Ir a pág:»</strong>. Solo escribe el número de página al que deseas ir (por ejemplo, <code>1000</code> o <code>1653</code>) y presiona la tecla <strong>Enter</strong> para saltar al instante sin tener que pulsar <em>Siguiente</em> cientos de veces. Además, en la esquina superior derecha del plugin (al lado de <em>Limpiar Caché</em>) tienes el botón <strong>📘 Manual</strong>, que abre automáticamente el PDF actualizado del manual instalado junto con el plugin.</p>
+            </div>
+          </details>
+
+          <details class="faq-item">
+            <summary class="faq-question">
               <span>¿Cómo recibo mi plugin y mi clave de activación después de pagar?</span>
               <svg class="faq-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
             </summary>
             <div class="faq-answer">
-              <p>Tras completar tu pago de <strong>$29 USD</strong> vía PayPal a la cuenta <strong>jhonerikpriv01@gmail.com</strong>, recibirás de forma automática en tu correo electrónico el enlace directo de descarga para Windows y macOS junto con tu archivo de licencia vitalicia.</p>
+              <p>Tras completar tu pago de <strong>$29 USD</strong> vía PayPal a la cuenta <strong>jhonerikpriv01@gmail.com</strong>, recibirás en tu correo electrónico el enlace directo de descarga del instalador en español para Windows y macOS (con el Manual PDF incluido) junto con tu clave de licencia vitalicia.</p>
             </div>
           </details>
 
           <details class="faq-item">
             <summary class="faq-question">
-              <span>¿Funciona en Mac con procesadores Apple Silicon (M1, M2, M3, M4)?</span>
+              <span>¿Funciona en Mac con procesadores Apple Silicon (M1, M2, M3, M4) y en Windows 10/11?</span>
               <svg class="faq-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
             </summary>
             <div class="faq-answer">
-              <p>Sí, al 100%. ClipSampler está compilado como <strong>Universal Binary (arm64 + x86_64)</strong>, lo que significa que corre de forma nativa sin necesidad de emulación Rosetta 2 en todos los modelos de Mac con chips Apple Silicon o procesadores Intel.</p>
-            </div>
-          </details>
-
-          <details class="faq-item">
-            <summary class="faq-question">
-              <span>¿Necesito una suscripción mensual o pagar por actualizaciones?</span>
-              <svg class="faq-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
-            </summary>
-            <div class="faq-answer">
-              <p>No. Creemos en el software justo para productores. Tu pago de $29 USD es un pago único que incluye todas las actualizaciones futuras de la versión v2.x sin ningún cargo recurrente.</p>
-            </div>
-          </details>
-
-          <details class="faq-item">
-            <summary class="faq-question">
-              <span>¿Es legal usar los sonidos descargados desde Freesound.org en mis canciones comerciales?</span>
-              <svg class="faq-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
-            </summary>
-            <div class="faq-answer">
-              <p>Sí. Nuestro buscador integrado incluye filtros automatizados para priorizar muestras bajo licencia <strong>Creative Commons 0 (CC0 - Dominio Público)</strong>, las cuales son 100% libres de regalías para uso comercial y no comercial. Consulta nuestro EULA para más detalles.</p>
-            </div>
-          </details>
-
-          <details class="faq-item">
-            <summary class="faq-question">
-              <span>¿Puedo instalar el plugin en mi computadora de escritorio y en mi laptop?</span>
-              <svg class="faq-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
-            </summary>
-            <div class="faq-answer">
-              <p>Sí. Tu licencia personal te permite activar el plugin en hasta 2 computadoras de tu propiedad (por ejemplo, tu PC de estudio y tu MacBook portátil para shows en vivo o viajes).</p>
+              <p>Sí, al 100%. ClipSampler v2.6.1 está compilado en C++ JUCE de 64 bits tanto para <strong>Windows 10/11 (VST3)</strong> como para <strong>macOS Universal Binary (arm64 + x86_64 en formatos VST3, AAX y AU)</strong>.</p>
             </div>
           </details>
         </div>
@@ -866,7 +950,7 @@
           <span class="brand-title">CLIPSAMPLER</span>
         </div>
         <p class="footer-desc">
-          Instrumento virtual VST3 / AU para producción musical moderna. Diseñado con JUCE 8 y C++23 para máxima fidelidad y cero latencia.
+          Instrumento virtual VST3 / AAX / AU de 64 bits para producción musical moderna. Diseñado con C++23 y JUCE 8 para máxima fidelidad y cero latencia.
         </p>
         <div class="paypal-security-badge">
           <span>🛡️ Pagos Verificados con PayPal</span>
@@ -876,28 +960,28 @@
       <div class="footer-col">
         <h4 class="footer-heading">Navegación</h4>
         <ul class="footer-links">
-          <li><a href="#capturas">Software Real</a></li>
-          <li><a href="#caracteristicas">Características</a></li>
-          <li><a href="#demo-mpc">Demo MPC</a></li>
-          <li><a href="#freesound">Freesound API v2</a></li>
-          <li><a href="#precio">Comprar Licencia</a></li>
+          <li><a href="#capturas">Interfaz Real v2.6.1</a></li>
+          <li><a href="#transformacion">Calor Analógico (Visor 2)</a></li>
+          <li><a href="#caracteristicas">Freesound API v2</a></li>
+          <li><a href="#compatibilidad">Bento Grid de Specs</a></li>
+          <li><a href="Manual_ClipSampler.pdf" target="_blank" rel="noopener">📘 Manual Oficial (PDF)</a></li>
         </ul>
       </div>
 
       <div class="footer-col">
-        <h4 class="footer-heading">Formatos</h4>
+        <h4 class="footer-heading">Especificaciones</h4>
         <ul class="footer-links">
-          <li><span>VST3 (Windows 64-bit)</span></li>
-          <li><span>Audio Unit (macOS)</span></li>
-          <li><span>VST3 (macOS Universal)</span></li>
-          <li><span>Standalone (.exe / .app)</span></li>
+          <li><span>VST3 / AAX / AU (64-bit)</span></li>
+          <li><span>Windows 10 &amp; 11 (Español)</span></li>
+          <li><span>macOS Universal (M1–M4 &amp; Intel)</span></li>
+          <li><span>Motor Nativo C++ JUCE</span></li>
         </ul>
       </div>
 
       <div class="footer-col">
         <h4 class="footer-heading">Contacto &amp; Soporte</h4>
         <p class="footer-contact">
-          Para activación manual o consultas:<br>
+          Para activación o consultas:<br>
           <a href="mailto:jhonerikpriv01@gmail.com" class="link-contact">jhonerikpriv01@gmail.com</a>
         </p>
         <p class="footer-time">Respuesta en menos de 2 horas</p>
@@ -906,9 +990,9 @@
 
     <div class="footer-bottom">
       <div class="container footer-bottom-inner">
-        <p>&copy; 2026 ClipSampler Audio Innovations. Todos los derechos reservados.</p>
+        <p>&copy; 2026 ClipSampler AudioInnovations. Todos los derechos reservados.</p>
         <p class="disclaimer-text">
-          VST es una marca registrada de Steinberg Media Technologies GmbH. Audio Units es una marca registrada de Apple Inc. Freesound.org es propiedad de MTG Universitat Pompeu Fabra.
+          VST es una marca registrada de Steinberg Media Technologies GmbH. AAX es una marca registrada de Avid Technology, Inc. Audio Units es una marca registrada de Apple Inc. Freesound.org es propiedad de MTG Universitat Pompeu Fabra.
         </p>
       </div>
     </div>
@@ -957,7 +1041,6 @@
 
       <!-- Formulario oficial de envío a PayPal -->
       <form action="https://www.paypal.com/cgi-bin/webscr" method="post" target="_blank" class="paypal-form" id="paypalDirectForm">
-        <!-- Comando PayPal Standard -->
         <input type="hidden" name="cmd" value="_xclick">
         <input type="hidden" name="business" value="jhonerikpriv01@gmail.com">
         <input type="hidden" name="item_name" value="ClipSampler v2.6.1 - Licencia Vitalicia Oficial (Windows y macOS) - $29 USD">

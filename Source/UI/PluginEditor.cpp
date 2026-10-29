@@ -40,6 +40,11 @@ ClipSamplerAudioProcessorEditor::ClipSamplerAudioProcessorEditor(ClipSamplerAudi
     cleanCacheButton.onClick = [this] { onCleanCacheClicked(); };
     addAndMakeVisible(cleanCacheButton);
 
+    manualButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff0284c7)); // Azul Zafiro destacado
+    manualButton.setColour(juce::TextButton::textColourOffId, juce::Colours::white);
+    manualButton.onClick = [this] { onManualButtonClicked(); };
+    addAndMakeVisible(manualButton);
+
     // =========================================================================
     // SECCIÓN 1: PANEL SUPERIOR (PLATAFORMA, ENLACE, TIEMPO, 3s/10s/30s Y DERECHOS IA)
     // =========================================================================
@@ -410,7 +415,7 @@ ClipSamplerAudioProcessorEditor::ClipSamplerAudioProcessorEditor(ClipSamplerAudi
     // Ergonomía HIG (desktop-ergonomics-hig): Cursores interactivos y Tooltips con atajos
     // =========================================================================
     juce::Component* interactiveControls[] = {
-        &licenseBadgeButton, &freesoundButton, &updateExtractorButton, &cleanCacheButton,
+        &licenseBadgeButton, &freesoundButton, &updateExtractorButton, &cleanCacheButton, &manualButton,
         &loadLocalFileButton, &usoLibreButton, &platformYoutubeBtn, &platformTiktokBtn, &platformInstagramBtn,
         &pasteButton, &detectDurationButton, &startTimeSlider, &extractModeButton,
         &extract3sButton, &extract10sButton, &extract30sButton, &newExtractionButton,
@@ -425,6 +430,7 @@ ClipSamplerAudioProcessorEditor::ClipSamplerAudioProcessorEditor(ClipSamplerAudi
 
     loadLocalFileButton.setTooltip(juce::String::fromUTF8("Cargar muestra de audio local en el Visor [Atajo: Ctrl+O]"));
     freesoundButton.setTooltip(juce::String::fromUTF8("Abrir explorador de muestras Freesound API v2 [Atajo: Ctrl+F]"));
+    manualButton.setTooltip(juce::String::fromUTF8("Abrir el Manual Oficial de Usuario en PDF actualizado con interfaz gráfica"));
     playButton.setTooltip(juce::String::fromUTF8("Reproducir vista previa de la muestra activa [Atajo: Espacio]"));
     stopButton.setTooltip(juce::String::fromUTF8("Detener reproducción [Atajo: Espacio / Esc]"));
     exactCutButton.setTooltip(juce::String::fromUTF8("Seleccionar o arrastrar únicamente la rodaja MPC activa hacia tu DAW"));
@@ -1375,6 +1381,10 @@ bool ClipSamplerAudioProcessorEditor::keyPressed(const juce::KeyPress& key)
         return false;
     }
 
+    // Si hay un modal abierto (Freesound o Licencia), no interceptamos teclas normales (1-8 o Espacio)
+    if (freesoundOverlay.isVisible() || licenseOverlay.isVisible())
+        return false;
+
     // Barra Espaciadora: Reproducir / Detener vista previa
     if (key == juce::KeyPress::spaceKey)
     {
@@ -1442,6 +1452,57 @@ void ClipSamplerAudioProcessorEditor::onUpdateExtractorClicked()
 void ClipSamplerAudioProcessorEditor::onCleanCacheClicked()
 {
     audioProcessor.cleanAudioCache();
+    timerCallback();
+}
+
+void ClipSamplerAudioProcessorEditor::onManualButtonClicked()
+{
+    juce::Array<juce::File> candidateFiles;
+
+    // 1. Ubicaciones de instalación oficiales (Windows ProgramData / Program Files y macOS Library / Applications)
+    candidateFiles.add(juce::File::getSpecialLocation(juce::File::commonApplicationDataDirectory)
+                           .getChildFile("ClipSampler")
+                           .getChildFile("Manual_ClipSampler.pdf"));
+    candidateFiles.add(juce::File::getSpecialLocation(juce::File::globalApplicationsDirectory)
+                           .getChildFile("ClipSampler")
+                           .getChildFile("Manual_ClipSampler.pdf"));
+    candidateFiles.add(juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory)
+                           .getChildFile("ClipSampler")
+                           .getChildFile("Manual_ClipSampler.pdf"));
+
+   #if JUCE_MAC
+    candidateFiles.add(juce::File("/Library/Application Support/ClipSampler/Manual_ClipSampler.pdf"));
+    candidateFiles.add(juce::File("/Library/Audio/Plug-Ins/VST3/ClipSampler.vst3/Contents/Resources/Manual_ClipSampler.pdf"));
+   #endif
+
+    // 2. Ubicación relativa al binario del plugin o entorno de desarrollo
+    juce::File binDir = juce::File::getSpecialLocation(juce::File::currentExecutableFile).getParentDirectory();
+    for (int depth = 0; depth < 6 && binDir.exists(); ++depth)
+    {
+        candidateFiles.add(binDir.getChildFile("Manual_ClipSampler.pdf"));
+        candidateFiles.add(binDir.getChildFile("Resources").getChildFile("Manual_ClipSampler.pdf"));
+        binDir = binDir.getParentDirectory();
+    }
+
+    juce::File appDir = juce::File::getSpecialLocation(juce::File::currentApplicationFile).getParentDirectory();
+    for (int depth = 0; depth < 6 && appDir.exists(); ++depth)
+    {
+        candidateFiles.add(appDir.getChildFile("Manual_ClipSampler.pdf"));
+        appDir = appDir.getParentDirectory();
+    }
+
+    for (const auto& pdfFile : candidateFiles)
+    {
+        if (pdfFile.existsAsFile())
+        {
+            pdfFile.startAsProcess();
+            audioProcessor.setStatusMessage(juce::String::fromUTF8("📘 Manual Oficial de Usuario (PDF) abierto: ") + pdfFile.getFileName());
+            timerCallback();
+            return;
+        }
+    }
+
+    audioProcessor.setStatusMessage(juce::String::fromUTF8("No se encontró Manual_ClipSampler.pdf. Reinstala el plugin para restaurar el manual."));
     timerCallback();
 }
 
@@ -1670,16 +1731,19 @@ void ClipSamplerAudioProcessorEditor::resized()
     bpmKeyBadgeLabel.setFont(juce::Font(juce::jlimit(9.5f, 14.0f, 11.2f * uiScale), juce::Font::bold));
 
     // -------------------------------------------------------------------------
-    // 0. Encabezado Responsivo (los 4 botones derechos ocupan máximo el 48% del ancho)
+    // 0. Encabezado Responsivo (los 5 botones derechos ocupan máximo el 54% del ancho)
     // -------------------------------------------------------------------------
     const int headerH = juce::roundToInt(54.0f * hScale);
     auto headerArea = getLocalBounds().removeFromTop(headerH).reduced(12, juce::roundToInt(9.0f * hScale));
 
-    const int cleanBtnW     = juce::jlimit(68, 112, juce::roundToInt(totalW * 0.090f));
-    const int updateBtnW    = juce::jlimit(80, 128, juce::roundToInt(totalW * 0.105f));
-    const int freesoundBtnW = juce::jlimit(88, 138, juce::roundToInt(totalW * 0.115f));
-    const int licenseBtnW   = juce::jlimit(145, 235, juce::roundToInt(totalW * 0.190f));
+    const int manualBtnW    = juce::jlimit(64, 98,  juce::roundToInt(totalW * 0.080f));
+    const int cleanBtnW     = juce::jlimit(68, 108, juce::roundToInt(totalW * 0.088f));
+    const int updateBtnW    = juce::jlimit(78, 122, juce::roundToInt(totalW * 0.098f));
+    const int freesoundBtnW = juce::jlimit(84, 130, juce::roundToInt(totalW * 0.106f));
+    const int licenseBtnW   = juce::jlimit(136, 210, juce::roundToInt(totalW * 0.172f));
 
+    manualButton.setBounds(headerArea.removeFromRight(manualBtnW));
+    headerArea.removeFromRight(5);
     cleanCacheButton.setBounds(headerArea.removeFromRight(cleanBtnW));
     headerArea.removeFromRight(5);
     updateExtractorButton.setBounds(headerArea.removeFromRight(updateBtnW));

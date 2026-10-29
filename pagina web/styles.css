@@ -4,12 +4,17 @@
    ========================================================================== */
 
 :root {
-  /* Paleta Base Oscura (Audio Studio Dark) */
-  --bg-base: #060a12;
-  --bg-surface: #0a1120;
-  --bg-card: #0f192d;
-  --bg-card-hover: #15233e;
-  --bg-card-glass: rgba(15, 25, 45, 0.75);
+  /* Paleta Base: Textura de Aluminio Anodizado Oscuro (#0D0D11 - React Bits / Aceternity UI) */
+  --bg-base: #0D0D11;
+  --bg-surface: #11131A;
+  --bg-card: #141722;
+  --bg-card-hover: #191E2D;
+  --bg-card-glass: rgba(20, 23, 34, 0.78);
+
+  /* Curvas de Animación Personalizadas (ui-animations & review-animations) */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
 
   /* Acentos de Color y Luces de Estudio */
   --cyan-primary: #38bdf8;
@@ -33,20 +38,27 @@
   --text-muted: #64748b;
 
   /* Bordes y Sombras */
-  --border-subtle: rgba(56, 189, 248, 0.12);
-  --border-highlight: rgba(56, 189, 248, 0.38);
-  --shadow-lg: 0 20px 40px -15px rgba(0, 0, 0, 0.7);
+  --border-subtle: rgba(56, 189, 248, 0.14);
+  --border-highlight: rgba(56, 189, 248, 0.42);
+  --shadow-lg: 0 20px 40px -15px rgba(0, 0, 0, 0.78);
   --shadow-cyan-glow: 0 0 35px -5px rgba(56, 189, 248, 0.32);
 
   /* Tipografías */
   --font-heading: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
   --font-body: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
 
   /* Espaciado */
   --radius-sm: 8px;
   --radius-md: 14px;
   --radius-lg: 22px;
   --radius-full: 9999px;
+}
+
+@property --beam-angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
 }
 
 /* Reset y Reglas Universales */
@@ -192,7 +204,7 @@ h1, h2, h3, h4 {
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
   border-bottom: 1px solid rgba(56, 189, 248, 0.1);
-  transition: all 0.25s ease;
+  transition: transform 0.25s ease, opacity 0.25s ease, background-color 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease, color 0.25s ease;
 }
 
 .nav-container {
@@ -291,7 +303,7 @@ h1, h2, h3, h4 {
   border-radius: var(--radius-sm);
   cursor: pointer;
   border: 1px solid transparent;
-  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.22s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.22s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.22s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.22s cubic-bezier(0.16, 1, 0.3, 1), color 0.22s cubic-bezier(0.16, 1, 0.3, 1);
   min-height: 44px; /* Touch target minimum */
   padding: 0 20px;
   font-size: 0.95rem;
@@ -534,7 +546,7 @@ h1, h2, h3, h4 {
   padding: 4px 10px;
   border-radius: 5px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: transform 0.2s ease, opacity 0.2s ease, background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, color 0.2s ease;
 }
 
 .win-tab-btn:hover {
@@ -651,7 +663,7 @@ h1, h2, h3, h4 {
   font-size: 0.78rem;
   cursor: pointer;
   flex-shrink: 0;
-  transition: all 0.2s;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.2s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .btn-play-hero-mini:hover {
@@ -815,7 +827,7 @@ h1, h2, h3, h4 {
   font-weight: 700;
   font-size: 0.8rem;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: transform 0.2s ease, opacity 0.2s ease, background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, color 0.2s ease;
 }
 
 .btn-plugin-play:hover {
@@ -846,7 +858,7 @@ h1, h2, h3, h4 {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  transition: all 0.1s ease;
+  transition: transform 0.1s ease, opacity 0.1s ease, background-color 0.1s ease, border-color 0.1s ease, box-shadow 0.1s ease, color 0.1s ease;
   min-height: 48px;
 }
 
@@ -893,7 +905,7 @@ h1, h2, h3, h4 {
   border-radius: var(--radius-md);
   overflow: hidden;
   box-shadow: var(--shadow-lg);
-  transition: all 0.28s ease;
+  transition: transform 0.28s ease, opacity 0.28s ease, background-color 0.28s ease, border-color 0.28s ease, box-shadow 0.28s ease, color 0.28s ease;
   display: flex;
   flex-direction: column;
 }
@@ -1070,7 +1082,7 @@ h1, h2, h3, h4 {
   display: flex;
   flex-direction: column;
   position: relative;
-  transition: all 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.28s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.28s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.28s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.28s cubic-bezier(0.16, 1, 0.3, 1), color 0.28s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .bento-card:hover {
@@ -1315,7 +1327,7 @@ h1, h2, h3, h4 {
   cursor: pointer;
   color: #ffffff;
   user-select: none;
-  transition: all 0.08s ease;
+  transition: transform 0.08s ease, opacity 0.08s ease, background-color 0.08s ease, border-color 0.08s ease, box-shadow 0.08s ease, color 0.08s ease;
   box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.1);
 }
 
@@ -1377,7 +1389,7 @@ h1, h2, h3, h4 {
   padding: 22px;
   display: flex;
   flex-direction: column;
-  transition: all 0.25s ease;
+  transition: transform 0.25s ease, opacity 0.25s ease, background-color 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease, color 0.25s ease;
 }
 
 .audio-card:hover {
@@ -1441,7 +1453,7 @@ h1, h2, h3, h4 {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  transition: all 0.2s ease;
+  transition: transform 0.2s ease, opacity 0.2s ease, background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, color 0.2s ease;
 }
 
 .btn-audio-play:hover {
@@ -1492,7 +1504,7 @@ h1, h2, h3, h4 {
   flex-direction: column;
   align-items: center;
   min-width: 140px;
-  transition: all 0.2s ease;
+  transition: transform 0.2s ease, opacity 0.2s ease, background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, color 0.2s ease;
 }
 
 .daw-item:hover {
@@ -1789,7 +1801,7 @@ h1, h2, h3, h4 {
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-sm);
   padding: 16px 20px;
-  transition: all 0.2s ease;
+  transition: transform 0.2s ease, opacity 0.2s ease, background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, color 0.2s ease;
 }
 
 .faq-item[open] {
@@ -1989,7 +2001,7 @@ h1, h2, h3, h4 {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.2s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .lightbox-close:hover {
@@ -2071,7 +2083,7 @@ h1, h2, h3, h4 {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.2s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .modal-close:hover {
@@ -2213,7 +2225,7 @@ h1, h2, h3, h4 {
   font-size: 0.78rem;
   font-weight: 700;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.2s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .btn-copy:hover {
@@ -2294,5 +2306,416 @@ h1, h2, h3, h4 {
   }
   .footer-content {
     grid-template-columns: 1fr;
+  }
+}
+
+/* ==========================================================================
+   REACT BITS / ACETERNITY UI: ALUMINIO ANODIZADO OSCURO (#0D0D11 + 3% NOISE)
+   & FONDO DE ONDAS SINUSOIDALES REACTIVAS (AURORA / WAVES SHADER)
+   ========================================================================== */
+body.bg-anodized-rack {
+  background-color: #0D0D11;
+  background-image:
+    radial-gradient(ellipse 80% 50% at 50% -10%, rgba(56, 189, 248, 0.12), transparent 70%),
+    linear-gradient(180deg, #0D0D11 0%, #10121A 50%, #0D0D11 100%);
+  position: relative;
+}
+
+.anodized-noise-overlay {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  z-index: 9999;
+  opacity: 0.03; /* Exactamente 3% SVG Noise como chasis de rack de estudio real */
+  mix-blend-mode: overlay;
+}
+
+.svg-noise-filter {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.aurora-waves-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0.88;
+}
+
+.nav-link-manual {
+  color: #7dd3fc !important;
+  background: rgba(56, 189, 248, 0.1);
+  border: 1px solid rgba(56, 189, 248, 0.28);
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-weight: 600;
+}
+
+/* ==========================================================================
+   MAGIC UI (magicui.design): BORDER BEAM (HAZ DE LUZ DE SEÑAL DE AUDIO)
+   ========================================================================== */
+.has-border-beam {
+  position: relative;
+  isolation: isolate;
+}
+
+.border-beam {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 2px;
+  pointer-events: none;
+  z-index: 25;
+  background: conic-gradient(
+    from var(--beam-angle, 0deg),
+    transparent 0deg,
+    transparent 245deg,
+    rgba(56, 189, 248, 0.25) 275deg,
+    #00d2ff 305deg,
+    #2dd4bf 330deg,
+    #f97316 352deg,
+    transparent 360deg
+  );
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  animation: borderBeamTravel 5.5s linear infinite;
+}
+
+@keyframes borderBeamTravel {
+  0% {
+    --beam-angle: 0deg;
+  }
+  100% {
+    --beam-angle: 360deg;
+  }
+}
+
+.has-border-beam-subtle {
+  position: relative;
+  overflow: hidden;
+}
+
+.has-border-beam-subtle::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1.5px;
+  pointer-events: none;
+  background: conic-gradient(
+    from var(--beam-angle, 0deg),
+    transparent 0deg,
+    transparent 280deg,
+    rgba(56, 189, 248, 0.65) 330deg,
+    rgba(249, 115, 22, 0.75) 355deg,
+    transparent 360deg
+  );
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  opacity: 0.55;
+  animation: borderBeamTravel 8s linear infinite;
+}
+
+/* ==========================================================================
+   GALERÍA DE 3 CAPTURAS REALES DEL SOFTWARE (PASO 1, PASO 2, FREESOUND)
+   ========================================================================== */
+.software-gallery-grid.gallery-grid-3 {
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+}
+
+@media (max-width: 1120px) {
+  .software-gallery-grid.gallery-grid-3 {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ==========================================================================
+   MAGIC UI BENTO GRID DE ESPECIFICACIONES (VST3, AAX, WIN, MAC, 64-BIT, JUCE)
+   ========================================================================== */
+.specs-bento-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 22px;
+}
+
+.spec-bento-card {
+  background: linear-gradient(160deg, rgba(22, 26, 39, 0.94) 0%, rgba(13, 15, 22, 0.98) 100%);
+  border: 1px solid rgba(56, 189, 248, 0.16);
+  border-radius: var(--radius-md);
+  padding: clamp(22px, 2.8vw, 30px);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 14px;
+  box-shadow: 0 18px 38px -14px rgba(0, 0, 0, 0.82), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  transition: transform 220ms var(--ease-out), border-color 220ms var(--ease-out), box-shadow 220ms var(--ease-out);
+}
+
+.spec-span-2 {
+  grid-column: span 2;
+}
+
+.spec-span-1 {
+  grid-column: span 1;
+}
+
+.spec-bento-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.spec-chip {
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+}
+
+.spec-chip.cyan {
+  background: rgba(56, 189, 248, 0.14);
+  color: #38bdf8;
+  border: 1px solid rgba(56, 189, 248, 0.32);
+}
+
+.spec-chip.purple {
+  background: rgba(168, 85, 247, 0.15);
+  color: #c084fc;
+  border: 1px solid rgba(168, 85, 247, 0.32);
+}
+
+.spec-chip.teal {
+  background: rgba(45, 212, 191, 0.14);
+  color: #2dd4bf;
+  border: 1px solid rgba(45, 212, 191, 0.32);
+}
+
+.spec-chip.orange {
+  background: rgba(249, 115, 22, 0.15);
+  color: #fb923c;
+  border: 1px solid rgba(249, 115, 22, 0.32);
+}
+
+.spec-mono-code {
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+  color: #94a3b8;
+  background: rgba(0, 0, 0, 0.38);
+  padding: 3px 8px;
+  border-radius: 5px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.spec-bento-main {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+}
+
+.spec-big-badge {
+  font-family: var(--font-heading);
+  font-size: 2.3rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: #38bdf8;
+  background: rgba(56, 189, 248, 0.08);
+  border: 1px solid rgba(56, 189, 248, 0.28);
+  border-radius: 12px;
+  padding: 10px 18px;
+  line-height: 1;
+  text-shadow: 0 0 22px rgba(56, 189, 248, 0.4);
+  align-self: flex-start;
+}
+
+.spec-big-badge.purple-text {
+  color: #c084fc;
+  background: rgba(168, 85, 247, 0.08);
+  border-color: rgba(168, 85, 247, 0.28);
+  text-shadow: 0 0 22px rgba(168, 85, 247, 0.4);
+}
+
+.spec-big-badge.small {
+  font-size: 1.35rem;
+  padding: 8px 12px;
+}
+
+.spec-big-badge.teal-text {
+  color: #2dd4bf;
+  background: rgba(45, 212, 191, 0.08);
+  border-color: rgba(45, 212, 191, 0.28);
+  text-shadow: 0 0 18px rgba(45, 212, 191, 0.35);
+}
+
+.spec-dual-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.spec-os-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.spec-os-icon {
+  width: 28px;
+  height: 28px;
+  color: #38bdf8;
+  flex-shrink: 0;
+}
+
+.spec-bento-card h3 {
+  font-size: 1.22rem;
+  color: #f8fafc;
+}
+
+.spec-bento-card p {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  line-height: 1.58;
+}
+
+.spec-bento-card code {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: #7dd3fc;
+  background: rgba(56, 189, 248, 0.1);
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+.spec-daw-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: auto;
+}
+
+.spec-daw-pills span {
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: #e2e8f0;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 4px 10px;
+  border-radius: 6px;
+}
+
+@media (max-width: 1024px) {
+  .specs-bento-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .spec-span-2 {
+    grid-column: span 2;
+  }
+}
+
+@media (max-width: 768px) {
+  .specs-bento-grid {
+    grid-template-columns: 1fr;
+  }
+  .spec-span-2, .spec-span-1 {
+    grid-column: span 1;
+  }
+  .spec-bento-main {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+/* ==========================================================================
+   REGLAS DE ANIMACIÓN UI-ANIMATIONS (RBAUMIER) & REVIEW-ANIMATIONS (EMIL KOWALSKI)
+   - Solo propiedades GPU (transform, opacity)
+   - Curvas cubic-bezier(0.16, 1, 0.3, 1) < 300ms
+   - Feedback táctil :active scale(0.97)
+   - Hover protegido con @media (hover: hover) and (pointer: fine)
+   - Accesibilidad @media (prefers-reduced-motion: reduce)
+   ========================================================================== */
+.btn,
+.win-tab-btn,
+.btn-play-hero-mini,
+.btn-plugin-play,
+.btn-audio-play,
+.btn-copy,
+.pad-btn,
+.mpc-pad {
+  transition:
+    transform 180ms var(--ease-out),
+    background-color 180ms var(--ease-out),
+    border-color 180ms var(--ease-out),
+    color 180ms var(--ease-out),
+    box-shadow 180ms var(--ease-out),
+    opacity 180ms var(--ease-out);
+  will-change: transform;
+}
+
+.btn:active,
+.win-tab-btn:active,
+.btn-play-hero-mini:active,
+.btn-plugin-play:active,
+.btn-audio-play:active,
+.btn-copy:active {
+  transform: scale(0.97);
+}
+
+.gallery-card,
+.bento-card,
+.audio-card,
+.spec-bento-card {
+  transition:
+    transform 240ms var(--ease-out),
+    border-color 240ms var(--ease-out),
+    background-color 240ms var(--ease-out),
+    box-shadow 240ms var(--ease-out);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .spec-bento-card:hover {
+    transform: translateY(-4px);
+    border-color: var(--border-highlight);
+    box-shadow: 0 24px 48px -12px rgba(0, 0, 0, 0.88), 0 0 28px rgba(56, 189, 248, 0.18);
+  }
+}
+
+/* Modals: entrada suave desde scale(0.95) y salida rápida */
+.modal-card,
+.lightbox-container {
+  transform: scale(0.95) translateY(6px);
+  opacity: 0;
+  transition:
+    transform 200ms var(--ease-out),
+    opacity 160ms var(--ease-out);
+}
+
+.modal-backdrop.is-open .modal-card,
+.lightbox-backdrop.is-open .lightbox-container {
+  transform: scale(1) translateY(0);
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .border-beam,
+  .has-border-beam-subtle::after {
+    animation: none !important;
   }
 }

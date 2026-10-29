@@ -492,6 +492,29 @@ FreesoundOverlayComponent::FreesoundOverlayComponent(ClipSamplerAudioProcessor& 
     pageInfoLabel.setFont(juce::Font(12.2f, juce::Font::bold));
     addChildComponent(pageInfoLabel);
 
+    pageJumpLabel.setJustificationType(juce::Justification::centredRight);
+    pageJumpLabel.setColour(juce::Label::textColourId, juce::Colour(0xff7dd3fc));
+    pageJumpLabel.setFont(juce::Font(11.6f, juce::Font::bold));
+    addChildComponent(pageJumpLabel);
+
+    pageJumpEditor.setInputRestrictions(6, "0123456789");
+    pageJumpEditor.setJustification(juce::Justification::centred);
+    pageJumpEditor.setColour(juce::TextEditor::backgroundColourId, juce::Colour(0xff080f1f));
+    pageJumpEditor.setColour(juce::TextEditor::textColourId, juce::Colour(0xff38bdf8));
+    pageJumpEditor.setColour(juce::TextEditor::outlineColourId, juce::Colour(0xff2c4470));
+    pageJumpEditor.setFont(juce::Font(12.2f, juce::Font::bold));
+    pageJumpEditor.setTextToShowWhenEmpty(juce::String::fromUTF8("N.º"), juce::Colour(0xff64748b));
+    pageJumpEditor.setTooltip(juce::String::fromUTF8("Escribe el número de página (ej. 1000 o 1653) y presiona Enter para ir directamente"));
+    pageJumpEditor.onReturnKey = [this] { onGoToPageTriggered(); };
+    addChildComponent(pageJumpEditor);
+
+    pageJumpGoButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff0284c7));
+    pageJumpGoButton.setColour(juce::TextButton::textColourOffId, juce::Colours::white);
+    pageJumpGoButton.setMouseCursor(juce::MouseCursor::PointingHandCursor);
+    pageJumpGoButton.setTooltip(juce::String::fromUTF8("Saltar directamente a la página escrita [Atajo: Enter]"));
+    pageJumpGoButton.onClick = [this] { onGoToPageTriggered(); };
+    addChildComponent(pageJumpGoButton);
+
     loadStoredApiKey();
 }
 
@@ -654,6 +677,9 @@ void FreesoundOverlayComponent::refreshView()
     prevPageButton.setVisible(showSearch);
     nextPageButton.setVisible(showSearch);
     pageInfoLabel.setVisible(showSearch);
+    pageJumpLabel.setVisible(showSearch);
+    pageJumpEditor.setVisible(showSearch);
+    pageJumpGoButton.setVisible(showSearch);
 
     if (showSearch)
     {
@@ -1022,10 +1048,40 @@ void FreesoundOverlayComponent::searchSimilarSounds(const FreesoundItem& targetS
     }).detach();
 }
 
+void FreesoundOverlayComponent::onGoToPageTriggered()
+{
+    if (!hasValidApiKey)
+        return;
+
+    juce::String txt = pageJumpEditor.getText().trim();
+    if (txt.isEmpty())
+        return;
+
+    int targetPage = txt.getIntValue();
+    if (targetPage < 1)
+        targetPage = 1;
+    if (totalPages > 1 && targetPage > totalPages)
+        targetPage = totalPages;
+
+    pageJumpEditor.setText(juce::String(targetPage), false);
+    stopPreview();
+
+    resultsFeedbackLabel.setText(juce::String::fromUTF8("Cargando página ") + juce::String(targetPage) + " en Freesound API v2...", juce::dontSendNotification);
+    resultsFeedbackLabel.setVisible(true);
+
+    if (isViewingSimilar)
+        searchSimilarSounds(similarTargetItem, targetPage);
+    else if (lastExecutedQuery.isNotEmpty())
+        performSearchAsync(lastExecutedQuery, lastExecutedFilter, lastExecutedSort, targetPage);
+    else
+        triggerSearch(targetPage);
+}
+
 void FreesoundOverlayComponent::updatePaginationUi()
 {
     prevPageButton.setEnabled(currentPage > 1);
     nextPageButton.setEnabled(currentPage < totalPages);
+    pageJumpEditor.setText(juce::String(currentPage), false);
 
     if (isViewingSimilar)
     {
@@ -1398,10 +1454,16 @@ void FreesoundOverlayComponent::resized()
 
         area.removeFromTop(14);
 
-        // Barra inferior de paginación
+        // Barra inferior de paginación con casilla de salto directo de página (Enter)
         auto pageNavArea = area.removeFromBottom(30).reduced(6, 0);
-        prevPageButton.setBounds(pageNavArea.removeFromLeft(112));
-        nextPageButton.setBounds(pageNavArea.removeFromRight(112));
+        prevPageButton.setBounds(pageNavArea.removeFromLeft(108));
+        nextPageButton.setBounds(pageNavArea.removeFromRight(108));
+        pageNavArea.removeFromRight(10);
+        pageJumpGoButton.setBounds(pageNavArea.removeFromRight(50).reduced(0, 1));
+        pageNavArea.removeFromRight(4);
+        pageJumpEditor.setBounds(pageNavArea.removeFromRight(72).reduced(0, 1));
+        pageNavArea.removeFromRight(4);
+        pageJumpLabel.setBounds(pageNavArea.removeFromRight(62));
         pageInfoLabel.setBounds(pageNavArea);
 
         area.removeFromBottom(10);

@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "skills": {
+    "ui-ux-pro-max": {
+      "source": "nextlevelbuilder/ui-ux-pro-max-skill",
+      "sourceType": "github",
+      "skillPath": ".claude/skills/ui-ux-pro-max/SKILL.md",
+      "computedHash": "bf7fef75af567d1f5be7bcb98b4af1f9b38a68ad26d71b513f629896747ee190"
+    },
+    "ui-animations": {
+      "source": "rbaumier/skills",
+      "sourceType": "github",
+      "skillPath": "ui-animations/SKILL.md",
+      "computedHash": "9f72932598ebf6ccdc9c1252611eb893d3f0807f3c95f18e7cfeb9ca5c694a44"
+    },
+    "review-animations": {
+      "source": "emilkowalski/skills",
+      "sourceType": "github",
+      "skillPath": "skills/review-animations/SKILL.md",
+      "computedHash": "6ff590d29e436766135aa3d137be1fac2a867165c74264683b805eb947ef7980"
+    }
+  }
+}

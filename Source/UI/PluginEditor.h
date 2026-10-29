@@ -540,6 +540,7 @@ private:
     void onDragMidiClicked();
     void onUpdateExtractorClicked();
     void onCleanCacheClicked();
+    void onManualButtonClicked();
     void onLicenseBadgeClicked();
     void onFreesoundButtonClicked();
     void updateLicenseUiState();
@@ -554,11 +555,12 @@ private:
     int uiSyncTickCounter = 0;
     int lastKnownVideoDuration = -1;
 
-    // Botones de la barra de encabezado (Estado de Licencia / Prueba de 3 Días, Freesound y Mantenimiento)
+    // Botones de la barra de encabezado (Estado de Licencia / Prueba de 3 Días, Freesound, Mantenimiento y Manual PDF)
     juce::TextButton licenseBadgeButton;
     juce::TextButton freesoundButton       { juce::String::fromUTF8("🎵 Freesound") };
     juce::TextButton updateExtractorButton { juce::String::fromUTF8("Actualizar Motor") };
     juce::TextButton cleanCacheButton      { juce::String::fromUTF8("Limpiar Caché") };
+    juce::TextButton manualButton          { juce::String::fromUTF8("📘 Manual") };
 
     // =========================================================================
     // Panel Superior: Sampler de Transformación Local y Extracción Web (Uso Libre)
