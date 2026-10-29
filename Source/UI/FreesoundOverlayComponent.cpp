@@ -2,6 +2,7 @@
 
 // ==============================================================================
 // Componente de Fila Individual para cada Resultado de Sonido de Freesound
+// (Diseño Pro: diseno-gui-pc-pro = desktop-ergonomics-hig + juce-custom-lookandfeel)
 // ==============================================================================
 class FreesoundItemRowComponent : public juce::Component
 {
@@ -13,91 +14,230 @@ public:
           onLoad(std::move(onLoadCb)),
           onSimilar(std::move(onSimilarCb))
     {
-        similarBtn.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff4a1d96)); // Púrpura sofisticado
-        similarBtn.setColour(juce::TextButton::textColourOffId, juce::Colour(0xffe9d5ff));
+        similarBtn.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff6d28d9)); // Violeta Real Pro
+        similarBtn.setColour(juce::TextButton::textColourOffId, juce::Colour(0xfff5f3ff));
+        similarBtn.setMouseCursor(juce::MouseCursor::PointingHandCursor);
+        similarBtn.setTooltip(juce::String::fromUTF8("Buscar muestras acústicamente similares en Freesound"));
         similarBtn.onClick = [this] { if (onSimilar) onSimilar(item); };
         addAndMakeVisible(similarBtn);
 
-        previewBtn.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff1e3a5f));
-        previewBtn.setColour(juce::TextButton::textColourOffId, juce::Colour(0xff7dd3fc));
+        previewBtn.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff0284c7)); // Azul Zafiro Cian
+        previewBtn.setColour(juce::TextButton::textColourOffId, juce::Colours::white);
+        previewBtn.setMouseCursor(juce::MouseCursor::PointingHandCursor);
+        previewBtn.setTooltip(juce::String::fromUTF8("Preescuchar muestra en tiempo real"));
         previewBtn.onClick = [this] { if (onPreview) onPreview(item); };
         addAndMakeVisible(previewBtn);
 
-        loadBtn.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff0d9488)); // Teal brillante
+        loadBtn.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff059669)); // Esmeralda Studio Pro
         loadBtn.setColour(juce::TextButton::textColourOffId, juce::Colours::white);
+        loadBtn.setMouseCursor(juce::MouseCursor::PointingHandCursor);
+        loadBtn.setTooltip(juce::String::fromUTF8("Descargar muestra y cargarla directamente en el Visor 1 y Pads MPC"));
         loadBtn.onClick = [this] { if (onLoad) onLoad(item); };
         addAndMakeVisible(loadBtn);
     }
 
-    void updateItem(const FreesoundItem& newItem, bool isCurrentlyPlaying)
+    void mouseEnter(const juce::MouseEvent&) override { repaint(); }
+    void mouseExit(const juce::MouseEvent&) override  { repaint(); }
+
+    void updateItem(const FreesoundItem& newItem, bool isCurrentlyPlaying, int newRowIndex)
     {
         item = newItem;
-        previewBtn.setButtonText(isCurrentlyPlaying ? juce::String::fromUTF8("⏹ Detener") : juce::String::fromUTF8("▶ Escuchar"));
-        previewBtn.setColour(juce::TextButton::buttonColourId, isCurrentlyPlaying ? juce::Colour(0xffdc2626) : juce::Colour(0xff1e3a5f));
+        playingState = isCurrentlyPlaying;
+        rowIdx = newRowIndex;
+        previewBtn.setButtonText(isCurrentlyPlaying
+                                     ? juce::String::fromUTF8("⏹ Detener")
+                                     : juce::String::fromUTF8("▶ Escuchar"));
+        previewBtn.setColour(juce::TextButton::buttonColourId,
+                             isCurrentlyPlaying ? juce::Colour(0xffea580c) : juce::Colour(0xff0284c7));
         repaint();
     }
 
     void paint(juce::Graphics& g) override
     {
-        auto bounds = getLocalBounds().toFloat().reduced(2.0f, 2.0f);
-        g.setColour(juce::Colour(0xff18243c));
-        g.fillRoundedRectangle(bounds, 6.0f);
-        g.setColour(juce::Colour(0xff2a3f65));
-        g.drawRoundedRectangle(bounds, 6.0f, 1.0f);
+        auto bounds = getLocalBounds().toFloat().reduced(3.0f, 2.2f);
+        const float corner = 7.5f;
+        const bool isHovered = isMouseOver(true);
 
-        // Área reservada para textos a la izquierda de los 3 botones
-        auto textArea = bounds.reduced(10.0f, 4.0f);
-        auto leftArea = textArea.removeFromLeft(textArea.getWidth() - 315);
+        // 1. Sombra proyectada inferior de la tarjeta de fila
+        g.setColour(juce::Colour(0x44000000));
+        g.fillRoundedRectangle(bounds.translated(0.0f, 1.5f), corner);
 
-        // Línea 1: Nombre + Badges (BPM nativo + Formato original)
-        auto topRow = leftArea.removeFromTop(leftArea.getHeight() * 0.52f);
+        // 2. Superficie multicapa según estado (Reproduciendo / Hover / Alternancia Par-Impar)
+        juce::Colour topBg, botBg, borderCol, accentBarCol;
+        if (playingState)
+        {
+            topBg        = juce::Colour(0xff0f3532);
+            botBg        = juce::Colour(0xff092226);
+            borderCol    = juce::Colour(0xff10b981);
+            accentBarCol = juce::Colour(0xff10b981);
+        }
+        else if (isHovered)
+        {
+            topBg        = juce::Colour(0xff192c4e);
+            botBg        = juce::Colour(0xff101d36);
+            borderCol    = juce::Colour(0xff38bdf8);
+            accentBarCol = juce::Colour(0xff38bdf8);
+        }
+        else
+        {
+            const bool even = (rowIdx % 2 == 0);
+            topBg        = even ? juce::Colour(0xff111d35) : juce::Colour(0xff15233f);
+            botBg        = even ? juce::Colour(0xff0b1324) : juce::Colour(0xff0e182c);
+            borderCol    = juce::Colour(0xff253b63);
+            accentBarCol = (item.bpm > 10.0) ? juce::Colour(0xfff59e0b) : juce::Colour(0xff0284c7);
+        }
 
-        juce::String titleWithBadges = item.name;
+        juce::ColourGradient rowGrad(topBg, bounds.getX(), bounds.getY(),
+                                     botBg, bounds.getX(), bounds.getBottom(), false);
+        g.setGradientFill(rowGrad);
+        g.fillRoundedRectangle(bounds, corner);
+
+        // Reflejo especular superior sutil
+        g.setColour(juce::Colours::white.withAlpha(isHovered ? 0.12f : 0.06f));
+        g.drawHorizontalLine((int)bounds.getY() + 1, bounds.getX() + 6.0f, bounds.getRight() - 6.0f);
+
+        // Borde perimetral
+        g.setColour(borderCol.withAlpha((playingState || isHovered) ? 0.90f : 0.72f));
+        g.drawRoundedRectangle(bounds, corner, (playingState || isHovered) ? 1.4f : 1.0f);
+
+        // 3. Barra LED lateral izquierda en cada fila
+        auto ledBar = juce::Rectangle<float>(bounds.getX() + 3.5f, bounds.getY() + 6.0f, 3.8f, bounds.getHeight() - 12.0f);
+        g.setColour(accentBarCol);
+        g.fillRoundedRectangle(ledBar, 1.9f);
+
+        // Área reservada para textos y píldoras a la izquierda de los 3 botones de acción
+        auto textArea = bounds.reduced(14.0f, 4.5f);
+        textArea.removeFromLeft(4.0f);
+        auto leftArea = textArea.removeFromLeft(textArea.getWidth() - 318.0f);
+
+        // =====================================================================
+        // LÍNEA 1: Título de la Muestra + Píldoras de Color ([BPM], Formato, Licencia)
+        // =====================================================================
+        auto topRow = leftArea.removeFromTop(leftArea.getHeight() * 0.53f);
+
+        auto drawBadgePill = [&](juce::Rectangle<float>& rowRect, const juce::String& badgeText,
+                                 juce::Colour bgCol, juce::Colour outlineCol, juce::Colour txtCol)
+        {
+            juce::Font bf(10.2f, juce::Font::bold);
+            float bw = bf.getStringWidthFloat(badgeText) + 14.0f;
+            float bh = juce::jmin(18.0f, rowRect.getHeight() - 2.0f);
+            auto pillRect = juce::Rectangle<float>(rowRect.getX(), rowRect.getCentreY() - bh * 0.5f, bw, bh);
+            if (pillRect.getRight() > rowRect.getRight())
+                return;
+
+            g.setColour(bgCol);
+            g.fillRoundedRectangle(pillRect, 4.5f);
+            g.setColour(outlineCol);
+            g.drawRoundedRectangle(pillRect, 4.5f, 1.0f);
+            g.setColour(txtCol);
+            g.setFont(bf);
+            g.drawFittedText(badgeText, pillRect.toNearestInt(), juce::Justification::centred, 1);
+
+            rowRect.removeFromLeft(bw + 6.0f);
+        };
+
+        // Medimos el título para colocar las píldoras justo después
+        juce::Font titleFont(13.2f, juce::Font::bold);
+        g.setFont(titleFont);
+        const float maxTitleW = juce::jmax(110.0f, topRow.getWidth() - 185.0f);
+        const float actualTitleW = juce::jmin(maxTitleW, titleFont.getStringWidthFloat(item.name) + 8.0f);
+
+        auto titleRect = topRow.removeFromLeft(actualTitleW);
+        g.setColour(playingState ? juce::Colour(0xff6ee7b7) : juce::Colour(0xfff8fafc));
+        g.drawFittedText(item.name, titleRect.toNearestInt(), juce::Justification::centredLeft, 1, 0.82f);
+
+        topRow.removeFromLeft(6.0f);
+
+        // Píldora 1: BPM en Ámbar Dorado
         if (item.bpm > 10.0)
-            titleWithBadges += "  [" + juce::String(juce::roundToInt(item.bpm)) + " BPM]";
+        {
+            juce::String bpmTxt = juce::String(juce::roundToInt(item.bpm)) + " BPM";
+            drawBadgePill(topRow, bpmTxt,
+                          juce::Colour(0xff451a03), juce::Colour(0xfff59e0b), juce::Colour(0xfffde68a));
+        }
+
+        // Píldora 2: Formato (WAV/FLAC en Cian; M4A/MP3/OGG en Índigo)
         if (item.type.isNotEmpty())
-            titleWithBadges += "  (" + item.type.toUpperCase() + ")";
+        {
+            juce::String fmtTxt = item.type.toUpperCase();
+            const bool isLossless = (fmtTxt == "WAV" || fmtTxt == "FLAC" || fmtTxt == "AIFF");
+            drawBadgePill(topRow, fmtTxt,
+                          isLossless ? juce::Colour(0xff083344) : juce::Colour(0xff2e1065),
+                          isLossless ? juce::Colour(0xff06b6d4) : juce::Colour(0xff8b5cf6),
+                          isLossless ? juce::Colour(0xff67e8f9) : juce::Colour(0xffddd6fe));
+        }
 
-        g.setColour(juce::Colour(0xfff8fafc));
-        g.setFont(juce::Font(12.8f, juce::Font::bold));
-        g.drawFittedText(titleWithBadges, topRow.toNearestInt(), juce::Justification::centredLeft, 1, 0.75f);
+        // Píldora 3: Licencia (CC0 en Esmeralda; CC-BY en Azul Cielo)
+        const bool isCc0 = item.license.containsIgnoreCase("zero");
+        drawBadgePill(topRow, isCc0 ? "CC0 LIBRE" : "CC-BY",
+                      isCc0 ? juce::Colour(0xff064e3b) : juce::Colour(0xff172554),
+                      isCc0 ? juce::Colour(0xff10b981) : juce::Colour(0xff3b82f6),
+                      isCc0 ? juce::Colour(0xff6ee7b7) : juce::Colour(0xff93c5fd));
 
-        // Línea 2: Subtítulo con metadata enriquecida (duración, usuario, licencia, specs y tags)
-        juce::String licBadge = item.license.containsIgnoreCase("zero") ? "CC0" : "CC-BY";
+        // =====================================================================
+        // LÍNEA 2: Subtítulo con Jerarquía Cromática (Duración • Autor • Specs • #Tags)
+        // =====================================================================
+        auto botRow = leftArea;
+        juce::Font metaFont(11.0f, juce::Font::plain);
+        juce::Font metaBold(11.0f, juce::Font::bold);
+
+        auto drawSegment = [&](const juce::String& txt, juce::Colour col, bool bold = false)
+        {
+            if (botRow.getWidth() <= 8.0f || txt.isEmpty())
+                return;
+            const auto& f = bold ? metaBold : metaFont;
+            g.setFont(f);
+            g.setColour(col);
+            float w = juce::jmin(botRow.getWidth(), f.getStringWidthFloat(txt) + 2.0f);
+            auto segRect = botRow.removeFromLeft(w);
+            g.drawFittedText(txt, segRect.toNearestInt(), juce::Justification::centredLeft, 1, 0.85f);
+        };
+
+        // Duración en Ámbar claro
+        drawSegment(juce::String(item.duration, 1) + "s", juce::Colour(0xfffbbf24), true);
+        drawSegment("   |   ", juce::Colour(0xff475569));
+
+        // Autor en Plata Azul
+        drawSegment("@" + item.username, juce::Colour(0xffe2e8f0), true);
+
+        // Especificaciones de audio en Cian Suave
         juce::String formatSpec;
         if (item.channels > 0)
             formatSpec += (item.channels == 2 ? "Stereo" : "Mono");
         if (item.samplerate > 0)
             formatSpec += " " + juce::String(item.samplerate / 1000) + "kHz";
+        if (formatSpec.isNotEmpty())
+        {
+            drawSegment("   |   ", juce::Colour(0xff475569));
+            drawSegment(formatSpec, juce::Colour(0xff7dd3fc));
+        }
 
+        // Etiquetas (#tags) en Lavanda / Índigo Luminoso
         juce::String tagsStr;
         int maxTags = juce::jmin(3, item.tags.size());
         for (int i = 0; i < maxTags; ++i)
-            tagsStr += " #" + item.tags[i];
-
-        juce::String metaStr = juce::String(item.duration, 1) + "s  |  @" + item.username + "  |  " + licBadge;
-        if (formatSpec.isNotEmpty())
-            metaStr += "  |  " + formatSpec;
+            tagsStr += (i == 0 ? "#" : "  #") + item.tags[i];
         if (tagsStr.isNotEmpty())
-            metaStr += "  | " + tagsStr;
-
-        g.setColour(juce::Colour(0xff94a3b8));
-        g.setFont(juce::Font(10.8f, juce::Font::plain));
-        g.drawFittedText(metaStr, leftArea.toNearestInt(), juce::Justification::centredLeft, 1, 0.70f);
+        {
+            drawSegment("   |   ", juce::Colour(0xff475569));
+            drawSegment(tagsStr, juce::Colour(0xffa5b4fc));
+        }
     }
 
     void resized() override
     {
-        auto area = getLocalBounds().reduced(8, 6);
-        loadBtn.setBounds(area.removeFromRight(120));
-        area.removeFromRight(5);
-        previewBtn.setBounds(area.removeFromRight(88));
-        area.removeFromRight(5);
-        similarBtn.setBounds(area.removeFromRight(85));
+        auto area = getLocalBounds().reduced(10, 8);
+        loadBtn.setBounds(area.removeFromRight(124));
+        area.removeFromRight(6);
+        previewBtn.setBounds(area.removeFromRight(92));
+        area.removeFromRight(6);
+        similarBtn.setBounds(area.removeFromRight(88));
     }
 
 private:
     FreesoundItem item;
+    bool playingState = false;
+    int rowIdx = 0;
     std::function<void(const FreesoundItem&)> onPreview;
     std::function<void(const FreesoundItem&)> onLoad;
     std::function<void(const FreesoundItem&)> onSimilar;
@@ -137,25 +277,28 @@ FreesoundOverlayComponent::FreesoundOverlayComponent(ClipSamplerAudioProcessor& 
     apiKeyInputLabel.setFont(juce::Font(13.5f, juce::Font::bold));
     addAndMakeVisible(apiKeyInputLabel);
 
-    apiKeyEditor.setColour(juce::TextEditor::backgroundColourId, juce::Colour(0xff152036));
+    apiKeyEditor.setColour(juce::TextEditor::backgroundColourId, juce::Colour(0xff0b1325));
     apiKeyEditor.setColour(juce::TextEditor::textColourId, juce::Colours::white);
-    apiKeyEditor.setColour(juce::TextEditor::outlineColourId, juce::Colour(0xff3b527d));
+    apiKeyEditor.setColour(juce::TextEditor::outlineColourId, juce::Colour(0xff2e4670));
     apiKeyEditor.setTextToShowWhenEmpty(juce::String::fromUTF8("Ejemplo: a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0"), juce::Colour(0xff64748b));
     apiKeyEditor.onReturnKey = [this] { onConnectApiKeyClicked(); };
     addAndMakeVisible(apiKeyEditor);
 
-    pasteKeyButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff30446e));
+    pasteKeyButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff253b63));
     pasteKeyButton.setColour(juce::TextButton::textColourOffId, juce::Colours::white);
+    pasteKeyButton.setMouseCursor(juce::MouseCursor::PointingHandCursor);
     pasteKeyButton.onClick = [this] { onPasteApiKeyClicked(); };
     addAndMakeVisible(pasteKeyButton);
 
-    connectButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff0d9488));
+    connectButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff059669));
     connectButton.setColour(juce::TextButton::textColourOffId, juce::Colours::white);
+    connectButton.setMouseCursor(juce::MouseCursor::PointingHandCursor);
     connectButton.onClick = [this] { onConnectApiKeyClicked(); };
     addAndMakeVisible(connectButton);
 
-    getApiKeyHelpButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff1e293b));
+    getApiKeyHelpButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff172542));
     getApiKeyHelpButton.setColour(juce::TextButton::textColourOffId, juce::Colour(0xff38bdf8));
+    getApiKeyHelpButton.setMouseCursor(juce::MouseCursor::PointingHandCursor);
     getApiKeyHelpButton.onClick = [this] { onOpenApiKeyWebClicked(); };
     addAndMakeVisible(getApiKeyHelpButton);
 
@@ -165,7 +308,7 @@ FreesoundOverlayComponent::FreesoundOverlayComponent(ClipSamplerAudioProcessor& 
     addAndMakeVisible(introStatusLabel);
 
     // =========================================================================
-    // Estado B: Buscador de Sonidos, Filtros y Paginación
+    // Estado B: Buscador de Sonidos, Filtros y Paginación (Paleta Pro Dark Mode)
     // =========================================================================
     searchHeaderTitleLabel.setText(juce::String::fromUTF8("🎵 EXPLORADOR DE SAMPLES FREESOUND (API v2)"), juce::dontSendNotification);
     searchHeaderTitleLabel.setColour(juce::Label::textColourId, juce::Colour(0xff38bdf8));
@@ -173,11 +316,13 @@ FreesoundOverlayComponent::FreesoundOverlayComponent(ClipSamplerAudioProcessor& 
     addChildComponent(searchHeaderTitleLabel);
 
     searchStatusBadge.setColour(juce::Label::textColourId, juce::Colour(0xff34d399));
-    searchStatusBadge.setFont(juce::Font(11.5f, juce::Font::bold));
+    searchStatusBadge.setJustificationType(juce::Justification::centred);
+    searchStatusBadge.setFont(juce::Font(11.2f, juce::Font::bold));
     addChildComponent(searchStatusBadge);
 
-    exitSimilarButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff581c87));
-    exitSimilarButton.setColour(juce::TextButton::textColourOffId, juce::Colour(0xfff3e8ff));
+    exitSimilarButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff6d28d9));
+    exitSimilarButton.setColour(juce::TextButton::textColourOffId, juce::Colour(0xfff5f3ff));
+    exitSimilarButton.setMouseCursor(juce::MouseCursor::PointingHandCursor);
     exitSimilarButton.onClick = [this] {
         isViewingSimilar = false;
         exitSimilarButton.setVisible(false);
@@ -185,57 +330,65 @@ FreesoundOverlayComponent::FreesoundOverlayComponent(ClipSamplerAudioProcessor& 
     };
     addChildComponent(exitSimilarButton);
 
-    changeKeyButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff334155));
-    changeKeyButton.setColour(juce::TextButton::textColourOffId, juce::Colour(0xffcbd5e1));
+    changeKeyButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff1e2f4d));
+    changeKeyButton.setColour(juce::TextButton::textColourOffId, juce::Colour(0xfffcd34d));
+    changeKeyButton.setMouseCursor(juce::MouseCursor::PointingHandCursor);
+    changeKeyButton.setTooltip(juce::String::fromUTF8("Cambiar o actualizar tu token personal de Freesound API v2"));
     changeKeyButton.onClick = [this] { onChangeApiKeyClicked(); };
     addChildComponent(changeKeyButton);
 
-    audioRouteButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff1e3a5f));
-    audioRouteButton.setColour(juce::TextButton::textColourOffId, juce::Colour(0xff7dd3fc));
-    audioRouteButton.setTooltip(juce::String::fromUTF8("Haz clic para alternar: Modo Auto (reproduce en DAW o altavoces segÃºn actividad), Solo DAW o Solo Directo"));
+    audioRouteButton.setButtonText(juce::String::fromUTF8("🔊 Salida: Auto"));
+    audioRouteButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff0369a1));
+    audioRouteButton.setColour(juce::TextButton::textColourOffId, juce::Colour(0xffe0f2fe));
+    audioRouteButton.setMouseCursor(juce::MouseCursor::PointingHandCursor);
+    audioRouteButton.setTooltip(juce::String::fromUTF8("Haz clic para alternar: Modo Auto (reproduce en DAW o altavoces según actividad), Solo DAW o Solo Directo"));
     audioRouteButton.onClick = [this] {
         if (currentAudioMode == AudioOutputMode::Auto)
         {
             currentAudioMode = AudioOutputMode::DawMixer;
-            audioRouteButton.setButtonText(juce::String::fromUTF8("ðŸŽ›ï¸ Salida: Solo DAW"));
+            audioRouteButton.setButtonText(juce::String::fromUTF8("🎛️ Salida: Solo DAW"));
         }
         else if (currentAudioMode == AudioOutputMode::DawMixer)
         {
             currentAudioMode = AudioOutputMode::DirectWindows;
-            audioRouteButton.setButtonText(juce::String::fromUTF8("ðŸ”ˆ Salida: Solo Directo"));
+            audioRouteButton.setButtonText(juce::String::fromUTF8("🔈 Salida: Solo Directo"));
         }
         else
         {
             currentAudioMode = AudioOutputMode::Auto;
-            audioRouteButton.setButtonText(juce::String::fromUTF8("ðŸ”Š Salida: Auto"));
+            audioRouteButton.setButtonText(juce::String::fromUTF8("🔊 Salida: Auto"));
         }
     };
     addChildComponent(audioRouteButton);
 
-    closeOverlayButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff475569));
-    closeOverlayButton.setColour(juce::TextButton::textColourOffId, juce::Colours::white);
+    closeOverlayButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xffbe123c));
+    closeOverlayButton.setColour(juce::TextButton::textColourOffId, juce::Colour(0xffffe4e6));
+    closeOverlayButton.setMouseCursor(juce::MouseCursor::PointingHandCursor);
+    closeOverlayButton.setTooltip(juce::String::fromUTF8("Cerrar el explorador Freesound y volver a ClipSampler (Atajo: Escape)"));
     closeOverlayButton.onClick = [this] {
         stopPreview();
         setVisible(false);
     };
     addChildComponent(closeOverlayButton);
 
-    // Barra de búsqueda
-    searchBox.setColour(juce::TextEditor::backgroundColourId, juce::Colour(0xff152036));
-    searchBox.setColour(juce::TextEditor::textColourId, juce::Colours::white);
-    searchBox.setColour(juce::TextEditor::outlineColourId, juce::Colour(0xff3b527d));
+    // Barra de búsqueda empotrada Nivel 2
+    searchBox.setColour(juce::TextEditor::backgroundColourId, juce::Colour(0xff080f1f));
+    searchBox.setColour(juce::TextEditor::textColourId, juce::Colour(0xfff8fafc));
+    searchBox.setColour(juce::TextEditor::outlineColourId, juce::Colour(0xff2c4470));
     searchBox.setTextToShowWhenEmpty(juce::String::fromUTF8("Escribe un término (ej. kick, 808, snare, vinyl loop, vocal, piano, riser)..."), juce::Colour(0xff64748b));
     searchBox.onReturnKey = [this] { triggerSearch(1); };
     addChildComponent(searchBox);
 
     searchButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff0284c7));
     searchButton.setColour(juce::TextButton::textColourOffId, juce::Colours::white);
+    searchButton.setMouseCursor(juce::MouseCursor::PointingHandCursor);
+    searchButton.setTooltip(juce::String::fromUTF8("Ejecutar búsqueda en Freesound API v2"));
     searchButton.onClick = [this] { triggerSearch(1); };
     addChildComponent(searchButton);
 
-    // Filtros: Duración, Orden, Licencia, Formato
-    durationFilterLabel.setColour(juce::Label::textColourId, juce::Colour(0xffcbd5e1));
-    durationFilterLabel.setFont(juce::Font(11.2f, juce::Font::bold));
+    // Filtros con etiquetas en Cian Luminoso y cursores interactivos
+    durationFilterLabel.setColour(juce::Label::textColourId, juce::Colour(0xff7dd3fc));
+    durationFilterLabel.setFont(juce::Font(11.4f, juce::Font::bold));
     addChildComponent(durationFilterLabel);
 
     durationFilterBox.addItem(juce::String::fromUTF8("Cualquier Duración"), 1);
@@ -244,11 +397,12 @@ FreesoundOverlayComponent::FreesoundOverlayComponent(ClipSamplerAudioProcessor& 
     durationFilterBox.addItem(juce::String::fromUTF8("Frases (6s - 15s)"), 4);
     durationFilterBox.addItem(juce::String::fromUTF8("Muestras Largas (> 15s)"), 5);
     durationFilterBox.setSelectedId(1, juce::dontSendNotification);
+    durationFilterBox.setMouseCursor(juce::MouseCursor::PointingHandCursor);
     durationFilterBox.onChange = [this] { triggerSearch(1); };
     addChildComponent(durationFilterBox);
 
-    sortFilterLabel.setColour(juce::Label::textColourId, juce::Colour(0xffcbd5e1));
-    sortFilterLabel.setFont(juce::Font(11.2f, juce::Font::bold));
+    sortFilterLabel.setColour(juce::Label::textColourId, juce::Colour(0xff7dd3fc));
+    sortFilterLabel.setFont(juce::Font(11.4f, juce::Font::bold));
     addChildComponent(sortFilterLabel);
 
     sortFilterBox.addItem(juce::String::fromUTF8("Relevancia (Score)"), 1);
@@ -257,22 +411,24 @@ FreesoundOverlayComponent::FreesoundOverlayComponent(ClipSamplerAudioProcessor& 
     sortFilterBox.addItem(juce::String::fromUTF8("Más Recientes"), 4);
     sortFilterBox.addItem(juce::String::fromUTF8("Más Cortos"), 5);
     sortFilterBox.setSelectedId(1, juce::dontSendNotification);
+    sortFilterBox.setMouseCursor(juce::MouseCursor::PointingHandCursor);
     sortFilterBox.onChange = [this] { triggerSearch(1); };
     addChildComponent(sortFilterBox);
 
-    licenseFilterLabel.setColour(juce::Label::textColourId, juce::Colour(0xffcbd5e1));
-    licenseFilterLabel.setFont(juce::Font(11.2f, juce::Font::bold));
+    licenseFilterLabel.setColour(juce::Label::textColourId, juce::Colour(0xff7dd3fc));
+    licenseFilterLabel.setFont(juce::Font(11.4f, juce::Font::bold));
     addChildComponent(licenseFilterLabel);
 
     licenseFilterBox.addItem(juce::String::fromUTF8("Todas las Licencias"), 1);
     licenseFilterBox.addItem(juce::String::fromUTF8("Creative Commons 0 (CC0)"), 2);
     licenseFilterBox.addItem(juce::String::fromUTF8("Attribution (CC-BY)"), 3);
     licenseFilterBox.setSelectedId(1, juce::dontSendNotification);
+    licenseFilterBox.setMouseCursor(juce::MouseCursor::PointingHandCursor);
     licenseFilterBox.onChange = [this] { triggerSearch(1); };
     addChildComponent(licenseFilterBox);
 
-    typeFilterLabel.setColour(juce::Label::textColourId, juce::Colour(0xffcbd5e1));
-    typeFilterLabel.setFont(juce::Font(11.2f, juce::Font::bold));
+    typeFilterLabel.setColour(juce::Label::textColourId, juce::Colour(0xff7dd3fc));
+    typeFilterLabel.setFont(juce::Font(11.4f, juce::Font::bold));
     addChildComponent(typeFilterLabel);
 
     typeFilterBox.addItem(juce::String::fromUTF8("Cualquier Formato"), 1);
@@ -281,25 +437,31 @@ FreesoundOverlayComponent::FreesoundOverlayComponent(ClipSamplerAudioProcessor& 
     typeFilterBox.addItem(juce::String::fromUTF8("WAV o FLAC"), 4);
     typeFilterBox.addItem(juce::String::fromUTF8("Solo AIFF"), 5);
     typeFilterBox.setSelectedId(1, juce::dontSendNotification);
+    typeFilterBox.setMouseCursor(juce::MouseCursor::PointingHandCursor);
     typeFilterBox.onChange = [this] { triggerSearch(1); };
     addChildComponent(typeFilterBox);
 
-    // ListBox de resultados
+    // ListBox de resultados (Nivel 2 - Lienzo Profundo con Scrollbar Cian)
     resultsListBox.setModel(this);
-    resultsListBox.setRowHeight(58);
-    resultsListBox.setColour(juce::ListBox::backgroundColourId, juce::Colour(0xff131c2e));
-    resultsListBox.setColour(juce::ListBox::outlineColourId, juce::Colour(0xff2a3f65));
+    resultsListBox.setRowHeight(60);
+    resultsListBox.setColour(juce::ListBox::backgroundColourId, juce::Colour(0xff080e1c));
+    resultsListBox.setColour(juce::ListBox::outlineColourId, juce::Colour(0xff23385e));
+    resultsListBox.setOutlineThickness(1);
+    resultsListBox.getViewport()->setScrollBarsShown(true, false);
+    resultsListBox.getVerticalScrollBar().setColour(juce::ScrollBar::thumbColourId, juce::Colour(0xff38bdf8).withAlpha(0.75f));
+    resultsListBox.getVerticalScrollBar().setColour(juce::ScrollBar::trackColourId, juce::Colour(0xff0b1324));
     addChildComponent(resultsListBox);
 
     resultsFeedbackLabel.setColour(juce::Label::textColourId, juce::Colour(0xff94a3b8));
     resultsFeedbackLabel.setJustificationType(juce::Justification::centred);
-    resultsFeedbackLabel.setFont(juce::Font(13.0f, juce::Font::italic));
+    resultsFeedbackLabel.setFont(juce::Font(13.5f, juce::Font::italic));
     resultsFeedbackLabel.setText(juce::String::fromUTF8("Ingresa un término arriba y pulsa 'Buscar Sonidos'."), juce::dontSendNotification);
     addChildComponent(resultsFeedbackLabel);
 
     // Barra de Paginación Inferior
-    prevPageButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff1e293b));
-    prevPageButton.setColour(juce::TextButton::textColourOffId, juce::Colour(0xff94a3b8));
+    prevPageButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff1e3a5f));
+    prevPageButton.setColour(juce::TextButton::textColourOffId, juce::Colour(0xffe0f2fe));
+    prevPageButton.setMouseCursor(juce::MouseCursor::PointingHandCursor);
     prevPageButton.onClick = [this] {
         if (currentPage > 1)
         {
@@ -311,8 +473,9 @@ FreesoundOverlayComponent::FreesoundOverlayComponent(ClipSamplerAudioProcessor& 
     };
     addChildComponent(prevPageButton);
 
-    nextPageButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff1e293b));
-    nextPageButton.setColour(juce::TextButton::textColourOffId, juce::Colour(0xff94a3b8));
+    nextPageButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff1e3a5f));
+    nextPageButton.setColour(juce::TextButton::textColourOffId, juce::Colour(0xffe0f2fe));
+    nextPageButton.setMouseCursor(juce::MouseCursor::PointingHandCursor);
     nextPageButton.onClick = [this] {
         if (currentPage < totalPages)
         {
@@ -325,8 +488,8 @@ FreesoundOverlayComponent::FreesoundOverlayComponent(ClipSamplerAudioProcessor& 
     addChildComponent(nextPageButton);
 
     pageInfoLabel.setJustificationType(juce::Justification::centred);
-    pageInfoLabel.setColour(juce::Label::textColourId, juce::Colour(0xffcbd5e1));
-    pageInfoLabel.setFont(juce::Font(12.0f, juce::Font::bold));
+    pageInfoLabel.setColour(juce::Label::textColourId, juce::Colour(0xfff1f5f9));
+    pageInfoLabel.setFont(juce::Font(12.2f, juce::Font::bold));
     addChildComponent(pageInfoLabel);
 
     loadStoredApiKey();
@@ -1060,44 +1223,92 @@ juce::Component* FreesoundOverlayComponent::refreshComponentForRow(int rowNumber
     if (rowNumber >= 0 && rowNumber < static_cast<int>(soundResults.size()))
     {
         const auto& sound = soundResults[(size_t)rowNumber];
-        rowComp->updateItem(sound, isCurrentSoundPlaying(sound.id));
+        rowComp->updateItem(sound, isCurrentSoundPlaying(sound.id), rowNumber);
     }
 
     return rowComp;
 }
 
 // ==============================================================================
-// Renderizado Gráfico y Maquetación
+// Renderizado Gráfico y Maquetación (diseno-gui-pc-pro)
 // ==============================================================================
 void FreesoundOverlayComponent::paint(juce::Graphics& g)
 {
-    // Fondo translúcido profundo (Dark Mode por capas - diseno-gui-pc-pro)
-    g.fillAll(juce::Colour(0xe4050912));
+    // 1. Fondo translúcido profundo (Nivel 0 - Chasis Oscuro)
+    g.fillAll(juce::Colour(0xe8040811));
 
-    auto cardBounds = getLocalBounds().reduced(24, 18).toFloat();
-    const float corner = 12.0f;
+    auto cardBounds = getLocalBounds().reduced(22, 16).toFloat();
+    const float corner = 12.5f;
 
-    // Sombra exterior del modal
-    g.setColour(juce::Colour(0x77000000));
-    g.fillRoundedRectangle(cardBounds.translated(0.0f, 4.0f), corner);
+    // 2. Sombra exterior profunda del modal
+    g.setColour(juce::Colour(0x88000000));
+    g.fillRoundedRectangle(cardBounds.translated(0.0f, 5.0f), corner);
 
-    // Tarjeta elevada Nivel 1
-    juce::ColourGradient cardGrad(juce::Colour(0xfc111b30), cardBounds.getX(), cardBounds.getY(),
-                                  juce::Colour(0xfc09101f), cardBounds.getX(), cardBounds.getBottom(), false);
+    // 3. Tarjeta elevada Nivel 1 (Obsidiana Zafiro Multicapa)
+    juce::ColourGradient cardGrad(juce::Colour(0xfd101a30), cardBounds.getX(), cardBounds.getY(),
+                                  juce::Colour(0xfd070c18), cardBounds.getX(), cardBounds.getBottom(), false);
+    cardGrad.addColour(0.35, juce::Colour(0xfd0b1324));
     g.setGradientFill(cardGrad);
     g.fillRoundedRectangle(cardBounds, corner);
 
-    // Bisel especular interno superior
-    g.setColour(juce::Colour(0x22ffffff));
+    if (hasValidApiKey)
+    {
+        // 4. Franja de Cabecera Superior Elevada (Header Bar)
+        auto headerRect = juce::Rectangle<float>(cardBounds.getX() + 1.5f, cardBounds.getY() + 1.5f,
+                                                 cardBounds.getWidth() - 3.0f, 52.0f);
+        juce::ColourGradient hdrGrad(juce::Colour(0xff162646), headerRect.getX(), headerRect.getY(),
+                                     juce::Colour(0xff0c1528), headerRect.getX(), headerRect.getBottom(), false);
+        g.setGradientFill(hdrGrad);
+        g.fillRoundedRectangle(headerRect, corner - 1.0f);
+
+        // Línea divisoria luminosa tricolor (Ámbar -> Cian -> Violeta) bajo la cabecera
+        juce::ColourGradient lineGrad(juce::Colour(0xfff59e0b), headerRect.getX() + 16.0f, headerRect.getBottom(),
+                                      juce::Colour(0xffa855f7), headerRect.getRight() - 16.0f, headerRect.getBottom(), false);
+        lineGrad.addColour(0.45, juce::Colour(0xff38bdf8));
+        g.setGradientFill(lineGrad);
+        g.fillRect(headerRect.getX() + 12.0f, headerRect.getBottom() - 1.5f, headerRect.getWidth() - 24.0f, 1.5f);
+
+        // Píldora Esmeralda para el indicador "● Conectado"
+        if (searchStatusBadge.isVisible() && !searchStatusBadge.getBounds().isEmpty())
+        {
+            auto badgeR = searchStatusBadge.getBounds().toFloat().reduced(1.0f, 2.5f);
+            g.setColour(juce::Colour(0xff064e3b).withAlpha(0.78f));
+            g.fillRoundedRectangle(badgeR, 6.0f);
+            g.setColour(juce::Colour(0xff10b981).withAlpha(0.75f));
+            g.drawRoundedRectangle(badgeR, 6.0f, 1.0f);
+        }
+
+        // 5. Panel Empotrado para el Deck de Búsqueda y Filtros (Nivel 2)
+        auto deckRect = juce::Rectangle<float>(cardBounds.getX() + 10.0f, headerRect.getBottom() + 6.0f,
+                                               cardBounds.getWidth() - 20.0f, 82.0f);
+        g.setColour(juce::Colour(0xff091121));
+        g.fillRoundedRectangle(deckRect, 8.5f);
+        g.setColour(juce::Colour(0xff1e3256));
+        g.drawRoundedRectangle(deckRect, 8.5f, 1.0f);
+
+        // 6. Franja Inferior de Paginación (Footer Status Bar)
+        if (!pageInfoLabel.getBounds().isEmpty())
+        {
+            auto footerRect = juce::Rectangle<float>(cardBounds.getX() + 10.0f, (float)pageInfoLabel.getY() - 4.0f,
+                                                     cardBounds.getWidth() - 20.0f, (float)pageInfoLabel.getHeight() + 8.0f);
+            g.setColour(juce::Colour(0xff0b1426));
+            g.fillRoundedRectangle(footerRect, 7.0f);
+            g.setColour(juce::Colour(0xff1e3256));
+            g.drawRoundedRectangle(footerRect, 7.0f, 1.0f);
+        }
+    }
+
+    // 7. Bisel especular interno superior y borde perimetral Cian brillante
+    g.setColour(juce::Colour(0x24ffffff));
     g.drawRoundedRectangle(cardBounds.reduced(1.0f), corner, 1.0f);
 
-    g.setColour(juce::Colour(0xff38bdf8).withAlpha(0.48f));
-    g.drawRoundedRectangle(cardBounds, corner, 1.4f);
+    g.setColour(juce::Colour(0xff38bdf8).withAlpha(0.62f));
+    g.drawRoundedRectangle(cardBounds, corner, 1.5f);
 }
 
 void FreesoundOverlayComponent::resized()
 {
-    auto area = getLocalBounds().reduced(36, 28);
+    auto area = getLocalBounds().reduced(36, 26);
 
     if (!hasValidApiKey)
     {
@@ -1133,36 +1344,37 @@ void FreesoundOverlayComponent::resized()
     {
         // Layout Estado B: Buscador, Filtros y Paginación
         auto topRow = area.removeFromTop(32);
-        closeOverlayButton.setBounds(topRow.removeFromRight(150));
+        closeOverlayButton.setBounds(topRow.removeFromRight(154));
         topRow.removeFromRight(8);
-        changeKeyButton.setBounds(topRow.removeFromRight(130));
+        changeKeyButton.setBounds(topRow.removeFromRight(132));
         topRow.removeFromRight(8);
-        audioRouteButton.setBounds(topRow.removeFromRight(150));
+        audioRouteButton.setBounds(topRow.removeFromRight(146));
         topRow.removeFromRight(8);
         if (isViewingSimilar)
         {
-            exitSimilarButton.setBounds(topRow.removeFromRight(170));
+            exitSimilarButton.setBounds(topRow.removeFromRight(168));
             topRow.removeFromRight(8);
         }
-        searchStatusBadge.setBounds(topRow.removeFromRight(140));
+        searchStatusBadge.setBounds(topRow.removeFromRight(176));
+        topRow.removeFromRight(6);
         searchHeaderTitleLabel.setBounds(topRow);
 
-        area.removeFromTop(10);
+        area.removeFromTop(18);
 
-        // Barra de búsqueda
-        auto searchRow = area.removeFromTop(34);
-        searchButton.setBounds(searchRow.removeFromRight(145));
+        // Barra de búsqueda dentro del Deck Nivel 2
+        auto searchRow = area.removeFromTop(34).reduced(6, 0);
+        searchButton.setBounds(searchRow.removeFromRight(148));
         searchRow.removeFromRight(8);
         searchBox.setBounds(searchRow);
 
         area.removeFromTop(10);
 
         // Fila de 4 Filtros: Duración, Orden, Licencia, Formato
-        auto filterRow = area.removeFromTop(28);
+        auto filterRow = area.removeFromTop(28).reduced(6, 0);
         const int filterColW = (filterRow.getWidth() - 36) / 4;
 
         auto durArea = filterRow.removeFromLeft(filterColW);
-        durationFilterLabel.setBounds(durArea.removeFromLeft(58));
+        durationFilterLabel.setBounds(durArea.removeFromLeft(60));
         durationFilterBox.setBounds(durArea);
 
         filterRow.removeFromLeft(12);
@@ -1183,15 +1395,15 @@ void FreesoundOverlayComponent::resized()
         typeFilterLabel.setBounds(typeArea.removeFromLeft(58));
         typeFilterBox.setBounds(typeArea);
 
-        area.removeFromTop(10);
+        area.removeFromTop(14);
 
         // Barra inferior de paginación
-        auto pageNavArea = area.removeFromBottom(28);
-        prevPageButton.setBounds(pageNavArea.removeFromLeft(105));
-        nextPageButton.setBounds(pageNavArea.removeFromRight(105));
+        auto pageNavArea = area.removeFromBottom(30).reduced(6, 0);
+        prevPageButton.setBounds(pageNavArea.removeFromLeft(112));
+        nextPageButton.setBounds(pageNavArea.removeFromRight(112));
         pageInfoLabel.setBounds(pageNavArea);
 
-        area.removeFromBottom(8);
+        area.removeFromBottom(10);
 
         // Lista de resultados
         resultsListBox.setBounds(area);

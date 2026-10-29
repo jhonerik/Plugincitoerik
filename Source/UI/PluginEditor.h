@@ -377,6 +377,112 @@ public:
         g.drawFittedText(text, juce::Rectangle<int>(width, height).reduced(8, 4), juce::Justification::centred, 3);
     }
 
+    /** Menús desplegables (ComboBox) empotrados de nivel profesional con bisel y flecha vectorial cian. */
+    void drawComboBox(juce::Graphics& g, int width, int height, bool isButtonDown,
+                      int /*buttonX*/, int /*buttonY*/, int /*buttonW*/, int /*buttonH*/,
+                      juce::ComboBox& box) override
+    {
+        auto bounds = juce::Rectangle<float>(0.5f, 0.5f, (float)width - 1.0f, (float)height - 1.0f);
+        const float corner = 6.5f;
+        const bool isHovered = box.isMouseOverOrDragging(true);
+
+        juce::Colour topCol = isHovered ? juce::Colour(0xff162647) : juce::Colour(0xff101c36);
+        juce::Colour botCol = isHovered ? juce::Colour(0xff0b1428) : juce::Colour(0xff080f1f);
+        juce::ColourGradient grad(topCol, bounds.getX(), bounds.getY(),
+                                  botCol, bounds.getX(), bounds.getBottom(), false);
+        g.setGradientFill(grad);
+        g.fillRoundedRectangle(bounds, corner);
+
+        // Bisel especular superior interno
+        g.setColour(juce::Colours::white.withAlpha(isHovered ? 0.14f : 0.08f));
+        g.drawHorizontalLine(1, bounds.getX() + 4.0f, bounds.getRight() - 4.0f);
+
+        // Borde iluminado al pasar el ratón o desplegar
+        juce::Colour borderCol = (isButtonDown || isHovered)
+            ? juce::Colour(0xff38bdf8)
+            : juce::Colour(0xff2c426b);
+        g.setColour(borderCol);
+        g.drawRoundedRectangle(bounds, corner, (isButtonDown || isHovered) ? 1.4f : 1.05f);
+
+        // Flecha chevron vectorial moderna a la derecha
+        const float arrowX = (float)width - 17.0f;
+        const float arrowY = (float)height * 0.5f;
+        juce::Path arrow;
+        arrow.startNewSubPath(arrowX - 4.2f, arrowY - 2.0f);
+        arrow.lineTo(arrowX, arrowY + 2.4f);
+        arrow.lineTo(arrowX + 4.2f, arrowY - 2.0f);
+        g.setColour((isButtonDown || isHovered) ? juce::Colour(0xff38bdf8) : juce::Colour(0xff94a3b8));
+        g.strokePath(arrow, juce::PathStrokeType(1.7f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
+    }
+
+    juce::Font getComboBoxFont(juce::ComboBox& box) override
+    {
+        return juce::Font(juce::jlimit(10.5f, 13.0f, (float)box.getHeight() * 0.44f), juce::Font::bold);
+    }
+
+    void positionComboBoxText(juce::ComboBox& box, juce::Label& label) override
+    {
+        label.setBounds(8, 1, box.getWidth() - 28, box.getHeight() - 2);
+        label.setFont(getComboBoxFont(box));
+        label.setColour(juce::Label::textColourId, juce::Colour(0xfff1f5f9));
+    }
+
+    /** Menú emergente (PopupMenu) en Dark Mode Zafiro con selección iluminada. */
+    void drawPopupMenuBackground(juce::Graphics& g, int width, int height) override
+    {
+        auto bounds = juce::Rectangle<float>(0.5f, 0.5f, (float)width - 1.0f, (float)height - 1.0f);
+        juce::ColourGradient bg(juce::Colour(0xff111d36), 0.0f, 0.0f,
+                                juce::Colour(0xff080f1e), 0.0f, (float)height, false);
+        g.setGradientFill(bg);
+        g.fillRoundedRectangle(bounds, 6.0f);
+        g.setColour(juce::Colour(0xff38bdf8).withAlpha(0.65f));
+        g.drawRoundedRectangle(bounds, 6.0f, 1.2f);
+    }
+
+    void drawPopupMenuItem(juce::Graphics& g, const juce::Rectangle<int>& area,
+                           const bool isSeparator, const bool isActive,
+                           const bool isHighlighted, const bool isTicked,
+                           const bool /*hasSubMenu*/, const juce::String& text,
+                           const juce::String& /*shortcutKeyText*/,
+                           const juce::Drawable* /*icon*/, const juce::Colour* const /*textColourToUse*/) override
+    {
+        if (isSeparator)
+        {
+            auto r = area.reduced(6, 0);
+            g.setColour(juce::Colour(0xff1e293b));
+            g.fillRect(r.removeFromTop(1));
+            return;
+        }
+
+        auto r = area.reduced(4, 2).toFloat();
+        if (isHighlighted && isActive)
+        {
+            juce::ColourGradient hl(juce::Colour(0xff0284c7), r.getX(), r.getY(),
+                                    juce::Colour(0xff0369a1), r.getX(), r.getBottom(), false);
+            g.setGradientFill(hl);
+            g.fillRoundedRectangle(r, 4.5f);
+        }
+        else if (isTicked)
+        {
+            g.setColour(juce::Colour(0xff17294a));
+            g.fillRoundedRectangle(r, 4.5f);
+        }
+
+        g.setColour(isHighlighted ? juce::Colours::white
+                                  : (isTicked ? juce::Colour(0xff38bdf8) : juce::Colour(0xffe2e8f0)));
+        g.setFont(juce::Font(12.2f, (isHighlighted || isTicked) ? juce::Font::bold : juce::Font::plain));
+
+        auto textRect = area.reduced(12, 0);
+        if (isTicked)
+        {
+            g.drawText(juce::String::fromUTF8("✓ ") + text, textRect, juce::Justification::centredLeft, true);
+        }
+        else
+        {
+            g.drawText(text, textRect, juce::Justification::centredLeft, true);
+        }
+    }
+
 private:
     float uiScale = 1.0f;
     juce::Colour themeAccent { 0xff38bdf8 };
