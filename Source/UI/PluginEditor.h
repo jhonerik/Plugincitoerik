@@ -9,15 +9,16 @@
 
 /**
  * @class ScalablePluginLookAndFeel
- * @brief Sistema de diseño visual adaptable (Responsive) con estética de Estudio Zafiro y Titanio Satinado.
+ * @brief Sistema de diseño visual Pro (diseno-gui-pc-pro: desktop-ergonomics-hig + juce-custom-lookandfeel).
  *
  * Características visuales y de adaptabilidad:
- * - Botones con gradiente metálico 3D, bisel superior especular y escalado automático de texto
- *   (drawButtonText) para que ninguna palabra se recorte al achicar la ventana.
- * - Tarjetas de sección en Azul Zafiro Satinado con cabeceras tipo cápsula que ajustan su fuente
- *   automáticamente al ancho disponible.
- * - Perillas rotatorias 3D (Lo-Fi, Tono, Filtro) con corona de marcas radiales y arco luminoso.
- * - Deslizador lineal de tiempo (MM:SS) con pista iluminada y cursor de doble anillo.
+ * - Paleta Dark Mode por capas de elevación (Chasis Nivel 0, Paneles Nivel 1, Visores Nivel 2, Controles Nivel 3).
+ * - Botones con sombra proyectada multicapa, bisel superior especular (1px), micro-desplazamiento táctil y escalado
+ *   automático de texto (drawButtonText) para que ninguna palabra se recorte al redimensionar.
+ * - Tarjetas de sección en Obsidiana Zafiro con cabeceras tipo cápsula e indicador LED lateral.
+ * - Perillas rotatorias 3D tipo hardware DSP (FabFilter / Serum) con corona de 11 marcas radiales activas,
+ *   halo luminoso (glow) y aguja con punto LED.
+ * - Cajas de texto empotradas con anillo de foco cian y Tooltips flotantes de alto contraste.
  */
 class ScalablePluginLookAndFeel : public juce::LookAndFeel_V4
 {
@@ -38,12 +39,12 @@ public:
     /**
      * Dibuja el texto de todos los botones de forma 100% adaptable (Responsive):
      * mide el ancho real del texto y reduce automáticamente el tamaño de la fuente si el botón es estrecho,
-     * garantizando que jamás se corte ni una sola letra.
+     * garantizando que jamás se corte ni una sola letra. Aplica micro-desplazamiento táctil al presionar.
      */
     void drawButtonText(juce::Graphics& g,
                         juce::TextButton& button,
-                        bool /*shouldDrawButtonAsHighlighted*/,
-                        bool /*shouldDrawButtonAsDown*/) override
+                        bool shouldDrawButtonAsHighlighted,
+                        bool shouldDrawButtonAsDown) override
     {
         const auto text = button.getButtonText();
         if (text.isEmpty())
@@ -52,6 +53,9 @@ public:
         auto textBounds = button.getLocalBounds().reduced(6, 2);
         if (textBounds.getWidth() <= 4 || textBounds.getHeight() <= 4)
             return;
+
+        if (shouldDrawButtonAsDown)
+            textBounds.translate(0, 1);
 
         float fontSize = juce::jlimit(9.5f, 16.5f, (float)button.getHeight() * 0.42f);
         juce::Font font(fontSize, juce::Font::bold);
@@ -64,83 +68,123 @@ public:
         }
 
         g.setFont(font);
-        const auto textCol = button.findColour(button.getToggleState()
-                                                   ? juce::TextButton::textColourOnId
-                                                   : juce::TextButton::textColourOffId);
-        g.setColour(textCol.withMultipliedAlpha(button.isEnabled() ? 1.0f : 0.50f));
+        auto textCol = button.findColour(button.getToggleState()
+                                             ? juce::TextButton::textColourOnId
+                                             : juce::TextButton::textColourOffId);
+        if (shouldDrawButtonAsHighlighted && button.isEnabled())
+            textCol = textCol.brighter(0.15f);
+
+        // Sombra de texto sutil para máximo contraste (HIG)
+        if (button.isEnabled() && textCol.getPerceivedBrightness() > 0.45f)
+        {
+            g.setColour(juce::Colour(0x66000000));
+            g.drawFittedText(text, textBounds.translated(0, 1), juce::Justification::centred, 1, 0.68f);
+        }
+
+        g.setColour(textCol.withMultipliedAlpha(button.isEnabled() ? 1.0f : 0.45f));
         g.drawFittedText(text, textBounds, juce::Justification::centred, 1, 0.68f);
     }
 
-    /** Dibuja el fondo metálico satinado con iluminación superior de cada botón. */
+    /** Dibuja el fondo biselado Pro con sombra proyectada, reflejo especular superior y halo hover. */
     void drawButtonBackground(juce::Graphics& g,
                               juce::Button& button,
                               const juce::Colour& backgroundColour,
                               bool shouldDrawButtonAsHighlighted,
                               bool shouldDrawButtonAsDown) override
     {
-        auto bounds = button.getLocalBounds().toFloat().reduced(1.0f);
-        const float cornerSize = 6.5f;
+        auto bounds = button.getLocalBounds().toFloat().reduced(1.2f);
+        const float cornerSize = 7.0f;
 
         if (!button.isEnabled())
         {
-            g.setColour(juce::Colour(0xff1e2a44).withAlpha(0.65f));
+            g.setColour(juce::Colour(0xff0f172a).withAlpha(0.72f));
             g.fillRoundedRectangle(bounds, cornerSize);
-            g.setColour(juce::Colour(0xff33476b));
+            g.setColour(juce::Colour(0xff1e293b));
             g.drawRoundedRectangle(bounds, cornerSize, 1.0f);
             return;
         }
 
+        // 1. Sombra proyectada inferior suave (Elevación Nivel 3)
+        if (!shouldDrawButtonAsDown)
+        {
+            g.setColour(juce::Colour(0x55000000));
+            g.fillRoundedRectangle(bounds.translated(0.0f, 1.6f), cornerSize);
+        }
+        else
+        {
+            bounds.translate(0.0f, 0.8f);
+        }
+
         juce::Colour base = backgroundColour;
         if (shouldDrawButtonAsDown)
-            base = base.brighter(0.25f);
+            base = base.darker(0.06f);
         else if (shouldDrawButtonAsHighlighted)
             base = base.brighter(0.14f);
 
-        juce::Colour topCol = base.brighter(0.18f);
-        juce::Colour botCol = base.darker(0.24f);
+        // 2. Gradiente multicapa tipo hardware satinado
+        juce::Colour topCol = base.brighter(shouldDrawButtonAsDown ? 0.06f : 0.22f);
+        juce::Colour midCol = base;
+        juce::Colour botCol = base.darker(0.28f);
 
         juce::ColourGradient grad(topCol, bounds.getX(), bounds.getY(),
                                   botCol, bounds.getX(), bounds.getBottom(), false);
+        grad.addColour(0.48, midCol);
         g.setGradientFill(grad);
         g.fillRoundedRectangle(bounds, cornerSize);
 
-        // Bisel superior perlado y borde luminoso al pasar el cursor
+        // 3. Línea de luz especular superior interna (Efecto cristal/metal 1px)
+        auto innerTop = bounds.reduced(2.0f, 1.0f).removeFromTop(2.0f);
+        g.setColour(juce::Colours::white.withAlpha(shouldDrawButtonAsHighlighted ? 0.26f : 0.15f));
+        g.drawHorizontalLine((int)innerTop.getY(), innerTop.getX() + 3.0f, innerTop.getRight() - 3.0f);
+
+        // 4. Halo exterior en estado Hover y borde de precisión
+        if (shouldDrawButtonAsHighlighted)
+        {
+            g.setColour(base.brighter(0.55f).withAlpha(0.28f));
+            g.drawRoundedRectangle(bounds.expanded(0.8f), cornerSize + 0.8f, 2.2f);
+        }
+
         juce::Colour borderCol = shouldDrawButtonAsHighlighted
-            ? base.brighter(0.60f)
-            : base.brighter(0.26f).withAlpha(0.80f);
+            ? base.brighter(0.68f)
+            : base.brighter(0.28f).withAlpha(0.82f);
         g.setColour(borderCol);
-        g.drawRoundedRectangle(bounds, cornerSize, shouldDrawButtonAsHighlighted ? 1.6f : 1.1f);
+        g.drawRoundedRectangle(bounds, cornerSize, shouldDrawButtonAsHighlighted ? 1.5f : 1.05f);
     }
 
-    /** Dibuja las tarjetas de sección en Azul Zafiro Satinado con cabecera adaptable. */
+    /** Dibuja las tarjetas de sección por capas (Dark Mode Nivel 1) con sombra, bisel especular y cápsula LED. */
     void drawGroupComponentOutline(juce::Graphics& g, int width, int height,
                                    const juce::String& text, const juce::Justification&,
                                    juce::GroupComponent&) override
     {
-        auto bounds = juce::Rectangle<float>(1.0f, 4.0f, (float)width - 2.0f, (float)height - 5.0f);
-        const float corner = 10.0f;
+        auto bounds = juce::Rectangle<float>(1.5f, 4.5f, (float)width - 3.0f, (float)height - 6.0f);
+        const float corner = 10.5f;
 
-        // Superficie elegante Azul Zafiro / Titanio Satinado
-        juce::ColourGradient cardGrad(juce::Colour(0xee22314f), bounds.getX(), bounds.getY(),
-                                      juce::Colour(0xee18243c), bounds.getX(), bounds.getBottom(), false);
+        // 1. Sombra exterior profunda para separar el panel del chasis (Nivel 0 -> Nivel 1)
+        g.setColour(juce::Colour(0x48000000));
+        g.fillRoundedRectangle(bounds.translated(0.0f, 2.0f), corner);
+
+        // 2. Superficie Dark Mode por capas (Obsidiana Zafiro Elevada)
+        juce::ColourGradient cardGrad(juce::Colour(0xf2111b30), bounds.getX(), bounds.getY(),
+                                      juce::Colour(0xf50a1120), bounds.getX(), bounds.getBottom(), false);
+        cardGrad.addColour(0.35, juce::Colour(0xf20e1729));
         g.setGradientFill(cardGrad);
         g.fillRoundedRectangle(bounds, corner);
 
-        // Bisel interior perlado sutil
-        g.setColour(juce::Colour(0x18ffffff));
-        g.drawRoundedRectangle(bounds.reduced(1.2f), corner, 1.0f);
+        // 3. Reflejo especular superior interno (1px)
+        g.setColour(juce::Colour(0x20ffffff));
+        g.drawRoundedRectangle(bounds.reduced(1.0f), corner, 1.0f);
 
-        // Borde exterior con el color de acento de la plataforma activa
-        g.setColour(themeAccent.withAlpha(0.42f));
-        g.drawRoundedRectangle(bounds, corner, 1.3f);
+        // 4. Borde perimetral con acento dinámico
+        g.setColour(themeAccent.withAlpha(0.40f));
+        g.drawRoundedRectangle(bounds, corner, 1.25f);
 
-        // Cápsula superior de título adaptable (reduce la fuente si la ventana es pequeña)
+        // 5. Cápsula superior de título adaptable con indicador LED lateral
         if (text.isNotEmpty())
         {
             const float maxPillW = juce::jmax(100.0f, (float)width - 28.0f);
             float fontSize = juce::jlimit(9.5f, 13.0f, 11.5f * uiScale);
             juce::Font f(fontSize, juce::Font::bold);
-            float reqW = f.getStringWidthFloat(text) + 24.0f;
+            float reqW = f.getStringWidthFloat(text) + 30.0f;
             if (reqW > maxPillW && reqW > 0.0f)
             {
                 fontSize = juce::jmax(8.5f, fontSize * (maxPillW / reqW) * 0.96f);
@@ -148,29 +192,37 @@ public:
                 reqW = maxPillW;
             }
 
-            const float pillH = juce::jlimit(17.0f, 23.0f, 19.5f * uiScale);
+            const float pillH = juce::jlimit(18.0f, 24.0f, 20.0f * uiScale);
             juce::Rectangle<float> pill(14.0f, 0.0f, juce::jmin(maxPillW, reqW), pillH);
 
-            g.setColour(juce::Colour(0xff293b5f));
-            g.fillRoundedRectangle(pill, 5.5f);
+            juce::ColourGradient pillGrad(juce::Colour(0xff1e2f4d), pill.getX(), pill.getY(),
+                                          juce::Colour(0xff111c33), pill.getX(), pill.getBottom(), false);
+            g.setGradientFill(pillGrad);
+            g.fillRoundedRectangle(pill, 6.0f);
+
+            // Barra de acento luminosa izquierda dentro de la cápsula
+            auto accentBar = pill.removeFromLeft(5.0f).reduced(1.5f, 3.5f);
+            g.setColour(themeAccent);
+            g.fillRoundedRectangle(accentBar, 1.5f);
+
             g.setColour(themeAccent.withAlpha(0.75f));
-            g.drawRoundedRectangle(pill, 5.5f, 1.1f);
+            g.drawRoundedRectangle(juce::Rectangle<float>(14.0f, 0.0f, juce::jmin(maxPillW, reqW), pillH), 6.0f, 1.1f);
 
             g.setFont(f);
             g.setColour(juce::Colour(0xfff8fafc));
-            g.drawFittedText(text, pill.reduced(8.0f, 0.0f).toNearestInt(), juce::Justification::centredLeft, 1, 0.70f);
+            g.drawFittedText(text, pill.reduced(6.0f, 0.0f).toNearestInt(), juce::Justification::centredLeft, 1, 0.70f);
         }
     }
 
-    /** Dibuja la barra deslizadora horizontal de tiempo de inicio (MM:SS). */
+    /** Dibuja la barra deslizadora horizontal de tiempo de inicio (MM:SS) con pista LED y halo. */
     void drawLinearSlider(juce::Graphics& g, int x, int y, int width, int height,
                           float sliderPos, float /*minSliderPos*/, float /*maxSliderPos*/,
                           const juce::Slider::SliderStyle, juce::Slider& slider) override
     {
         auto trackBounds = juce::Rectangle<float>((float)x, (float)y + (float)height * 0.5f - 4.0f, (float)width, 8.0f);
-        g.setColour(juce::Colour(0xff141e33));
+        g.setColour(juce::Colour(0xff080d1a));
         g.fillRoundedRectangle(trackBounds, 4.0f);
-        g.setColour(juce::Colour(0xff384f78));
+        g.setColour(juce::Colour(0xff283a5e));
         g.drawRoundedRectangle(trackBounds, 4.0f, 1.0f);
 
         float fillW = juce::jlimit(0.0f, (float)width, sliderPos - (float)x);
@@ -178,28 +230,28 @@ public:
         {
             auto fillRect = trackBounds.withWidth(fillW);
             juce::Colour trackCol = slider.findColour(juce::Slider::trackColourId);
-            juce::ColourGradient fillGrad(trackCol.darker(0.15f), fillRect.getX(), fillRect.getY(),
-                                          trackCol.brighter(0.25f), fillRect.getRight(), fillRect.getY(), false);
+            juce::ColourGradient fillGrad(trackCol.darker(0.20f), fillRect.getX(), fillRect.getY(),
+                                          trackCol.brighter(0.30f), fillRect.getRight(), fillRect.getY(), false);
             g.setGradientFill(fillGrad);
             g.fillRoundedRectangle(fillRect, 4.0f);
         }
 
-        // Cursor luminoso de doble anillo
+        // Cursor luminoso de triple anillo con halo suave
         float thumbX = juce::jlimit((float)x + 6.0f, (float)(x + width) - 6.0f, sliderPos);
         float thumbY = (float)y + (float)height * 0.5f;
         juce::Colour thumbCol = slider.findColour(juce::Slider::thumbColourId);
 
-        g.setColour(thumbCol.withAlpha(0.35f));
-        g.fillEllipse(thumbX - 9.5f, thumbY - 9.5f, 19.0f, 19.0f);
+        g.setColour(thumbCol.withAlpha(0.28f));
+        g.fillEllipse(thumbX - 10.5f, thumbY - 10.5f, 21.0f, 21.0f);
 
         g.setColour(thumbCol);
-        g.fillEllipse(thumbX - 6.0f, thumbY - 6.0f, 12.0f, 12.0f);
+        g.fillEllipse(thumbX - 6.2f, thumbY - 6.2f, 12.4f, 12.4f);
 
         g.setColour(juce::Colours::white);
-        g.fillEllipse(thumbX - 2.5f, thumbY - 2.5f, 5.0f, 5.0f);
+        g.fillEllipse(thumbX - 2.6f, thumbY - 2.6f, 5.2f, 5.2f);
     }
 
-    /** Dibuja las perillas rotatorias 3D (Lo-Fi, Tono, Filtro) con marcas radiales de estudio. */
+    /** Dibuja las perillas rotatorias 3D tipo Hardware DSP (FabFilter / Serum) con corona iluminada y halo. */
     void drawRotarySlider(juce::Graphics& g, int x, int y, int width, int height,
                           float sliderPosProportional, float rotaryStartAngle,
                           float rotaryEndAngle, juce::Slider& slider) override
@@ -214,46 +266,115 @@ public:
         auto ry = centreY - radius;
         auto rw = radius * 2.0f;
         auto angle = rotaryStartAngle + sliderPosProportional * (rotaryEndAngle - rotaryStartAngle);
+        juce::Colour arcCol = slider.findColour(juce::Slider::rotarySliderFillColourId);
 
-        // Marcas radiales exteriores
-        g.setColour(juce::Colour(0xff526b96));
-        for (int i = 0; i <= 8; ++i)
+        // 1. Corona de 11 marcas radiales (se iluminan las marcas alcanzadas por el valor actual)
+        for (int i = 0; i <= 10; ++i)
         {
-            float tickAngle = rotaryStartAngle + (i / 8.0f) * (rotaryEndAngle - rotaryStartAngle);
-            float tx1 = centreX + (radius + 1.5f) * std::sin(tickAngle);
-            float ty1 = centreY - (radius + 1.5f) * std::cos(tickAngle);
+            float prop = (float)i / 10.0f;
+            float tickAngle = rotaryStartAngle + prop * (rotaryEndAngle - rotaryStartAngle);
+            bool isReached = (prop <= sliderPosProportional + 0.01f);
+            g.setColour(isReached ? arcCol.withAlpha(0.82f) : juce::Colour(0xff33476b));
+            float tx1 = centreX + (radius + 1.4f) * std::sin(tickAngle);
+            float ty1 = centreY - (radius + 1.4f) * std::cos(tickAngle);
             float tx2 = centreX + (radius + 3.2f) * std::sin(tickAngle);
             float ty2 = centreY - (radius + 3.2f) * std::cos(tickAngle);
-            g.drawLine(tx1, ty1, tx2, ty2, 1.2f);
+            g.drawLine(tx1, ty1, tx2, ty2, isReached ? 1.4f : 1.0f);
         }
 
-        // Cuerpo 3D de titanio azulado
-        juce::ColourGradient knobGrad(juce::Colour(0xff32456b), rx, ry,
-                                      juce::Colour(0xff19243b), rx, ry + rw, false);
+        // 2. Sombra proyectada bajo el cuerpo de la perilla
+        g.setColour(juce::Colour(0x66000000));
+        g.fillEllipse(rx, ry + 1.5f, rw, rw);
+
+        // 3. Capuchón 3D anodizado oscuro con bisel especular
+        juce::ColourGradient knobGrad(juce::Colour(0xff293a5c), rx, ry,
+                                      juce::Colour(0xff0d1526), rx, ry + rw, false);
         g.setGradientFill(knobGrad);
         g.fillEllipse(rx, ry, rw, rw);
 
-        // Arco base
+        g.setColour(juce::Colour(0x22ffffff));
+        g.drawEllipse(rx + 1.2f, ry + 1.2f, rw - 2.4f, rw - 2.4f, 0.9f);
+
+        // 4. Pista base del arco
         juce::Path bgArc;
         bgArc.addCentredArc(centreX, centreY, radius, radius, 0.0f, rotaryStartAngle, rotaryEndAngle, true);
-        g.setColour(juce::Colour(0xff2c3e61));
+        g.setColour(juce::Colour(0xff1b2842));
         g.strokePath(bgArc, juce::PathStrokeType(3.0f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
 
-        // Arco de valor iluminado
-        juce::Colour arcCol = slider.findColour(juce::Slider::rotarySliderFillColourId);
-        juce::Path valArc;
-        valArc.addCentredArc(centreX, centreY, radius, radius, 0.0f, rotaryStartAngle, angle, true);
-        g.setColour(arcCol);
-        g.strokePath(valArc, juce::PathStrokeType(3.4f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
+        // 5. Halo luminoso exterior + Arco de valor activo
+        if (sliderPosProportional > 0.005f)
+        {
+            juce::Path valArc;
+            valArc.addCentredArc(centreX, centreY, radius, radius, 0.0f, rotaryStartAngle, angle, true);
 
-        // Aguja indicadora blanca
+            // Halo suave (Glow)
+            g.setColour(arcCol.withAlpha(0.24f));
+            g.strokePath(valArc, juce::PathStrokeType(5.6f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
+
+            // Núcleo brillante
+            g.setColour(arcCol.brighter(0.15f));
+            g.strokePath(valArc, juce::PathStrokeType(3.2f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
+        }
+
+        // 6. Aguja indicadora de precisión con punto LED en la punta
         juce::Path p;
         auto pointerLength = radius * 0.68f;
-        auto pointerThickness = 2.3f;
-        p.addRoundedRectangle(-pointerThickness * 0.5f, -radius + 1.5f, pointerThickness, pointerLength, 1.0f);
+        auto pointerThickness = 2.2f;
+        p.addRoundedRectangle(-pointerThickness * 0.5f, -radius + 1.8f, pointerThickness, pointerLength, 1.0f);
         p.applyTransform(juce::AffineTransform::rotation(angle).translated(centreX, centreY));
         g.setColour(juce::Colours::white);
         g.fillPath(p);
+
+        float dotDist = radius * 0.62f;
+        float dotX = centreX + dotDist * std::sin(angle);
+        float dotY = centreY - dotDist * std::cos(angle);
+        g.setColour(arcCol.brighter(0.35f));
+        g.fillEllipse(dotX - 1.8f, dotY - 1.8f, 3.6f, 3.6f);
+    }
+
+    /** Cajas de texto empotradas (Nivel 2) con bordes redondeados y anillo de foco cian. */
+    void fillTextEditorBackground(juce::Graphics& g, int width, int height, juce::TextEditor& textEditor) override
+    {
+        auto bounds = juce::Rectangle<float>(0.0f, 0.0f, (float)width, (float)height).reduced(0.5f);
+        g.setColour(textEditor.findColour(juce::TextEditor::backgroundColourId));
+        g.fillRoundedRectangle(bounds, 6.0f);
+    }
+
+    void drawTextEditorOutline(juce::Graphics& g, int width, int height, juce::TextEditor& textEditor) override
+    {
+        if (!textEditor.isEnabled())
+            return;
+
+        auto bounds = juce::Rectangle<float>(0.5f, 0.5f, (float)width - 1.0f, (float)height - 1.0f);
+        if (textEditor.hasKeyboardFocus(true) && !textEditor.isReadOnly())
+        {
+            g.setColour(juce::Colour(0xff38bdf8).withAlpha(0.25f));
+            g.drawRoundedRectangle(bounds.expanded(0.8f), 6.5f, 2.4f);
+            g.setColour(juce::Colour(0xff38bdf8));
+            g.drawRoundedRectangle(bounds, 6.0f, 1.5f);
+        }
+        else
+        {
+            g.setColour(textEditor.findColour(juce::TextEditor::outlineColourId));
+            g.drawRoundedRectangle(bounds, 6.0f, 1.1f);
+        }
+    }
+
+    /** Tooltips flotantes modernos de alto contraste (HIG). */
+    void drawTooltip(juce::Graphics& g, const juce::String& text, int width, int height) override
+    {
+        auto bounds = juce::Rectangle<float>(0.5f, 0.5f, (float)width - 1.0f, (float)height - 1.0f);
+        juce::ColourGradient bg(juce::Colour(0xfa0f172a), 0.0f, 0.0f,
+                                juce::Colour(0xfa080d1a), 0.0f, (float)height, false);
+        g.setGradientFill(bg);
+        g.fillRoundedRectangle(bounds, 6.0f);
+
+        g.setColour(juce::Colour(0xff38bdf8).withAlpha(0.80f));
+        g.drawRoundedRectangle(bounds, 6.0f, 1.2f);
+
+        g.setColour(juce::Colour(0xfff8fafc));
+        g.setFont(juce::Font(12.0f, juce::Font::bold));
+        g.drawFittedText(text, juce::Rectangle<int>(width, height).reduced(8, 4), juce::Justification::centred, 3);
     }
 
 private:
@@ -263,16 +384,7 @@ private:
 
 /**
  * @class ClipSamplerAudioProcessorEditor
- * @brief Interfaz Gráfica Principal 100% Adaptable (Responsive) y en Español de ClipSampler v2.5.
- *
- * Características principales:
- * - Estética elegante en Azul Zafiro Real y Titanio Satinado con iluminación ambiental e indicadores dinámicos.
- * - Diseño 100% responsivo desde tamaños compactos (680x540) hasta pantallas grandes (1800x1300) sin solapar textos.
- * - Selector multi-plataforma (YouTube, TikTok, Instagram) con auto-detección al pegar enlaces.
- * - Extracción en 3s, 10s o 30s + botón condicional "Nueva Extracción" al completar los 2 audios.
- * - Suite de 3 botones de Derechos de Autor e IA (±3 semitonos + dispersión de fase).
- * - Doble visor de onda con Rebanador MPC (C1-G2), perillas de efectos (Lo-Fi, Tono, Filtro, Sinc. BPM)
- *   y botones para arrastrar archivos .WAV y .MIDI directamente al DAW.
+ * @brief Interfaz Gráfica Principal 100% Adaptable (Responsive) y en Español de ClipSampler v2.6.1.
  */
 class ClipSamplerAudioProcessorEditor : public juce::AudioProcessorEditor,
                                         public juce::DragAndDropContainer,
@@ -331,7 +443,9 @@ private:
 
     ClipSamplerAudioProcessor& audioProcessor;
     ScalablePluginLookAndFeel scalableLnf;
+    juce::TooltipWindow tooltipWindow { this, 420 };
     int licenseCheckTickCounter = 0;
+    int uiSyncTickCounter = 0;
     int lastKnownVideoDuration = -1;
 
     // Botones de la barra de encabezado (Estado de Licencia / Prueba de 3 Días, Freesound y Mantenimiento)

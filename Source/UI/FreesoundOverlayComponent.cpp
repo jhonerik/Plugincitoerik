@@ -1071,20 +1071,28 @@ juce::Component* FreesoundOverlayComponent::refreshComponentForRow(int rowNumber
 // ==============================================================================
 void FreesoundOverlayComponent::paint(juce::Graphics& g)
 {
-    // Fondo translúcido con desenfoque zafiro profundo
-    g.fillAll(juce::Colour(0xd80b1326));
+    // Fondo translúcido profundo (Dark Mode por capas - diseno-gui-pc-pro)
+    g.fillAll(juce::Colour(0xe4050912));
 
     auto cardBounds = getLocalBounds().reduced(24, 18).toFloat();
     const float corner = 12.0f;
 
-    // Tarjeta elegante principal
-    juce::ColourGradient cardGrad(juce::Colour(0xfa18243c), cardBounds.getX(), cardBounds.getY(),
-                                  juce::Colour(0xfa121b2d), cardBounds.getX(), cardBounds.getBottom(), false);
+    // Sombra exterior del modal
+    g.setColour(juce::Colour(0x77000000));
+    g.fillRoundedRectangle(cardBounds.translated(0.0f, 4.0f), corner);
+
+    // Tarjeta elevada Nivel 1
+    juce::ColourGradient cardGrad(juce::Colour(0xfc111b30), cardBounds.getX(), cardBounds.getY(),
+                                  juce::Colour(0xfc09101f), cardBounds.getX(), cardBounds.getBottom(), false);
     g.setGradientFill(cardGrad);
     g.fillRoundedRectangle(cardBounds, corner);
 
-    g.setColour(juce::Colour(0xff38bdf8).withAlpha(0.35f));
-    g.drawRoundedRectangle(cardBounds, corner, 1.3f);
+    // Bisel especular interno superior
+    g.setColour(juce::Colour(0x22ffffff));
+    g.drawRoundedRectangle(cardBounds.reduced(1.0f), corner, 1.0f);
+
+    g.setColour(juce::Colour(0xff38bdf8).withAlpha(0.48f));
+    g.drawRoundedRectangle(cardBounds, corner, 1.4f);
 }
 
 void FreesoundOverlayComponent::resized()

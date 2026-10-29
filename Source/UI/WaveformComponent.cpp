@@ -386,25 +386,43 @@ void WaveformComponent::paint(juce::Graphics& g)
     const int selectedSliceIdx = processor.getSelectedSliceIndex(slotIndex);
     const juce::String selectedSliceName = processor.getSelectedSliceName(slotIndex);
 
-    // 1. Fondo elegante Azul Zafiro Acústico (evita el fondo negro plano)
-    juce::ColourGradient cardGrad(juce::Colour(0xff162238), bounds.getX(), bounds.getY(),
-                                  juce::Colour(0xff1e2f4d), bounds.getX(), bounds.getBottom(), false);
+    // 1. Pozo de Osciloscopio Empotrado (Nivel 2 Dark Mode - diseno-gui-pc-pro)
+    juce::ColourGradient cardGrad(juce::Colour(0xff060b16), bounds.getX(), bounds.getY(),
+                                  juce::Colour(0xff0c1528), bounds.getX(), bounds.getBottom(), false);
+    cardGrad.addColour(0.5, juce::Colour(0xff080f1e));
     g.setGradientFill(cardGrad);
     g.fillRoundedRectangle(bounds, 9.0f);
 
-    // Cuadrícula acústica sutil de fondo estilo osciloscopio de estudio
-    g.setColour(juce::Colour(0x12ffffff));
+    // Franja superior de cabecera del visor con contraste limpio
+    const float headerH = juce::jlimit(18.0f, 24.0f, bounds.getHeight() * 0.22f);
+    {
+        auto topStrip = bounds.withHeight(headerH);
+        g.setColour(juce::Colour(0x99111c33));
+        g.fillRoundedRectangle(topStrip, 9.0f);
+        g.setColour(juce::Colour(0x24ffffff));
+        g.drawHorizontalLine((int)topStrip.getBottom(), bounds.getX() + 2.0f, bounds.getRight() - 2.0f);
+    }
+
+    // Cuadrícula acústica sutil de fondo estilo osciloscopio de estudio (tiempo + dB)
+    g.setColour(juce::Colour(0x0fffffff));
     for (float gx = bounds.getX() + 40.0f; gx < bounds.getRight(); gx += 40.0f)
-        g.drawVerticalLine((int)gx, bounds.getY() + 22.0f, bounds.getBottom() - 2.0f);
+        g.drawVerticalLine((int)gx, bounds.getY() + headerH, bounds.getBottom() - 2.0f);
+
+    const float waveTopY = bounds.getY() + headerH + 4.0f;
+    const float waveBotY = bounds.getBottom() - 4.0f;
+    const float waveMidY = (waveTopY + waveBotY) * 0.5f;
+    g.setColour(juce::Colour(0x0bffffff));
+    g.drawHorizontalLine((int)(waveTopY + (waveMidY - waveTopY) * 0.5f), bounds.getX() + 6.0f, bounds.getRight() - 6.0f);
+    g.drawHorizontalLine((int)(waveMidY + (waveBotY - waveMidY) * 0.5f), bounds.getX() + 6.0f, bounds.getRight() - 6.0f);
 
     juce::Colour accentCol = (slotIndex == 2) ? juce::Colour(0xff00e676) : juce::Colour(0xff38bdf8);
     if (isActiveSlot && totalLength > 0.0)
     {
-        g.setColour(accentCol.withAlpha(0.18f));
+        g.setColour(accentCol.withAlpha(0.20f));
         g.drawRoundedRectangle(bounds.reduced(1.5f), 9.0f, 3.2f);
     }
 
-    juce::Colour borderCol = (isActiveSlot && totalLength > 0.0) ? accentCol.withAlpha(0.92f) : juce::Colour(0xff364b70);
+    juce::Colour borderCol = (isActiveSlot && totalLength > 0.0) ? accentCol.withAlpha(0.92f) : juce::Colour(0xff253656);
     g.setColour(borderCol);
     g.drawRoundedRectangle(bounds.reduced(0.75f), 9.0f, isActiveSlot ? 1.8f : 1.1f);
 
@@ -415,7 +433,6 @@ void WaveformComponent::paint(juce::Graphics& g)
     }
 
     // Barra superior de título adaptable (usa drawFittedText para no cortar texto cuando la ventana es pequeña)
-    const float headerH = juce::jlimit(18.0f, 24.0f, bounds.getHeight() * 0.22f);
     auto headerBar = bounds.removeFromTop(headerH).reduced(10.0f, 1.0f);
 
     g.setColour(selectedSliceIdx >= 0 ? juce::Colour(0xffffd54f) : accentCol.brighter(0.15f));

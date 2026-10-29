@@ -69,9 +69,9 @@ ClipSamplerAudioProcessorEditor::ClipSamplerAudioProcessorEditor(ClipSamplerAudi
     urlLabel.setMinimumHorizontalScale(0.68f);
     addAndMakeVisible(urlLabel);
 
-    urlEditor.setColour(juce::TextEditor::backgroundColourId, juce::Colour(0xff152036));
+    urlEditor.setColour(juce::TextEditor::backgroundColourId, juce::Colour(0xff080d1a));
     urlEditor.setColour(juce::TextEditor::textColourId, juce::Colours::white);
-    urlEditor.setColour(juce::TextEditor::outlineColourId, juce::Colour(0xff3b527d));
+    urlEditor.setColour(juce::TextEditor::outlineColourId, juce::Colour(0xff283a5e));
     if (audioProcessor.getLastUrl().isNotEmpty())
         urlEditor.setText(audioProcessor.getLastUrl(), false);
     urlEditor.onReturnKey = [this] { onDetectDurationClicked(); };
@@ -109,9 +109,9 @@ ClipSamplerAudioProcessorEditor::ClipSamplerAudioProcessorEditor(ClipSamplerAudi
 
     startTimeEditor.setText(savedTime, false);
     startTimeEditor.setJustification(juce::Justification::centred);
-    startTimeEditor.setColour(juce::TextEditor::backgroundColourId, juce::Colour(0xff152036));
+    startTimeEditor.setColour(juce::TextEditor::backgroundColourId, juce::Colour(0xff080d1a));
     startTimeEditor.setColour(juce::TextEditor::textColourId, juce::Colour(0xff38bdf8));
-    startTimeEditor.setColour(juce::TextEditor::outlineColourId, juce::Colour(0xff3b527d));
+    startTimeEditor.setColour(juce::TextEditor::outlineColourId, juce::Colour(0xff283a5e));
     startTimeEditor.onTextChange = [this] {
         int secs = AudioExtractorWorker::parseTimeToSeconds(startTimeEditor.getText());
         if (secs > startTimeSlider.getMaximum())
@@ -401,8 +401,39 @@ ClipSamplerAudioProcessorEditor::ClipSamplerAudioProcessorEditor(ClipSamplerAudi
     updatePlatformUiState();
     updateFxAndMpcUiState();
 
-    // Temporizador a 30 Hz para actualizar barra de progreso y cabezal de reproducción
-    startTimerHz(30);
+    // =========================================================================
+    // Ergonomía HIG (desktop-ergonomics-hig): Cursores interactivos y Tooltips con atajos
+    // =========================================================================
+    juce::Component* interactiveControls[] = {
+        &licenseBadgeButton, &freesoundButton, &updateExtractorButton, &cleanCacheButton,
+        &loadLocalFileButton, &usoLibreButton, &platformYoutubeBtn, &platformTiktokBtn, &platformInstagramBtn,
+        &pasteButton, &detectDurationButton, &startTimeSlider, &extractModeButton,
+        &extract3sButton, &extract10sButton, &extract30sButton, &newExtractionButton,
+        &tapeWarmthBtn, &derechosPlusBtn, &derechosMinusBtn, &detectCopyrightBtn,
+        &fxTargetAudio1Btn, &fxTargetAudio2Btn, &lofiKnob, &pitchKnob, &toneKnob, &attackKnob, &releaseKnob,
+        &autoSyncButton, &autoChopButton, &bakeFxButton,
+        &playButton, &stopButton, &exactCutButton, &padReverseButton, &padHalfTimeButton,
+        &dragDawButton, &dragMidiButton, &exportWavButton
+    };
+    for (auto* comp : interactiveControls)
+        comp->setMouseCursor(juce::MouseCursor::PointingHandCursor);
+
+    loadLocalFileButton.setTooltip(juce::String::fromUTF8("Cargar muestra de audio local en el Visor [Atajo: Ctrl+O]"));
+    freesoundButton.setTooltip(juce::String::fromUTF8("Abrir explorador de muestras Freesound API v2 [Atajo: Ctrl+F]"));
+    playButton.setTooltip(juce::String::fromUTF8("Reproducir vista previa de la muestra activa [Atajo: Espacio]"));
+    stopButton.setTooltip(juce::String::fromUTF8("Detener reproducción [Atajo: Espacio / Esc]"));
+    exactCutButton.setTooltip(juce::String::fromUTF8("Seleccionar o arrastrar únicamente la rodaja MPC activa hacia tu DAW"));
+    dragDawButton.setTooltip(juce::String::fromUTF8("Mantén presionado y arrastra el archivo .WAV directamente a una pista de tu DAW"));
+    dragMidiButton.setTooltip(juce::String::fromUTF8("Convertir muestra a notas MIDI y arrastrar al Piano Roll [Atajo: Ctrl+M]"));
+    exportWavButton.setTooltip(juce::String::fromUTF8("Guardar muestra activa como archivo .WAV de 24 bits [Atajo: Ctrl+E]"));
+    lofiKnob.setTooltip(juce::String::fromUTF8("Reducción de resolución estilo sampler vintage de 12 bits (0% - 100%)"));
+    pitchKnob.setTooltip(juce::String::fromUTF8("Transposición cromática en semitonos (-12 st a +12 st)"));
+    toneKnob.setTooltip(juce::String::fromUTF8("Filtro paso-bajo analógico cálido (15% - 100%)"));
+    attackKnob.setTooltip(juce::String::fromUTF8("Tiempo de ataque de la envolvente anti-click (0.5 ms - 500 ms)"));
+    releaseKnob.setTooltip(juce::String::fromUTF8("Tiempo de caída/relajación de cada nota o rodaja (5 ms - 2000 ms)"));
+
+    // Temporizador a 60 FPS (juce-custom-lookandfeel) para máxima fluidez visual del cabezal y animaciones
+    startTimerHz(60);
 }
 
 ClipSamplerAudioProcessorEditor::~ClipSamplerAudioProcessorEditor()
@@ -637,6 +668,17 @@ void ClipSamplerAudioProcessorEditor::updateFxAndMpcUiState()
 // ==============================================================================
 void ClipSamplerAudioProcessorEditor::timerCallback()
 {
+    // 1. Actualización fluida a 60 FPS del cabezal de reproducción cuando está sonando
+    if (audioProcessor.isAudioPlaying())
+    {
+        originalWaveformComponent.repaint();
+        transformedWaveformComponent.repaint();
+    }
+
+    // Sincronizamos el resto de estados de controles a 30 Hz (cada 2 ticks de 60 Hz) para máxima eficiencia CPU
+    if ((++uiSyncTickCounter & 1) != 0)
+        return;
+
     if (++licenseCheckTickCounter >= 150)
     {
         licenseCheckTickCounter = 0;
@@ -1277,19 +1319,75 @@ void ClipSamplerAudioProcessorEditor::mouseDrag(const juce::MouseEvent& event)
 
 bool ClipSamplerAudioProcessorEditor::keyPressed(const juce::KeyPress& key)
 {
+    // Si el usuario está escribiendo un enlace o tiempo en una caja de texto, solo interceptamos Escape
+    if (urlEditor.hasKeyboardFocus(true) || startTimeEditor.hasKeyboardFocus(true))
+    {
+        if (key == juce::KeyPress::escapeKey)
+        {
+            grabKeyboardFocus();
+            return true;
+        }
+        return false;
+    }
+
+    // Escape: cierra modales abiertos o detiene la reproducción
+    if (key == juce::KeyPress::escapeKey)
+    {
+        if (freesoundOverlay.isVisible())
+        {
+            freesoundOverlay.setVisible(false);
+            return true;
+        }
+        if (licenseOverlay.isVisible() && audioProcessor.getLicenseManager().isUnlocked())
+        {
+            licenseOverlay.setVisible(false);
+            return true;
+        }
+        if (audioProcessor.isAudioPlaying())
+        {
+            onStopClicked();
+            return true;
+        }
+        return false;
+    }
+
+    // Barra Espaciadora: Reproducir / Detener vista previa
     if (key == juce::KeyPress::spaceKey)
     {
-        // Si el usuario está escribiendo un enlace o tiempo en una caja de texto, no interferimos
-        if (urlEditor.hasKeyboardFocus(true) || startTimeEditor.hasKeyboardFocus(true))
-            return false;
-
         if (audioProcessor.isAudioPlaying())
             onStopClicked();
         else
             onPlayClicked();
 
-        return true; // Evento consumido
+        return true;
     }
+
+    // Atajos de teclado con Ctrl (Windows) o Cmd (macOS) - desktop-ergonomics-hig
+    if (key.getModifiers().isCommandDown())
+    {
+        const auto ch = key.getTextCharacter();
+        if (ch == 'f' || ch == 'F' || key.getKeyCode() == 'F')
+        {
+            onFreesoundButtonClicked();
+            return true;
+        }
+        if (ch == 'o' || ch == 'O' || key.getKeyCode() == 'O')
+        {
+            onLoadLocalFileClicked();
+            return true;
+        }
+        if (ch == 'm' || ch == 'M' || key.getKeyCode() == 'M')
+        {
+            onDragMidiClicked();
+            return true;
+        }
+        if (ch == 'e' || ch == 'E' || key.getKeyCode() == 'E')
+        {
+            onExportWavClicked();
+            return true;
+        }
+    }
+
     return false;
 }
 
@@ -1395,10 +1493,10 @@ void ClipSamplerAudioProcessorEditor::paint(juce::Graphics& g)
     const float w = (float)getWidth();
     const float h = (float)getHeight();
 
-    // 1. Lienzo principal elegante en Azul Zafiro Real y Titanio Satinado (reemplaza el fondo negro)
-    juce::ColourGradient bgGrad(juce::Colour(0xff1e2b48), 0.0f, 0.0f,
-                                juce::Colour(0xff152036), w, h, false);
-    bgGrad.addColour(0.50, juce::Colour(0xff253659));
+    // 1. Chasis Nivel 0 (Dark Mode por capas - desktop-ergonomics-hig): Obsidiana Carbono Profundo
+    juce::ColourGradient bgGrad(juce::Colour(0xff090e1c), 0.0f, 0.0f,
+                                juce::Colour(0xff060a14), w, h, false);
+    bgGrad.addColour(0.50, juce::Colour(0xff0f182d));
     g.setGradientFill(bgGrad);
     g.fillAll();
 
@@ -1409,53 +1507,71 @@ void ClipSamplerAudioProcessorEditor::paint(juce::Graphics& g)
                                                                 : juce::Colour(0xffe040fb);
 
     {
-        juce::ColourGradient topGlow(platAccent.withAlpha(0.16f), w * 0.25f, 0.0f,
+        juce::ColourGradient topGlow(platAccent.withAlpha(0.14f), w * 0.25f, 0.0f,
                                      juce::Colours::transparentBlack, w * 0.25f, h * 0.48f, true);
         g.setGradientFill(topGlow);
         g.fillRect(0.0f, 0.0f, w, h * 0.55f);
 
-        juce::ColourGradient botGlow(juce::Colour(0x1838bdf8), w * 0.72f, h * 0.75f,
+        juce::ColourGradient botGlow(juce::Colour(0x1638bdf8), w * 0.72f, h * 0.75f,
                                      juce::Colours::transparentBlack, w * 0.72f, h * 0.25f, true);
         g.setGradientFill(botGlow);
         g.fillRect(0.0f, h * 0.35f, w, h * 0.65f);
     }
 
-    // 3. Textura arquitectónica sutil de estudio (líneas acústicas finas y ondas decorativas)
-    g.setColour(juce::Colour(0x09ffffff));
+    // 3. Textura arquitectónica sutil de estudio (líneas acústicas finas)
+    g.setColour(juce::Colour(0x06ffffff));
     for (float yLine = 60.0f; yLine < h; yLine += 28.0f)
         g.drawHorizontalLine((int)yLine, 0.0f, w);
 
-    // 4. Barra de Encabezado Superior en Titanio Azulado
+    // 4. Barra de Encabezado Superior en Titanio Anodizado con bisel especular
     const float wScale = juce::jlimit(0.72f, 1.65f, w / 980.0f);
     const float hScale = juce::jlimit(0.72f, 1.65f, h / 760.0f);
     const int headerH = juce::roundToInt(54.0f * hScale);
 
     auto headerBounds = getLocalBounds().removeFromTop(headerH);
-    juce::ColourGradient hdrGrad(juce::Colour(0xff283a5e), 0.0f, 0.0f,
-                                 juce::Colour(0xff1c2944), 0.0f, (float)headerH, false);
+    juce::ColourGradient hdrGrad(juce::Colour(0xff15223b), 0.0f, 0.0f,
+                                 juce::Colour(0xff0b1222), 0.0f, (float)headerH, false);
     g.setGradientFill(hdrGrad);
     g.fillRect(headerBounds);
 
-    // Calculamos el espacio disponible EXACTO a la izquierda del botón de Prueba de 3 Días
-    // para que el título y el subtítulo jamás se monten ni se recorten sobre el botón.
+    // Reflejo especular superior de 1px en la barra de encabezado
+    g.setColour(juce::Colour(0x22ffffff));
+    g.drawHorizontalLine(0, 0.0f, w);
+
+    // Calculamos el espacio disponible EXACTO a la izquierda del botón de Licencia
     const int rightButtonsStartX = licenseBadgeButton.getX() > 40
         ? licenseBadgeButton.getX()
         : juce::roundToInt(w * 0.50f);
-    const int availHeaderTextW = juce::jmax(150, rightButtonsStartX - 26);
+    const int availHeaderTextW = juce::jmax(150, rightButtonsStartX - 36);
 
     const int titleY = juce::roundToInt(4.0f * hScale);
     const int titleH = juce::roundToInt(25.0f * hScale);
     const int subY   = titleY + titleH;
     const int subH   = juce::jmax(14, headerH - subY - 4);
 
-    // Título principal adaptable
-    g.setColour(juce::Colour(0xff7dd3fc));
+    // Indicador LED luminoso junto al nombre del plugin
+    const float ledRadius = 4.2f * hScale;
+    const float ledX = 15.0f;
+    const float ledY = (float)titleY + (float)titleH * 0.5f - ledRadius;
+    juce::Colour ledCol = audioProcessor.isAudioPlaying() ? juce::Colour(0xff10b981) : juce::Colour(0xff38bdf8);
+    g.setColour(ledCol.withAlpha(0.32f));
+    g.fillEllipse(ledX - 2.5f, ledY - 2.5f, (ledRadius + 2.5f) * 2.0f, (ledRadius + 2.5f) * 2.0f);
+    g.setColour(ledCol);
+    g.fillEllipse(ledX, ledY, ledRadius * 2.0f, ledRadius * 2.0f);
+
+    // Título principal adaptable con sombra sutil
+    const int titleTextX = juce::roundToInt(ledX + ledRadius * 2.0f + 8.0f);
     g.setFont(juce::Font(juce::jlimit(14.5f, 24.0f, 21.0f * wScale), juce::Font::bold));
+    g.setColour(juce::Colour(0x88000000));
     g.drawFittedText(juce::String::fromUTF8("CLIPSAMPLER v2.6.1"),
-                     16, titleY, availHeaderTextW, titleH,
+                     titleTextX, titleY + 1, availHeaderTextW, titleH,
+                     juce::Justification::centredLeft, 1, 0.68f);
+    g.setColour(juce::Colour(0xfff0f9ff));
+    g.drawFittedText(juce::String::fromUTF8("CLIPSAMPLER v2.6.1"),
+                     titleTextX, titleY, availHeaderTextW, titleH,
                      juce::Justification::centredLeft, 1, 0.68f);
 
-    // Subtítulo 100% en español, codificado con fromUTF8 y ajustado dinámicamente a availHeaderTextW
+    // Subtítulo 100% en español con indicador de flujo de trabajo Pro
     const juce::String subText = juce::String::fromUTF8("YOUTUBE  |  TIKTOK  |  INSTAGRAM   —   REBANADOR MPC   |   EFECTOS Y MIDI");
     float subFontSize = juce::jlimit(8.5f, 12.5f, 11.0f * wScale);
     juce::Font subFont(subFontSize, juce::Font::bold);
@@ -1469,10 +1585,10 @@ void ClipSamplerAudioProcessorEditor::paint(juce::Graphics& g)
     g.setFont(subFont);
     g.setColour(platAccent.brighter(0.32f));
     g.drawFittedText(subText,
-                     16, subY, availHeaderTextW, subH,
+                     16, subY, availHeaderTextW + 10, subH,
                      juce::Justification::centredLeft, 1, 0.65f);
 
-    // Línea luminosa divisoria debajo del encabezado
+    // Línea luminosa divisoria debajo del encabezado con resplandor
     juce::ColourGradient lineGrad(platAccent, 0.0f, (float)headerH,
                                   juce::Colour(0xff38bdf8), w, (float)headerH, false);
     g.setGradientFill(lineGrad);
