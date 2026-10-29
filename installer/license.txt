@@ -1,6 +1,6 @@
-﻿================================================================================
+================================================================================
 ACUERDO DE LICENCIA DE USUARIO FINAL Y POLÍTICAS DE USO
-ClipSampler v2.6.1 - Plugin de Instrumento Virtual de Audio (VST3 / AAX 64 bits)
+ClipSampler - Plugin de Instrumento Virtual de Audio (VST3 / AU 64 bits)
 ================================================================================
 
 POR FAVOR, LEA DETENIDAMENTE ESTE DOCUMENTO ANTES DE INSTALAR Y UTILIZAR EL 

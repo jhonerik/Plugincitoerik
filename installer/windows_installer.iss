@@ -1,17 +1,17 @@
-﻿; ==============================================================================
-; ClipSampler v2.6.1 - Script de Instalador de Windows de 64 bits (Inno Setup)
+; ==============================================================================
+; ClipSampler - Script de Instalador de Windows de 64 bits (Inno Setup)
 ; Idioma: 100% Español | Incluye Plugin VST3 (64 bits) y Manual Oficial en PDF
 ; ==============================================================================
 
 #define MyAppName "ClipSampler"
-#define MyAppVersion "2.6.1"
 #define MyAppPublisher "AudioInnovations"
 #define MyAppURL "https://www.audioinnovations.com"
 
 [Setup]
 AppId={{C78912A3-B245-429C-8A91-58FF807B4391}
 AppName={#MyAppName}
-AppVersion={#MyAppVersion}
+AppVerName={#MyAppName}
+AppVersion=1.0
 AppPublisher={#MyAppPublisher}
 AppPublisherURL={#MyAppURL}
 AppSupportURL={#MyAppURL}
@@ -21,7 +21,7 @@ DisableDirPage=yes
 DefaultGroupName={#MyAppName}
 DisableProgramGroupPage=yes
 OutputDir=..\dist_windows
-OutputBaseFilename=ClipSampler_Windows_Installer_v{#MyAppVersion}
+OutputBaseFilename=ClipSampler_Windows_Installer
 Compression=lzma2/ultra64
 SolidCompression=yes
 ArchitecturesAllowed=x64compatible
@@ -95,7 +95,7 @@ Filename: "{commonappdata}\ClipSampler\Manual_ClipSampler.pdf"; \
 
 [Messages]
 spanish.WelcomeLabel1=Bienvenido al Asistente de Instalación de [name]
-spanish.WelcomeLabel2=Este asistente instalará [name/ver] (Plugin VST3 de 64 bits y el Manual Oficial de Usuario en PDF) en tu computadora.%n%nSe recomienda cerrar tu estación de trabajo de audio digital (DAW) antes de continuar.
+spanish.WelcomeLabel2=Este asistente instalará [name] (Plugin VST3 de 64 bits y el Manual Oficial de Usuario en PDF) en tu computadora.%n%nSe recomienda cerrar tu estación de trabajo de audio digital (DAW) antes de continuar.
 spanish.SelectComponentsDesc=¿Qué componentes deseas instalar?
 spanish.SelectComponentsLabel2=Componentes incluidos en esta instalación en español:
 spanish.ClickNext=Haz clic en Siguiente para continuar, o en Cancelar para salir de la instalación.

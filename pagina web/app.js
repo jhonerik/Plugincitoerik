@@ -492,7 +492,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (promoBadge) promoBadge.textContent = 'OFERTA FINALIZADA';
     if (promoBarText) {
-      promoBarText.innerHTML = 'Tu tiempo de promoción de 24 horas ha finalizado. Obtén <strong>ClipSampler Pro</strong> (Instalador 100% en Español + Manual PDF) por <span class="price-highlight">$50 USD</span>';
+      promoBarText.innerHTML = 'Tu tiempo de promoción de 24 horas ha finalizado. Obtén <strong>ClipSampler</strong> (Instalador 100% en Español + Manual PDF) por <span class="price-highlight">$50 USD</span>';
     }
     if (promoActionLink) promoActionLink.textContent = 'Adquirir Licencia';
     if (navBuyBtnText) navBuyBtnText.textContent = 'Comprar Ahora • $50 USD';

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# ClipSampler v2.6.1 - Script de Empaquetado de Instalador para macOS (Español)
-# Genera instalador .pkg con selector de VST3, AAX y Manual Oficial en PDF
+# ClipSampler - Script de Empaquetado de Instalador para macOS (Español)
+# Genera instalador .pkg con selector de VST3 y Manual Oficial en PDF
 # ==============================================================================
 
 set -e
@@ -15,7 +15,7 @@ OUTPUT_DIR="${PROJECT_ROOT}/dist_macos"
 STAGING_DIR="${PROJECT_ROOT}/staging_pkg"
 
 echo "=========================================================="
-echo " Empaquetando ClipSampler v2.6.1 para macOS (Español)     "
+echo " Empaquetando ClipSampler para macOS (Español)            "
 echo "=========================================================="
 
 mkdir -p "${OUTPUT_DIR}"
@@ -72,7 +72,7 @@ pkgbuild --root "${STAGING_DIR}/aax" \
          "${SCRIPT_DIR}/ClipSampler_AAX.pkg"
 
 # 3. Construir instalador final con productbuild usando macos_distribution.xml
-FINAL_PKG="${OUTPUT_DIR}/ClipSampler_macOS_Installer_v2.6.1.pkg"
+FINAL_PKG="${OUTPUT_DIR}/ClipSampler_macOS_Installer.pkg"
 
 echo "🚀 Generando paquete instalador unificado en español..."
 productbuild --distribution "${SCRIPT_DIR}/macos_distribution.xml" \

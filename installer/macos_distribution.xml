@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <installer-gui-script minSpecVersion="2">
-    <title>Instalador de ClipSampler v2.6.1 (Español)</title>
+    <title>Instalador de ClipSampler (Español)</title>
     <options customize="always" require-scripts="false" hostArchitectures="x86_64,arm64" />
     
     <!-- Políticas de Usuario y Acuerdo de Licencia en Español -->

@@ -1,6 +1,6 @@
-﻿================================================================================
+================================================================================
 LICENCIAS Y AVISOS DE COMPONENTES DE TERCEROS
-ClipSampler v2.6.1 - Plugin de Instrumento Virtual de Audio (VST3 / AAX / AU)
+ClipSampler - Plugin de Instrumento Virtual de Audio (VST3 / AU)
 ================================================================================
 
 Este programa incluye binarios sin modificar de FFmpeg (licencia LGPL 2.1+) 

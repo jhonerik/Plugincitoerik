@@ -881,7 +881,7 @@ void ClipSamplerAudioProcessorEditor::onUsoLibreClicked()
         .withIconType(juce::MessageBoxIconType::WarningIcon)
         .withTitle(juce::String::fromUTF8("⚖️ ACUERDO DE USUARIO, USO LIBRE Y DESCARGO DE RESPONSABILIDAD LEGAL"))
         .withMessage(juce::String::fromUTF8(
-            "CLIPSAMPLER v2.6.1 es un Instrumento Musical Virtual (VST3/AU) y Sampler de Transformación de Audio Local.\n\n"
+            "CLIPSAMPLER es un Instrumento Musical Virtual (VST3/AU) y Sampler de Transformación de Audio Local.\n\n"
             "La función de extracción y lectura de URLs externas (YouTube, TikTok, Instagram) es una "
             "herramienta técnica opcional de USO LIBRE destinada exclusivamente a material de Dominio Público, "
             "licencias Creative Commons (CC0 / CC-BY), contenido propio o material con expresa autorización de su titular.\n\n"
@@ -1664,11 +1664,11 @@ void ClipSamplerAudioProcessorEditor::paint(juce::Graphics& g)
     const int titleTextX = juce::roundToInt(ledX + ledRadius * 2.0f + 8.0f);
     g.setFont(juce::Font(juce::jlimit(14.5f, 24.0f, 21.0f * wScale), juce::Font::bold));
     g.setColour(juce::Colour(0x88000000));
-    g.drawFittedText(juce::String::fromUTF8("CLIPSAMPLER v2.6.1"),
+    g.drawFittedText(juce::String::fromUTF8("CLIPSAMPLER"),
                      titleTextX, titleY + 1, availHeaderTextW, titleH,
                      juce::Justification::centredLeft, 1, 0.68f);
     g.setColour(juce::Colour(0xfff0f9ff));
-    g.drawFittedText(juce::String::fromUTF8("CLIPSAMPLER v2.6.1"),
+    g.drawFittedText(juce::String::fromUTF8("CLIPSAMPLER"),
                      titleTextX, titleY, availHeaderTextW, titleH,
                      juce::Justification::centredLeft, 1, 0.68f);
 
