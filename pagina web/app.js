@@ -445,20 +445,94 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // =========================================================================
-  // 7. CUENTA REGRESIVA DE LA OFERTA (12 HORAS DINÁMICAS)
+  // 7. PROMOCIÓN DE 24 HORAS EN LA PRIMERA VISITA (DE $29 USD A $50 USD AL EXPIRAR)
   // =========================================================================
+  const PROMO_STORAGE_KEY = 'clipsampler_first_visit_ts_v261';
+  const PROMO_DURATION_MS = 24 * 60 * 60 * 1000; // Exactamente 24 horas
+
   const timerHours = document.getElementById('timerHours');
   const timerMins = document.getElementById('timerMins');
   const timerSecs = document.getElementById('timerSecs');
 
-  let totalSeconds = (12 * 3600) + (45 * 60) + 30;
+  let firstVisitTs = null;
+  try {
+    const stored = localStorage.getItem(PROMO_STORAGE_KEY);
+    if (stored && !isNaN(parseInt(stored, 10))) {
+      firstVisitTs = parseInt(stored, 10);
+    } else {
+      firstVisitTs = Date.now();
+      localStorage.setItem(PROMO_STORAGE_KEY, String(firstVisitTs));
+    }
+  } catch (err) {
+    // En caso de navegación privada con localStorage restringido
+    firstVisitTs = Date.now();
+  }
+
+  let promoExpiredApplied = false;
+
+  function applyExpiredPromoPrice() {
+    if (promoExpiredApplied) return;
+    promoExpiredApplied = true;
+
+    const promoBadge = document.getElementById('promoBadge');
+    const promoBarText = document.getElementById('promoBarText');
+    const promoActionLink = document.getElementById('promoActionLink');
+    const navBuyBtnText = document.getElementById('navBuyBtnText');
+    const heroBuyBtnText = document.getElementById('heroBuyBtnText');
+    const pricingSectionTag = document.getElementById('pricingSectionTag');
+    const priceNumber = document.getElementById('priceNumber');
+    const discountBadgeBox = document.getElementById('discountBadgeBox');
+    const btnOpenCheckoutText = document.getElementById('btnOpenCheckoutText');
+    const modalOriginalPriceRow = document.getElementById('modalOriginalPriceRow');
+    const modalDiscountRow = document.getElementById('modalDiscountRow');
+    const modalTotalAmount = document.getElementById('modalTotalAmount');
+    const paypalAmountInput = document.getElementById('paypalAmountInput');
+    const paypalItemNameInput = document.getElementById('paypalItemNameInput');
+    const btnPaypalSubmitText = document.getElementById('btnPaypalSubmitText');
+
+    if (promoBadge) promoBadge.textContent = 'OFERTA FINALIZADA';
+    if (promoBarText) {
+      promoBarText.innerHTML = 'Tu tiempo de promoción de 24 horas ha finalizado. Obtén <strong>ClipSampler v2.6.1 Pro</strong> (Instalador 100% en Español + Manual PDF) por <span class="price-highlight">$50 USD</span>';
+    }
+    if (promoActionLink) promoActionLink.textContent = 'Adquirir Licencia';
+    if (navBuyBtnText) navBuyBtnText.textContent = 'Comprar Ahora • $50 USD';
+    if (heroBuyBtnText) heroBuyBtnText.textContent = 'Comprar Licencia Vitalicia — $50 USD';
+    if (pricingSectionTag) pricingSectionTag.textContent = 'LICENCIA VITALICIA OFICIAL';
+    if (priceNumber) priceNumber.textContent = '50';
+    if (discountBadgeBox) discountBadgeBox.style.display = 'none';
+    if (btnOpenCheckoutText) btnOpenCheckoutText.textContent = 'Pagar $50 USD con PayPal';
+
+    if (modalOriginalPriceRow) {
+      modalOriginalPriceRow.innerHTML = '<span>Precio de lista oficial:</span><strong>$50.00 USD</strong>';
+    }
+    if (modalDiscountRow) modalDiscountRow.style.display = 'none';
+    if (modalTotalAmount) modalTotalAmount.textContent = '$50.00 USD';
+    if (paypalAmountInput) paypalAmountInput.value = '50.00';
+    if (paypalItemNameInput) {
+      paypalItemNameInput.value = 'ClipSampler v2.6.1 - Licencia Vitalicia Oficial (Windows y Mac) - $50 USD';
+    }
+    if (btnPaypalSubmitText) {
+      btnPaypalSubmitText.textContent = 'Proceder al Pago Seguro de $50 USD';
+    }
+
+    document.querySelectorAll('.dynamic-price-label').forEach((el) => {
+      el.textContent = '$50 USD';
+    });
+  }
 
   function updateCountdown() {
-    if (totalSeconds <= 0) {
-      totalSeconds = 24 * 3600; // Reinicia el ciclo
-    }
-    totalSeconds--;
+    const elapsedMs = Date.now() - firstVisitTs;
+    const remainingMs = PROMO_DURATION_MS - elapsedMs;
 
+    if (remainingMs <= 0) {
+      if (timerHours) timerHours.textContent = '00';
+      if (timerMins) timerMins.textContent = '00';
+      if (timerSecs) timerSecs.textContent = '00';
+      applyExpiredPromoPrice();
+      return;
+    }
+
+    const totalSeconds = Math.ceil(remainingMs / 1000);
     const h = Math.floor(totalSeconds / 3600);
     const m = Math.floor((totalSeconds % 3600) / 60);
     const s = totalSeconds % 60;
@@ -468,6 +542,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (timerSecs) timerSecs.textContent = String(s).padStart(2, '0');
   }
 
+  updateCountdown();
   setInterval(updateCountdown, 1000);
 
   // =========================================================================
