@@ -1126,6 +1126,54 @@ h1, h2, h3, h4 {
   grid-column: span 1;
 }
 
+.card-span-3 {
+  grid-column: span 3;
+}
+
+.local-audio-features-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin: 16px 0 12px;
+}
+
+.local-feature-box {
+  background: rgba(15, 23, 42, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 14px 12px;
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.local-feature-box:hover {
+  transform: translateY(-2px);
+  border-color: rgba(45, 212, 191, 0.4);
+}
+
+.local-feature-icon {
+  font-size: 1.4rem;
+  line-height: 1;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.local-feature-box strong {
+  display: block;
+  font-size: 0.88rem;
+  color: #f1f5f9;
+  margin-bottom: 4px;
+}
+
+.local-feature-box p {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  line-height: 1.45;
+  margin: 0;
+}
+
 .bento-icon-wrapper {
   width: 48px;
   height: 48px;
@@ -3106,6 +3154,12 @@ h1, h2, h3, h4 {
   .card-span-1 {
     grid-column: span 1;
   }
+  .card-span-3 {
+    grid-column: span 2;
+  }
+  .local-audio-features-grid {
+    grid-template-columns: 1fr;
+  }
   .audio-cards-grid {
     grid-template-columns: 1fr 1fr;
   }
@@ -3143,7 +3197,7 @@ h1, h2, h3, h4 {
   .bento-grid {
     grid-template-columns: 1fr;
   }
-  .card-span-2, .card-span-1 {
+  .card-span-2, .card-span-1, .card-span-3 {
     grid-column: span 1;
   }
   .specs-box {
