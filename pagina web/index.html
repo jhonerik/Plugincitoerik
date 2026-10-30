@@ -1133,8 +1133,22 @@
        ========================================================================= -->
   <div class="lightbox-backdrop" id="imageLightbox" aria-hidden="true" role="dialog" aria-modal="true" aria-label="Visualizador de captura en alta resolución">
     <div class="lightbox-container">
-      <button class="lightbox-close" id="btnCloseLightbox" aria-label="Cerrar vista ampliada">&times;</button>
-      <img src="" alt="Captura ampliada en alta resolución" class="lightbox-img" id="lightboxImg">
+      <div class="lightbox-toolbar">
+        <div class="lightbox-toolbar-left">
+          <span class="lightbox-zoom-pill">🔍 Clic en la imagen para ampliar el texto</span>
+          <button type="button" class="lightbox-tool-btn" id="btnZoomIn" title="Acercar imagen">➕ Acercar</button>
+          <button type="button" class="lightbox-tool-btn" id="btnZoomOut" title="Alejar imagen">➖ Alejar</button>
+          <button type="button" class="lightbox-tool-btn" id="btnZoomFit" title="Ajustar a pantalla">Ajustar</button>
+        </div>
+        <div class="lightbox-toolbar-btns">
+          <button class="lightbox-close" id="btnCloseLightbox" aria-label="Cerrar vista ampliada">&times;</button>
+        </div>
+      </div>
+
+      <div class="lightbox-viewport" id="lightboxViewport">
+        <img src="" alt="Captura ampliada en alta resolución" class="lightbox-img" id="lightboxImg">
+      </div>
+
       <div class="lightbox-caption" id="lightboxCaption">ClipSampler</div>
     </div>
   </div>
