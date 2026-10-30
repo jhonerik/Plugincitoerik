@@ -439,131 +439,200 @@
     </section>
 
     <!-- =========================================================================
-         DEMO INTERACTIVO MPC EN EL NAVEGADOR (16 PADS)
+         INTERFAZ INTERACTIVA REAL DEL PLUGIN (VISOR 1 ORIGINAL + VISOR 2 CALOR ANALÓGICO)
          ========================================================================= -->
     <section class="mpc-interactive-section section-padding" id="demo-mpc">
       <div class="container">
         <div class="section-header text-center">
-          <span class="section-tag">PRUEBA EN VIVO CON ONDAS REACTIVAS</span>
-          <h2 class="section-title">Experimenta el Modo Rebanador MPC (C1–D#2)</h2>
+          <span class="section-tag glow">PRUEBA EL PLUGIN REAL EN VIVO EN TU NAVEGADOR</span>
+          <h2 class="section-title">Experimenta el Modo Rebanador MPC (C1–G2)</h2>
           <p class="section-subtitle">
-            Haz clic en los 16 pads o toca las teclas de tu teclado (1-4, Q-R, A-F, Z-V) para disparar las rodajas acústicas en tiempo real.
+            Interactúa directamente con los <strong>dos visores reales de ClipSampler</strong>: haz <strong>doble clic (o clic)</strong> sobre cualquier corte (<code>C1</code> a <code>A#1</code>) en el <strong>Visor 1</strong> o en el <strong>Visor 2</strong>, <strong>arrastra las líneas amarillas</strong> para modificar los cortes, o <strong>tócalos con tu teclado</strong> (teclas <code>1–9, 0</code> o <code>Z–M</code>).
           </p>
         </div>
 
-        <div class="mpc-chassis has-border-beam">
+        <!-- Réplica Interactiva 1:1 de la Interfaz Real de ClipSampler -->
+        <div class="cs-live-plugin has-border-beam" id="csLivePlugin" tabindex="0" aria-label="Interfaz interactiva real de ClipSampler">
           <div class="border-beam" aria-hidden="true"></div>
-          <div class="mpc-top-display">
-            <div class="lcd-screen">
-              <div class="lcd-row">
-                <span class="lcd-title">CLIPSAMPLER // MODO REBANADOR MPC</span>
-                <span class="lcd-voice" id="lcdVoiceInfo">VOZ: LISTO</span>
+
+          <!-- CABECERA DEL PLUGIN -->
+          <div class="cs-live-header">
+            <div class="cs-live-brand">
+              <div class="cs-live-title-row">
+                <span class="cs-live-led" id="csLiveLed"></span>
+                <span class="cs-live-logo">CLIPSAMPLER</span>
               </div>
-              <div class="lcd-row">
-                <span class="lcd-slice" id="lcdSliceInfo">RODAJA ACTIVA: NINGUNA</span>
-                <span class="lcd-bpm">77.50 BPM • CALOR ANALÓGICO</span>
-              </div>
+              <div class="cs-live-sub">YOUTUBE &nbsp;|&nbsp; TIKTOK &nbsp;|&nbsp; INSTAGRAM &nbsp; — &nbsp; REBANADOR MPC &nbsp;|&nbsp; EFECTOS Y MIDI</div>
             </div>
-            <div class="mpc-status-lights">
-              <div class="status-light active"><span></span>SINC. DAW</div>
-              <div class="status-light active"><span></span>CALOR ANALÓGICO</div>
-              <div class="status-light active"><span></span>64 BITS</div>
+            <div class="cs-live-top-btns">
+              <button type="button" class="cs-top-btn cs-btn-license">✓ LICENCIA ACTIVA [PRO]</button>
+              <button type="button" class="cs-top-btn cs-btn-freesound" id="csBtnFreesoundToggle" title="Cargar sample de Freesound">🎵 Freesound</button>
+              <button type="button" class="cs-top-btn cs-btn-demo" id="csBtnAutoDemo" title="Ejecutar demostración animada con audio">▶ Demo Automático</button>
+              <button type="button" class="cs-top-btn cs-btn-dark" id="csBtnResetSlices">Restaurar Cortes</button>
+              <a href="Manual_ClipSampler.pdf" target="_blank" rel="noopener" class="cs-top-btn cs-btn-manual">📘 Manual</a>
             </div>
           </div>
 
-          <!-- Cuadrícula 4x4 de 16 Pads MPC -->
-          <div class="pads-grid-16" id="mpc16Grid">
-            <!-- Fila 4 (Superior) -->
-            <button class="mpc-pad" data-note="48" data-key="1">
-              <span class="pad-num">PAD 13</span>
-              <span class="pad-note">C2</span>
-              <span class="pad-shortcut">[ 1 ]</span>
-            </button>
-            <button class="mpc-pad" data-note="49" data-key="2">
-              <span class="pad-num">PAD 14</span>
-              <span class="pad-note">C#2</span>
-              <span class="pad-shortcut">[ 2 ]</span>
-            </button>
-            <button class="mpc-pad" data-note="50" data-key="3">
-              <span class="pad-num">PAD 15</span>
-              <span class="pad-note">D2</span>
-              <span class="pad-shortcut">[ 3 ]</span>
-            </button>
-            <button class="mpc-pad" data-note="51" data-key="4">
-              <span class="pad-num">PAD 16</span>
-              <span class="pad-note">D#2</span>
-              <span class="pad-shortcut">[ 4 ]</span>
-            </button>
+          <!-- SECCIÓN 1: TRANSFORMACIÓN ANALÓGICA Y EXTRACCIÓN -->
+          <div class="cs-live-panel">
+            <div class="cs-panel-tab">1. SAMPLER DE TRANSFORMACIÓN LOCAL Y EXTRACCIÓN (USO LIBRE)</div>
 
-            <!-- Fila 3 -->
-            <button class="mpc-pad" data-note="44" data-key="q">
-              <span class="pad-num">PAD 9</span>
-              <span class="pad-note">G#1</span>
-              <span class="pad-shortcut">[ Q ]</span>
-            </button>
-            <button class="mpc-pad" data-note="45" data-key="w">
-              <span class="pad-num">PAD 10</span>
-              <span class="pad-note">A1</span>
-              <span class="pad-shortcut">[ W ]</span>
-            </button>
-            <button class="mpc-pad" data-note="46" data-key="e">
-              <span class="pad-num">PAD 11</span>
-              <span class="pad-note">A#1</span>
-              <span class="pad-shortcut">[ E ]</span>
-            </button>
-            <button class="mpc-pad" data-note="47" data-key="r">
-              <span class="pad-num">PAD 12</span>
-              <span class="pad-note">B1</span>
-              <span class="pad-shortcut">[ R ]</span>
-            </button>
+            <div class="cs-source-row">
+              <button type="button" class="cs-src-btn cs-src-local" id="csBtnLoadLocal">📁 Cargar Audio Local</button>
+              <button type="button" class="cs-src-btn cs-src-free active">✅ Uso Libre (Web Activo)</button>
+              <button type="button" class="cs-src-btn cs-src-yt active">▶ YouTube</button>
+              <button type="button" class="cs-src-btn cs-src-dark">♪ TikTok</button>
+              <button type="button" class="cs-src-btn cs-src-dark">◉ Instagram</button>
+            </div>
 
-            <!-- Fila 2 -->
-            <button class="mpc-pad" data-note="40" data-key="a">
-              <span class="pad-num">PAD 5</span>
-              <span class="pad-note">E1</span>
-              <span class="pad-shortcut">[ A ]</span>
-            </button>
-            <button class="mpc-pad" data-note="41" data-key="s">
-              <span class="pad-num">PAD 6</span>
-              <span class="pad-note">F1</span>
-              <span class="pad-shortcut">[ S ]</span>
-            </button>
-            <button class="mpc-pad" data-note="42" data-key="d">
-              <span class="pad-num">PAD 7</span>
-              <span class="pad-note">F#1</span>
-              <span class="pad-shortcut">[ D ]</span>
-            </button>
-            <button class="mpc-pad" data-note="43" data-key="f">
-              <span class="pad-num">PAD 8</span>
-              <span class="pad-note">G1</span>
-              <span class="pad-shortcut">[ F ]</span>
-            </button>
+            <div class="cs-url-row">
+              <span class="cs-url-label">Enlace (URL):</span>
+              <div class="cs-url-input-wrap">
+                <input type="text" class="cs-url-input" value="Pulsa [ ⚖ Uso Libre (Web)] para activar extracción de enlaces..." readonly>
+                <button type="button" class="cs-url-btn">Pegar</button>
+                <button type="button" class="cs-url-btn">Detectar Duración</button>
+              </div>
+            </div>
 
-            <!-- Fila 1 (Inferior) -->
-            <button class="mpc-pad" data-note="36" data-key="z">
-              <span class="pad-num">PAD 1</span>
-              <span class="pad-note">C1</span>
-              <span class="pad-shortcut">[ Z ]</span>
-            </button>
-            <button class="mpc-pad" data-note="37" data-key="x">
-              <span class="pad-num">PAD 2</span>
-              <span class="pad-note">C#1</span>
-              <span class="pad-shortcut">[ X ]</span>
-            </button>
-            <button class="mpc-pad" data-note="38" data-key="c">
-              <span class="pad-num">PAD 3</span>
-              <span class="pad-note">D1</span>
-              <span class="pad-shortcut">[ C ]</span>
-            </button>
-            <button class="mpc-pad" data-note="39" data-key="v">
-              <span class="pad-num">PAD 4</span>
-              <span class="pad-note">D#1</span>
-              <span class="pad-shortcut">[ V ]</span>
-            </button>
+            <div class="cs-time-row">
+              <span class="cs-time-label">Inicio (MM:SS):</span>
+              <span class="cs-time-val">00:00</span>
+              <div class="cs-time-slider-track">
+                <div class="cs-time-slider-thumb"></div>
+              </div>
+              <span class="cs-time-meta">Inicio: 00:00 | Fin Video: [Auto / Detectar]</span>
+            </div>
+
+            <div class="cs-extract-row">
+              <button type="button" class="cs-ext-btn cs-ext-sec">☕ Segundos</button>
+              <button type="button" class="cs-ext-btn cs-ext-3s" id="csBtnExtract3s">Extraer 3 Segundos</button>
+              <button type="button" class="cs-ext-btn cs-ext-10s" id="csBtnExtract10s">Extraer 10 Segundos</button>
+              <button type="button" class="cs-ext-btn cs-ext-30s" id="csBtnExtract30s">Extraer 30 Segundos</button>
+              <button type="button" class="cs-ext-btn cs-ext-new" id="csBtnNewExtract">✨ Nueva Extracción</button>
+            </div>
+
+            <div class="cs-transform-row">
+              <button type="button" class="cs-trans-btn cs-btn-warmth" id="csBtnWarmth">
+                📼 Calor Analógico
+              </button>
+              <button type="button" class="cs-trans-btn cs-btn-pitch" id="csBtnPitchUp">
+                ▲ Alterar +3 Tonos Más
+              </button>
+              <button type="button" class="cs-trans-btn cs-btn-pitch" id="csBtnPitchDown">
+                ▼ Alterar -3 Tonos Menos
+              </button>
+              <button type="button" class="cs-trans-btn cs-btn-verify" id="csBtnVerify">
+                🛡️ Verificar Derechos
+              </button>
+            </div>
+
+            <div class="cs-status-strip">
+              <span class="cs-status-msg" id="csStatusMsg">
+                ✅ Modo Interactivo Activo: Da clic o doble clic en cualquier rodaja (C1–A#1) del Visor 1 o Visor 2, arrastra los cortes amarillos o toca con tu teclado.
+              </span>
+              <span class="cs-status-right" id="csRightsBadge">AUDIO 2: CALOR ANALÓGICO - Listo para usar</span>
+            </div>
           </div>
 
-          <div class="mpc-footer-note">
-            💡 <em>En tu DAW puedes tocar estas rodajas con cualquier controlador o teclado MIDI (C1–G2) o cambiar a modo cromático para tocar melodías.</em>
+          <!-- SECCIÓN 2: VISOR DUAL DE ONDAS, REBANADOR MPC (C1-G2), EFECTOS Y CONVERSOR A MIDI -->
+          <div class="cs-live-panel cs-panel-visors">
+            <div class="cs-panel-tab">2. VISOR DUAL DE ONDAS, REBANADOR MPC (C1-G2), EFECTOS Y CONVERSOR A MIDI</div>
+
+            <!-- Barra de Efectos Macro y Selector de Audio 1 / Audio 2 -->
+            <div class="cs-fx-bar">
+              <div class="cs-fx-left">
+                <span class="cs-fx-label">Efectos:</span>
+                <button type="button" class="cs-slot-btn" id="csSlotBtn1" data-slot="1">Audio 1</button>
+                <button type="button" class="cs-slot-btn active-slot2" id="csSlotBtn2" data-slot="2">Audio 2</button>
+
+                <div class="cs-knob-pill" id="csKnobLofi" role="button" tabindex="0" title="Clic para alternar textura Lo-Fi">
+                  <span class="cs-knob-circle lofi"></span>
+                  <span id="csKnobLofiText">Lo-Fi: 0%</span>
+                </div>
+                <div class="cs-knob-pill" id="csKnobPitch" role="button" tabindex="0" title="Clic para alternar Tono">
+                  <span class="cs-knob-circle pitch"></span>
+                  <span id="csKnobPitchText">Tono: 0 st</span>
+                </div>
+                <div class="cs-knob-pill" id="csKnobFilter" role="button" tabindex="0" title="Clic para alternar Filtro">
+                  <span class="cs-knob-circle filter"></span>
+                  <span id="csKnobFilterText">Filtro: 100%</span>
+                </div>
+                <div class="cs-knob-pill">
+                  <span class="cs-knob-circle atk"></span>
+                  <span>Atk: 2 ms</span>
+                </div>
+                <div class="cs-knob-pill">
+                  <span class="cs-knob-circle rel"></span>
+                  <span>Rel: 50 ms</span>
+                </div>
+              </div>
+
+              <div class="cs-fx-right">
+                <button type="button" class="cs-fx-action-btn" id="csBtnSyncBpm">Sinc. BPM: NO</button>
+                <button type="button" class="cs-fx-action-btn cs-btn-apply-fx" id="csBtnApplyFx">Aplicar FX</button>
+                <button type="button" class="cs-fx-action-btn cs-btn-mpc-active" id="csBtnToggleMpc">Rebanador MPC: SÍ</button>
+              </div>
+            </div>
+
+            <!-- VISOR 1: AUDIO ORIGINAL (FREESOUND) -->
+            <div class="cs-visor-box cs-visor-1" id="csVisorBox1" data-slot="1">
+              <div class="cs-visor-header">
+                <span class="cs-visor-title" id="csVisor1Title">
+                  VISOR 1: AUDIO ORIGINAL (REBANADOR MPC C1-G2) &nbsp;[CLIC O DOBLE CLIC = TOCAR CORTE]
+                </span>
+                <span class="cs-visor-meta">[FREESOUND] &nbsp;91.5 BPM | Tono: Gm | 6.0s</span>
+              </div>
+              <div class="cs-canvas-wrap">
+                <canvas id="csVisor1Canvas" width="1160" height="145" aria-label="Visor 1 Audio Original con Rebanador MPC C1 a A#1"></canvas>
+              </div>
+            </div>
+
+            <!-- VISOR 2: CALOR ANALÓGICO (TAPE WARMTH) -->
+            <div class="cs-visor-box cs-visor-2 is-active" id="csVisorBox2" data-slot="2">
+              <div class="cs-visor-header">
+                <span class="cs-visor-title" id="csVisor2Title">
+                  VISOR 2: CALOR ANALÓGICO (TAPE WARMTH) &nbsp;[TODO EL AUDIO | 2 CLICS = CORTE]
+                </span>
+                <span class="cs-visor-meta" id="csVisor2Meta">+3 st IA | [LOCAL] &nbsp;91.5 BPM | Tono: Gm | 6.0s</span>
+              </div>
+              <div class="cs-canvas-wrap">
+                <canvas id="csVisor2Canvas" width="1160" height="145" aria-label="Visor 2 Calor Analógico con Rebanador MPC C1 a A#1"></canvas>
+              </div>
+            </div>
+
+            <!-- BARRA INFERIOR DE TRANSPORTE Y EXPORTACIÓN -->
+            <div class="cs-transport-bar">
+              <button type="button" class="cs-trans-ctrl cs-btn-play" id="csBtnPlay">▶ Reproducir</button>
+              <button type="button" class="cs-trans-ctrl cs-btn-stop" id="csBtnStop">■ Detener</button>
+              <div class="cs-bpm-readout" id="csBpmReadout">91.5 BPM | Tono: Gm | DAW: 130</div>
+              <button type="button" class="cs-trans-ctrl cs-btn-fx-mini" id="csBtnRev" title="Invertir reproducción (Reverse)">◀ Rev</button>
+              <button type="button" class="cs-trans-ctrl cs-btn-fx-mini" id="csBtnHalf" title="Media velocidad (Half-Time 0.5x)">⏳ 1/2</button>
+              <button type="button" class="cs-trans-ctrl cs-btn-cut" id="csBtnExactCut">✂ Corte Exacto</button>
+              <button type="button" class="cs-trans-ctrl cs-btn-drag-wav" id="csBtnDragWav">Arrastrar .WAV</button>
+              <button type="button" class="cs-trans-ctrl cs-btn-midi" id="csBtnConvertMidi">🎹 Convertir a MIDI</button>
+              <button type="button" class="cs-trans-ctrl cs-btn-export" id="csBtnExportWav">Exportar .WAV...</button>
+            </div>
+
+            <!-- TECLADO MIDI / DISPARADOR EN VIVO DE LAS RODAJAS DEL VISOR ACTIVO -->
+            <div class="cs-keyboard-strip" id="csKeyboardStrip" aria-label="Teclado MIDI interactivo para tocar las rodajas C1 a A#1">
+              <div class="cs-kb-label">
+                <span>🎹 TOCA LAS RODAJAS EN VIVO (CLIC O TECLADO):</span>
+                <small id="csActiveSlotIndicator">Disparando: <strong>VISOR 2 (CALOR ANALÓGICO)</strong></small>
+              </div>
+              <div class="cs-kb-keys" id="csKbKeys">
+                <button type="button" class="cs-key-btn" data-slice="0" data-key="z"><strong>C1</strong><span>Tecla Z / 1</span></button>
+                <button type="button" class="cs-key-btn is-sharp" data-slice="1" data-key="x"><strong>C#1</strong><span>Tecla X / 2</span></button>
+                <button type="button" class="cs-key-btn" data-slice="2" data-key="c"><strong>D1</strong><span>Tecla C / 3</span></button>
+                <button type="button" class="cs-key-btn is-sharp" data-slice="3" data-key="v"><strong>D#1</strong><span>Tecla V / 4</span></button>
+                <button type="button" class="cs-key-btn" data-slice="4" data-key="a"><strong>E1</strong><span>Tecla A / 5</span></button>
+                <button type="button" class="cs-key-btn" data-slice="5" data-key="s"><strong>F1</strong><span>Tecla S / 6</span></button>
+                <button type="button" class="cs-key-btn is-sharp" data-slice="6" data-key="d"><strong>F#1</strong><span>Tecla D / 7</span></button>
+                <button type="button" class="cs-key-btn" data-slice="7" data-key="f"><strong>G1</strong><span>Tecla F / 8</span></button>
+                <button type="button" class="cs-key-btn is-sharp" data-slice="8" data-key="q"><strong>G#1</strong><span>Tecla Q / 9</span></button>
+                <button type="button" class="cs-key-btn" data-slice="9" data-key="w"><strong>A1</strong><span>Tecla W / 0</span></button>
+                <button type="button" class="cs-key-btn is-sharp" data-slice="10" data-key="e"><strong>A#1</strong><span>Tecla E / -</span></button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -1081,7 +1150,8 @@
     </div>
   </div>
 
-  <!-- Script interactivo -->
+  <!-- Muestras reales embebidas para el Visor 1 y Visor 2 + Script interactivo -->
+  <script src="audio-samples.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
