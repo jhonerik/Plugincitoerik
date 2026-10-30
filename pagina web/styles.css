@@ -1002,6 +1002,10 @@ h1, h2, h3, h4 {
   margin-bottom: 12px;
 }
 
+.gallery-badge-row.badge-row-center {
+  justify-content: center;
+}
+
 .badge-gallery-teal {
   background: rgba(45, 212, 191, 0.16);
   color: var(--teal-accent);
