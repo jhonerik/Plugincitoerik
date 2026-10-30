@@ -54,8 +54,8 @@ public:
 
     void paint(juce::Graphics& g) override
     {
-        auto bounds = getLocalBounds().toFloat().reduced(3.0f, 2.2f);
-        const float corner = 7.5f;
+        auto bounds = getLocalBounds().toFloat().reduced(3.0f, 3.0f);
+        const float corner = 9.0f;
         const bool isHovered = isMouseOver(true);
 
         // 1. Sombra proyectada inferior de la tarjeta de fila
@@ -106,9 +106,9 @@ public:
         g.fillRoundedRectangle(ledBar, 1.9f);
 
         // Área reservada para textos y píldoras a la izquierda de los 3 botones de acción
-        auto textArea = bounds.reduced(14.0f, 4.5f);
+        auto textArea = bounds.reduced(16.0f, 9.0f);
         textArea.removeFromLeft(4.0f);
-        auto leftArea = textArea.removeFromLeft(textArea.getWidth() - 318.0f);
+        auto leftArea = textArea.removeFromLeft(textArea.getWidth() - 366.0f);
 
         // =====================================================================
         // LÍNEA 1: Título de la Muestra + Píldoras de Color ([BPM], Formato, Licencia)
@@ -118,9 +118,9 @@ public:
         auto drawBadgePill = [&](juce::Rectangle<float>& rowRect, const juce::String& badgeText,
                                  juce::Colour bgCol, juce::Colour outlineCol, juce::Colour txtCol)
         {
-            juce::Font bf(10.2f, juce::Font::bold);
-            float bw = bf.getStringWidthFloat(badgeText) + 14.0f;
-            float bh = juce::jmin(18.0f, rowRect.getHeight() - 2.0f);
+            juce::Font bf(12.4f, juce::Font::bold);
+            float bw = bf.getStringWidthFloat(badgeText) + 18.0f;
+            float bh = juce::jmin(24.0f, rowRect.getHeight() - 4.0f);
             auto pillRect = juce::Rectangle<float>(rowRect.getX(), rowRect.getCentreY() - bh * 0.5f, bw, bh);
             if (pillRect.getRight() > rowRect.getRight())
                 return;
@@ -133,13 +133,13 @@ public:
             g.setFont(bf);
             g.drawFittedText(badgeText, pillRect.toNearestInt(), juce::Justification::centred, 1);
 
-            rowRect.removeFromLeft(bw + 6.0f);
+            rowRect.removeFromLeft(bw + 8.0f);
         };
 
         // Medimos el título para colocar las píldoras justo después
-        juce::Font titleFont(13.2f, juce::Font::bold);
+        juce::Font titleFont(16.8f, juce::Font::bold);
         g.setFont(titleFont);
-        const float maxTitleW = juce::jmax(110.0f, topRow.getWidth() - 185.0f);
+        const float maxTitleW = juce::jmax(110.0f, topRow.getWidth() - 230.0f);
         const float actualTitleW = juce::jmin(maxTitleW, titleFont.getStringWidthFloat(item.name) + 8.0f);
 
         auto titleRect = topRow.removeFromLeft(actualTitleW);
@@ -178,8 +178,8 @@ public:
         // LÍNEA 2: Subtítulo con Jerarquía Cromática (Duración • Autor • Specs • #Tags)
         // =====================================================================
         auto botRow = leftArea;
-        juce::Font metaFont(11.0f, juce::Font::plain);
-        juce::Font metaBold(11.0f, juce::Font::bold);
+        juce::Font metaFont(13.6f, juce::Font::plain);
+        juce::Font metaBold(13.6f, juce::Font::bold);
 
         auto drawSegment = [&](const juce::String& txt, juce::Colour col, bool bold = false)
         {
@@ -226,12 +226,12 @@ public:
 
     void resized() override
     {
-        auto area = getLocalBounds().reduced(10, 8);
-        loadBtn.setBounds(area.removeFromRight(124));
+        auto area = getLocalBounds().reduced(12, 16);
+        loadBtn.setBounds(area.removeFromRight(142));
         area.removeFromRight(6);
-        previewBtn.setBounds(area.removeFromRight(92));
+        previewBtn.setBounds(area.removeFromRight(106));
         area.removeFromRight(6);
-        similarBtn.setBounds(area.removeFromRight(88));
+        similarBtn.setBounds(area.removeFromRight(102));
     }
 
 private:
@@ -443,7 +443,7 @@ FreesoundOverlayComponent::FreesoundOverlayComponent(ClipSamplerAudioProcessor& 
 
     // ListBox de resultados (Nivel 2 - Lienzo Profundo con Scrollbar Cian)
     resultsListBox.setModel(this);
-    resultsListBox.setRowHeight(60);
+    resultsListBox.setRowHeight(88);
     resultsListBox.setColour(juce::ListBox::backgroundColourId, juce::Colour(0xff080e1c));
     resultsListBox.setColour(juce::ListBox::outlineColourId, juce::Colour(0xff23385e));
     resultsListBox.setOutlineThickness(1);
