@@ -53,7 +53,7 @@ jobs:
   # ============================================================================
   build-macos:
     name: macOS Universal Binary (VST3 & .pkg)
-    runs-on: macos-14
+    runs-on: macos-latest
 
     steps:
       - name: Checkout Código Fuente
